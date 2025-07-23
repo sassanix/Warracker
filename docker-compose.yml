@@ -7,7 +7,7 @@ services:
       - ./uploads:/data/uploads
       - ./backend/migrations:/app/migrations
       # Uncomment the next line to persist embedded Postgres data (when using USE_INTERNAL_DB=true)
-      - ./postgres_data:/app/postgres_data
+      # - ./postgres_data:/app/postgres_data
     environment:
       - DB_HOST=warrackerdb
       - DB_NAME=warranty_test
@@ -16,7 +16,7 @@ services:
       - DB_ADMIN_USER=warracker_admin
       - DB_ADMIN_PASSWORD=${DB_ADMIN_PASSWORD:-change_this_password_in_production}
       # To use embedded Postgres, uncomment the next line:
-      - USE_INTERNAL_DB=true
+      # - USE_INTERNAL_DB=true
       # When using embedded Postgres, DB_HOST/DB_PORT are ignored and set automatically
       - SMTP_HOST=${SMTP_HOST:-localhost}
       - SMTP_PORT=${SMTP_PORT:-1025}
@@ -44,9 +44,9 @@ services:
       - MAX_UPLOAD_MB=${MAX_UPLOAD_MB:-16} # Reduced from 32MB default for memory efficiency
       - NGINX_MAX_BODY_SIZE_VALUE=${NGINX_MAX_BODY_SIZE_VALUE:-16M} # Match upload limit
     # If using external DB, keep depends_on
-    #depends_on:
-    #  warrackerdb:
-    #    condition: service_healthy
+    depends_on:
+      warrackerdb:
+        condition: service_healthy
     restart: unless-stopped
     command: >
       bash -c "
@@ -55,21 +55,21 @@ services:
     # If using embedded DB, you can remove depends_on and command overrides
 
   # External Postgres service (optional, not needed if using embedded DB)
-#  warrackerdb:
-#    image: "postgres:15-alpine"
-#    volumes:
-#      - postgres_data:/var/lib/postgresql/data
-#      - ./backend/migrations:/docker-entrypoint-initdb.d
-#    environment:
-#      - POSTGRES_DB=warranty_test
-#      - POSTGRES_USER=warranty_user
-#      - POSTGRES_PASSWORD=${DB_PASSWORD:-warranty_password}
-#    restart: unless-stopped
-#    healthcheck:
-#      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 5
+  warrackerdb:
+    image: "postgres:15-alpine"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d
+    environment:
+      - POSTGRES_DB=warranty_test
+      - POSTGRES_USER=warranty_user
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-warranty_password}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
