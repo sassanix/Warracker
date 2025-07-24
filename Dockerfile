@@ -8,7 +8,8 @@ RUN apt-get update && \
         libpq-dev \
         nginx \
         curl \
-        postgresql-client \
+        postgresql-15 \
+        postgresql-client-15 \
         supervisor \
         gettext-base \
         libcurl4-openssl-dev \
@@ -195,3 +196,12 @@ EOF
 
 # Start supervisor which will manage the setup, nginx, and gunicorn processes
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+
+# Copy entrypoint script
+COPY backend/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Expose Postgres data directory as a volume for persistence
+VOLUME ["/app/postgres_data"]
+
+ENTRYPOINT ["/app/entrypoint.sh"]
