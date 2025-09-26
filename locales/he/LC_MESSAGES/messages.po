@@ -1,0 +1,168 @@
+# Hebrew translations for Warracker
+# Copyright (C) 2025 Warracker
+# This file is distributed under the same license as the Warracker project.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Warracker 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-06-29 12:36-0300\n"
+"PO-Revision-Date: 2025-09-26 12:00+0300\n"
+"Last-Translator: \n"
+"Language: he\n"
+"Language-Team: Hebrew\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+# -------- Errors --------
+msgid "Validation error"
+msgstr "שגיאת אימות"
+
+msgid "Authentication error"
+msgstr "שגיאת הזדהות"
+
+msgid "Authorization error"
+msgstr "שגיאת הרשאה"
+
+msgid "Resource not found"
+msgstr "המשאב לא נמצא"
+
+msgid "Internal server error"
+msgstr "שגיאת שרת פנימית"
+
+msgid "File is too large"
+msgstr "הקובץ גדול מדי"
+
+msgid "Invalid file type"
+msgstr "סוג קובץ לא תקין"
+
+msgid "An error occurred"
+msgstr "אירעה שגיאה"
+
+# -------- Auth --------
+msgid "Login"
+msgstr "התחברות"
+
+msgid "Logout"
+msgstr "התנתקות"
+
+msgid "Register"
+msgstr "הרשמה"
+
+msgid "Username"
+msgstr "שם משתמש"
+
+msgid "Password"
+msgstr "סיסמה"
+
+msgid "Email"
+msgstr "אימייל"
+
+msgid "First Name"
+msgstr "שם פרטי"
+
+msgid "Last Name"
+msgstr "שם משפחה"
+
+# -------- Navigation --------
+msgid "Home"
+msgstr "דף הבית"
+
+msgid "Settings"
+msgstr "הגדרות"
+
+msgid "Status"
+msgstr "מצב"
+
+msgid "About"
+msgstr "אודות"
+
+# -------- Common actions --------
+msgid "Save"
+msgstr "שמירה"
+
+msgid "Cancel"
+msgstr "ביטול"
+
+msgid "Delete"
+msgstr "מחיקה"
+
+msgid "Edit"
+msgstr "עריכה"
+
+msgid "Search"
+msgstr "חיפוש"
+
+msgid "Export"
+msgstr "ייצוא"
+
+msgid "Import"
+msgstr "ייבוא"
+
+# -------- Messages --------
+msgid "Success"
+msgstr "הצלחה"
+
+msgid "Error"
+msgstr "שגיאה"
+
+msgid "Warning"
+msgstr "אזהרה"
+
+msgid "Loading..."
+msgstr "טוען..."
+
+msgid "Saved successfully"
+msgstr "נשמר בהצלחה"
+
+msgid "Deleted successfully"
+msgstr "נמחק בהצלחה"
+
+msgid "Invalid request"
+msgstr "בקשה לא תקינה"
+
+msgid "Unauthorized"
+msgstr "לא מורשה"
+
+msgid "Not found"
+msgstr "לא נמצא"
+
+msgid "Server error"
+msgstr "שגיאת שרת"
+
+# -------- Warranties --------
+msgid "Warranties"
+msgstr "אחריות"
+
+msgid "Warranty"
+msgstr "אחריות"
+
+msgid "Product Name"
+msgstr "שם מוצר"
+
+msgid "Purchase Date"
+msgstr "תאריך רכישה"
+
+msgid "Warranty Duration"
+msgstr "משך אחריות"
+
+msgid "Expiration Date"
+msgstr "תאריך תפוגה"
+
+msgid "Vendor"
+msgstr "ספק"
+
+msgid "Active"
+msgstr "פעילה"
+
+msgid "Expired"
+msgstr "פגה"
+
+msgid "Expiring Soon"
+msgstr "עומדת לפוג"
+
+msgid "Lifetime"
+msgstr "לכל החיים"
