@@ -32,7 +32,7 @@ def init_babel(app):
         'nl': 'Nederlands',
         'hi': 'हिन्दी',
         'fa': 'فارسی',
-        'ar': 'العربية',
+        'ar': 'Hebrew',
         'ru': 'Русский',
         'uk': 'Українська',
         'zh_CN': '简体中文',
