@@ -1,6 +1,6 @@
 services:
   warracker:
-    image: ghcr.io/sassanix/warracker/main:latest
+    image: ghcr.io/ngfblog/warracker/main:latest
     ports:
       - "8005:80"
     volumes:
