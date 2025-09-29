@@ -29,7 +29,6 @@ The easiest way to organize product warranties, monitor expiration dates, and st
 #
 
 
-    
 </div>
 ⭐ If you find Warracker helpful, we’d truly appreciate a star on GitHub! Your support motivates us to keep improving and building great new features.
 
