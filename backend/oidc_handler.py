@@ -1,7 +1,7 @@
 # backend/oidc_handler.py
 import os
 import uuid
-from datetime import datetime, UTC # Ensure timedelta is imported if used, though not in this snippet
+from datetime import datetime # Ensure timedelta is imported if used, though not in this snippet
 from flask import Blueprint, jsonify, redirect, url_for, current_app, request, session
 
 # Import shared extensions and utilities
@@ -20,74 +20,6 @@ import logging
 logger = logging.getLogger(__name__) # Or use current_app.logger inside routes
 
 oidc_bp = Blueprint('oidc', __name__) # url_prefix will be set when registering in app.py
-
-def init_oidc_client(current_app_instance, db_conn_func, db_release_func):
-    """Function to initialize OIDC client based on settings"""
-    from .extensions import oauth
-
-    logger.info("[FACTORY OIDC_INIT] Attempting to initialize OIDC client...")
-    conn = None
-    oidc_db_settings = {}
-    try:
-        conn = db_conn_func()
-        if conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT key, value FROM site_settings WHERE key LIKE 'oidc_%%'")
-                for row in cur.fetchall():
-                    oidc_db_settings[row[0]] = row[1]
-                logger.info(f"[FACTORY OIDC_INIT] Fetched OIDC settings from DB: {oidc_db_settings}")
-        else:
-            logger.error("[FACTORY OIDC_INIT] Database connection failed, cannot fetch OIDC settings from DB.")
-    except Exception as e:
-        logger.error(f"[FACTORY OIDC_INIT] Error fetching OIDC settings from DB: {e}. Proceeding without DB settings.")
-    finally:
-        if conn:
-            db_release_func(conn)
-
-    # Priority: Environment Variable > Database Setting > Hardcoded Default
-    # Check Environment Variable first for OIDC enabled
-    oidc_enabled_from_env = os.environ.get('OIDC_ENABLED')
-    if oidc_enabled_from_env is not None:
-        # If the environment variable is set (even to 'false'), it takes highest priority
-        is_enabled = oidc_enabled_from_env.lower() == 'true'
-    else:
-        # If no environment variable, fall back to the database setting
-        oidc_enabled_from_db = oidc_db_settings.get('oidc_enabled', 'false')  # Default to 'false' if not in DB
-        is_enabled = oidc_enabled_from_db.lower() == 'true'
-
-    current_app_instance.config['OIDC_ENABLED'] = is_enabled
-    logger.info(f"[FACTORY OIDC_INIT] OIDC enabled status: {is_enabled}")
-
-    if is_enabled:
-        # Apply same precedence logic to all OIDC settings
-        provider_name = os.environ.get('OIDC_PROVIDER_NAME', oidc_db_settings.get('oidc_provider_name', 'oidc'))
-        client_id = os.environ.get('OIDC_CLIENT_ID', oidc_db_settings.get('oidc_client_id', ''))
-        client_secret = os.environ.get('OIDC_CLIENT_SECRET', oidc_db_settings.get('oidc_client_secret', ''))
-        if os.environ.get('OIDC_CLIENT_SECRET_FILE'):
-            client_secret = open(os.environ.get('OIDC_CLIENT_SECRET_FILE'), 'r').read().strip()
-        issuer_url = os.environ.get('OIDC_ISSUER_URL', oidc_db_settings.get('oidc_issuer_url', ''))
-        scope = os.environ.get('OIDC_SCOPE', oidc_db_settings.get('oidc_scope', 'openid email profile'))
-
-        current_app_instance.config['OIDC_PROVIDER_NAME'] = provider_name
-
-        if client_id and client_secret and issuer_url:
-            logger.info(f"[FACTORY OIDC_INIT] Registering OIDC client '{provider_name}' with Authlib.")
-            oauth.register(
-                name=provider_name,
-                client_id=client_id,
-                client_secret=client_secret,
-                server_metadata_url=f"{issuer_url.rstrip('/')}/.well-known/openid-configuration",
-                client_kwargs={'scope': scope},
-                override=True
-            )
-            logger.info(f"[FACTORY OIDC_INIT] OIDC client '{provider_name}' registered successfully.")
-        else:
-            logger.warning("[FACTORY OIDC_INIT] OIDC is enabled, but critical parameters are missing. OIDC login will be unavailable.")
-            current_app_instance.config['OIDC_ENABLED'] = False
-    else:
-        current_app_instance.config['OIDC_PROVIDER_NAME'] = None
-        logger.info("[FACTORY OIDC_INIT] OIDC is disabled.")
-
 
 @oidc_bp.route('/oidc/login') # Original path was /api/oidc/login
 def oidc_login_route():
@@ -136,80 +68,43 @@ def oidc_callback_route():
         frontend_login_url = os.environ.get('FRONTEND_URL', 'http://localhost:8080').rstrip('/') + "/login.html"
         return redirect(f"{frontend_login_url}?oidc_error=token_missing")
 
-    token_id_claims = token_data.get('userinfo')
-    if not token_id_claims:
-        logger.error("[OIDC_HANDLER] OIDC callback: Failed to retrieve token userinfo.")
-        frontend_login_url = os.environ.get('FRONTEND_URL', 'http://localhost:8080').rstrip('/') + "/login.html"
-        return redirect(f"{frontend_login_url}?oidc_error=userinfo_missing")
-
-    try:
-        userinfo = client.userinfo(token=token_data)
-    except Exception as e:
-        logger.error(f"[OIDC_HANDLER] OIDC callback error fetching userinfo: {e}")
-        frontend_login_url = os.environ.get('FRONTEND_URL', 'http://localhost:8080').rstrip('/') + "/login.html"
-        return redirect(f"{frontend_login_url}?oidc_error=userinfo_fetch_failed")
+    userinfo = token_data.get('userinfo')
+    if not userinfo:
+        try:
+            userinfo = client.userinfo(token=token_data)
+        except Exception as e:
+            logger.error(f"[OIDC_HANDLER] OIDC callback error fetching userinfo: {e}")
+            frontend_login_url = os.environ.get('FRONTEND_URL', 'http://localhost:8080').rstrip('/') + "/login.html"
+            return redirect(f"{frontend_login_url}?oidc_error=userinfo_fetch_failed")
             
     if not userinfo:
         logger.error("[OIDC_HANDLER] OIDC callback: Failed to retrieve userinfo.")
         frontend_login_url = os.environ.get('FRONTEND_URL', 'http://localhost:8080').rstrip('/') + "/login.html"
         return redirect(f"{frontend_login_url}?oidc_error=userinfo_missing")
 
-    oidc_subject = token_id_claims.get('sub')
-    oidc_issuer = token_id_claims.get('iss')
+    oidc_subject = userinfo.get('sub')
+    oidc_issuer = userinfo.get('iss') 
 
     if not oidc_subject:
-        logger.error("[OIDC_HANDLER] OIDC callback: 'sub' (subject) missing in token userinfo.")
+        logger.error("[OIDC_HANDLER] OIDC callback: 'sub' (subject) missing in userinfo.")
         frontend_login_url = os.environ.get('FRONTEND_URL', 'http://localhost:8080').rstrip('/') + "/login.html"
         return redirect(f"{frontend_login_url}?oidc_error=subject_missing")
-
-    email = token_id_claims.get('email') or userinfo.get('email')
-
-    first_name = token_id_claims.get('given_name') or userinfo.get('given_name', '')
-    last_name = token_id_claims.get('family_name') or userinfo.get('family_name', '')
-
-    if not first_name and not last_name:
-        first_name = token_id_claims.get('name') or userinfo.get('name', '')
-
-    user_groups = token_id_claims.get('groups') or userinfo.get('groups') or []
 
     conn = None
     try:
         conn = get_db_connection()
         with conn.cursor() as cur:
             # Check for existing OIDC user
-            cur.execute("SELECT id, username, email, first_name, last_name, is_admin FROM users WHERE oidc_sub = %s AND oidc_issuer = %s AND is_active = TRUE",
+            cur.execute("SELECT id, username, email, is_admin FROM users WHERE oidc_sub = %s AND oidc_issuer = %s AND is_active = TRUE", 
                         (oidc_subject, oidc_issuer))
             user_db_data = cur.fetchone()
             
             user_id = None
             is_new_user = False
 
-            admin_oidc_group = os.environ.get('OIDC_ADMIN_GROUP')
-            if not admin_oidc_group:
-                cur.execute("SELECT value FROM site_settings WHERE key = 'admin_oidc_group'")
-                result = cur.fetchone()
-                if result:
-                    admin_oidc_group = result[0]
-
             if user_db_data:
                 user_id = user_db_data[0]
                 logger.info(f"[OIDC_HANDLER] Existing OIDC user found with ID {user_id} for sub {oidc_subject}")
-
-                # Update any changed user info
-                if email and email != user_db_data[2]:
-                    cur.execute('UPDATE users SET email = %s WHERE id = %s', (email, user_id))
-                    logger.info(f"[OIDC_HANDLER] Updated email for OIDC user ID {user_id} to {email}")
-                if first_name and first_name != user_db_data[3]:
-                    cur.execute('UPDATE users SET first_name = %s WHERE id = %s', (first_name, user_id))
-                    logger.info(f"[OIDC_HANDLER] Updated first name for OIDC user ID {user_id} to {first_name}")
-                if last_name and last_name != user_db_data[4]:
-                    cur.execute('UPDATE users SET last_name = %s WHERE id = %s', (last_name, user_id))
-                    logger.info(f"[OIDC_HANDLER] Updated last name for OIDC user ID {user_id} to {last_name}")
-                if admin_oidc_group:
-                    is_admin = admin_oidc_group in user_groups
-                    if is_admin != user_db_data[5]:
-                        cur.execute('UPDATE users SET is_admin = %s WHERE id = %s', (is_admin, user_id))
-                        logger.info(f"[OIDC_HANDLER] Updated admin status for OIDC user ID {user_id} to {is_admin} based on group membership.")
             else:
                 # Check if registration is enabled before creating new users
                 cur.execute("""
@@ -241,6 +136,7 @@ def oidc_callback_route():
                 
                 # New user provisioning
                 is_new_user = True
+                email = userinfo.get('email')
                 if not email:
                     logger.error("[OIDC_HANDLER] 'email' missing in userinfo for new OIDC user.")
                     frontend_login_url = os.environ.get('FRONTEND_URL', 'http://localhost:8080').rstrip('/') + "/login.html"
@@ -253,39 +149,36 @@ def oidc_callback_route():
                     frontend_login_url = os.environ.get('FRONTEND_URL', 'http://localhost:8080').rstrip('/') + "/login.html"
                     return redirect(f"{frontend_login_url}?oidc_error=email_conflict_local_account")
 
-                username = token_id_claims.get('preferred_username') or userinfo.get('preferred_username') or \
-                            token_id_claims.get('name') or userinfo.get('name') or \
-                            email.split('@')[0]
+                username = userinfo.get('preferred_username') or userinfo.get('name') or email.split('@')[0]
                 # Ensure username uniqueness
                 cur.execute("SELECT id FROM users WHERE username = %s", (username,))
                 if cur.fetchone():
                     username = f"{username}_{str(uuid.uuid4())[:4]}" # Short random suffix
 
+                first_name = userinfo.get('given_name', '')
+                last_name = userinfo.get('family_name', '')
+                
                 cur.execute('SELECT COUNT(*) FROM users')
                 user_count = cur.fetchone()[0]
+                
+                # Determine admin status: first user OR email matches configured admin email
+                is_first_user_admin = (user_count == 0)
+                
+                admin_email_from_env = current_app.config.get('ADMIN_EMAIL', '').lower()
+                oidc_user_email_lower = email.lower() if email else ''
+                
+                is_email_match_admin = False
+                if admin_email_from_env and oidc_user_email_lower == admin_email_from_env:
+                    is_email_match_admin = True
+                    logger.info(f"[OIDC_HANDLER] New OIDC user email {oidc_user_email_lower} matches ADMIN_EMAIL {admin_email_from_env}.")
 
-                if admin_oidc_group:
-                    is_admin = admin_oidc_group in user_groups
-                    if is_admin:
-                        logger.info(f"[OIDC_HANDLER] New OIDC user {username} granted admin via OIDC group '{admin_oidc_group}'.")
-                else:
-                    # Determine admin status: first user OR email matches configured admin email
-                    is_first_user_admin = (user_count == 0)
+                is_admin = is_first_user_admin or is_email_match_admin
+                
+                if is_admin and not is_first_user_admin:
+                    logger.info(f"[OIDC_HANDLER] Granting admin rights to new OIDC user {oidc_user_email_lower} based on email match.")
+                elif is_first_user_admin:
+                    logger.info(f"[OIDC_HANDLER] Granting admin rights to new OIDC user {oidc_user_email_lower} as they are the first user.")
 
-                    admin_email_from_env = current_app.config.get('ADMIN_EMAIL', '').lower()
-                    oidc_user_email_lower = email.lower() if email else ''
-
-                    is_email_match_admin = False
-                    if admin_email_from_env and oidc_user_email_lower == admin_email_from_env:
-                        is_email_match_admin = True
-                        logger.info(f"[OIDC_HANDLER] New OIDC user email {oidc_user_email_lower} matches ADMIN_EMAIL {admin_email_from_env}.")
-
-                    is_admin = is_first_user_admin or is_email_match_admin
-
-                    if is_admin and not is_first_user_admin:
-                        logger.info(f"[OIDC_HANDLER] Granting admin rights to new OIDC user {oidc_user_email_lower} based on email match.")
-                    elif is_first_user_admin:
-                        logger.info(f"[OIDC_HANDLER] Granting admin rights to new OIDC user {oidc_user_email_lower} as they are the first user.")
 
                 # Insert new OIDC user
                 cur.execute(
@@ -300,14 +193,14 @@ def oidc_callback_route():
                 app_session_token = generate_token(user_id) # Generate app-specific JWT
                 
                 # Update last login timestamp
-                cur.execute('UPDATE users SET last_login = %s WHERE id = %s', (datetime.now(UTC), user_id))
+                cur.execute('UPDATE users SET last_login = %s WHERE id = %s', (datetime.utcnow(), user_id))
                 
                 # Log OIDC session in user_sessions table
                 ip_address = request.remote_addr
                 user_agent = request.headers.get('User-Agent', '')
                 # Use a different UUID for session_token in DB if needed, or re-use app_session_token if appropriate for your session model
                 db_session_token = str(uuid.uuid4()) 
-                expires_at = datetime.now(UTC) + current_app.config['JWT_EXPIRATION_DELTA']
+                expires_at = datetime.utcnow() + current_app.config['JWT_EXPIRATION_DELTA']
                 
                 cur.execute(
                     'INSERT INTO user_sessions (user_id, session_token, expires_at, ip_address, user_agent, login_method) VALUES (%s, %s, %s, %s, %s, %s)',

@@ -131,12 +131,11 @@
                             </a>
                         </div>
                         <div class="user-menu-item">
-                            <a href="about.html" style="text-decoration: none; color: inherit;">
-                                <i class="fas fa-info-circle"></i> <span data-i18n="nav.about">About</span>
-                            </a>
+                            <i class="fas fa-info-circle"></i>
+                            <a href="about.html" style="text-decoration: none; color: inherit;" data-i18n="nav.about">About</a>
                         </div>
                         <div class="user-menu-item" id="logoutMenuItem">
-                            <span><i class="fas fa-sign-out-alt"></i> <span data-i18n="auth.logout">Logout</span></span>
+                            <i class="fas fa-sign-out-alt"></i> <span data-i18n="auth.logout">Logout</span>
                         </div>
                     </div>
                 </div>
@@ -415,7 +414,7 @@
             </div>
             
             <!-- Security -->
-            <div id="securitySection" class="card">
+            <div class="card">
                 <div class="card-header">
                     <h3 data-i18n="settings.security">Security</h3>
                 </div>
@@ -633,12 +632,6 @@
                                 <label for="oidcScope" data-i18n="settings.scope">Scope</label>
                                 <input type="text" id="oidcScope" class="form-control" placeholder="e.g., openid email profile">
                                 <small class="text-muted" data-i18n="settings.scope_desc">Space-separated OIDC scopes.</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="oidcAdminGroup" data-i18n="settings.oidc_admin_group">OIDC Admin Group</label>
-                                <input type="text" id="oidcAdminGroup" class="form-control" />
-                                <small class="text-muted" data-i18n="settings.oidc_admin_desc">Group that is given admin privileges. Leave blank to disable.</small>
                             </div>
                             
                             <button type="button" id="saveOidcSettingsBtn" class="btn btn-primary" data-i18n="settings.save_oidc_settings">Save OIDC Settings</button>

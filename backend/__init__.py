@@ -108,6 +108,71 @@ def ensure_owner_exists():
         if conn:
             release_db_connection(conn)
 
+def init_oidc_client(current_app_instance, db_conn_func, db_release_func):
+    """Function to initialize OIDC client based on settings"""
+    from .extensions import oauth
+    
+    logger.info("[FACTORY OIDC_INIT] Attempting to initialize OIDC client...")
+    conn = None
+    oidc_db_settings = {}
+    try:
+        conn = db_conn_func()
+        if conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT key, value FROM site_settings WHERE key LIKE 'oidc_%%'")
+                for row in cur.fetchall():
+                    oidc_db_settings[row[0]] = row[1]
+                logger.info(f"[FACTORY OIDC_INIT] Fetched OIDC settings from DB: {oidc_db_settings}")
+        else:
+            logger.error("[FACTORY OIDC_INIT] Database connection failed, cannot fetch OIDC settings from DB.")
+    except Exception as e:
+        logger.error(f"[FACTORY OIDC_INIT] Error fetching OIDC settings from DB: {e}. Proceeding without DB settings.")
+    finally:
+        if conn:
+            db_release_func(conn)
+
+    # Priority: Environment Variable > Database Setting > Hardcoded Default
+    # Check Environment Variable first for OIDC enabled
+    oidc_enabled_from_env = os.environ.get('OIDC_ENABLED')
+    if oidc_enabled_from_env is not None:
+        # If the environment variable is set (even to 'false'), it takes highest priority
+        is_enabled = oidc_enabled_from_env.lower() == 'true'
+    else:
+        # If no environment variable, fall back to the database setting
+        oidc_enabled_from_db = oidc_db_settings.get('oidc_enabled', 'false')  # Default to 'false' if not in DB
+        is_enabled = oidc_enabled_from_db.lower() == 'true'
+    
+    current_app_instance.config['OIDC_ENABLED'] = is_enabled
+    logger.info(f"[FACTORY OIDC_INIT] OIDC enabled status: {is_enabled}")
+
+    if is_enabled:
+        # Apply same precedence logic to all OIDC settings
+        provider_name = os.environ.get('OIDC_PROVIDER_NAME', oidc_db_settings.get('oidc_provider_name', 'oidc'))
+        client_id = os.environ.get('OIDC_CLIENT_ID', oidc_db_settings.get('oidc_client_id', ''))
+        client_secret = os.environ.get('OIDC_CLIENT_SECRET', oidc_db_settings.get('oidc_client_secret', ''))
+        issuer_url = os.environ.get('OIDC_ISSUER_URL', oidc_db_settings.get('oidc_issuer_url', ''))
+        scope = os.environ.get('OIDC_SCOPE', oidc_db_settings.get('oidc_scope', 'openid email profile'))
+
+        current_app_instance.config['OIDC_PROVIDER_NAME'] = provider_name
+
+        if client_id and client_secret and issuer_url:
+            logger.info(f"[FACTORY OIDC_INIT] Registering OIDC client '{provider_name}' with Authlib.")
+            oauth.register(
+                name=provider_name,
+                client_id=client_id,
+                client_secret=client_secret,
+                server_metadata_url=f"{issuer_url.rstrip('/')}/.well-known/openid-configuration",
+                client_kwargs={'scope': scope},
+                override=True
+            )
+            logger.info(f"[FACTORY OIDC_INIT] OIDC client '{provider_name}' registered successfully.")
+        else:
+            logger.warning("[FACTORY OIDC_INIT] OIDC is enabled, but critical parameters are missing. OIDC login will be unavailable.")
+            current_app_instance.config['OIDC_ENABLED'] = False
+    else:
+        current_app_instance.config['OIDC_PROVIDER_NAME'] = None
+        logger.info("[FACTORY OIDC_INIT] OIDC is disabled.")
+
 def create_app(config_name=None):
     """Create and configure an instance of the Flask application."""
     # Configure logging FIRST
@@ -183,11 +248,9 @@ def create_app(config_name=None):
         # Initialize OIDC client after extensions and blueprints
         try:
             from .db_handler import get_db_connection, release_db_connection
-            from .oidc_handler import init_oidc_client
             init_oidc_client(app, get_db_connection, release_db_connection)
         except ImportError:
             from db_handler import get_db_connection, release_db_connection
-            from oidc_handler import init_oidc_client
             init_oidc_client(app, get_db_connection, release_db_connection)
         
         # Ensure an owner exists on startup

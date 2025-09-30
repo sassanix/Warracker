@@ -197,16 +197,12 @@
   }
 
   header .user-menu-item {
+    padding: 8px 15px !important;
     cursor: pointer !important;
     transition: background-color 0.3s !important;
     display: flex !important;
     align-items: center !important;
     color: var(--text-color) !important;
-  }
-
-  header .user-menu-item > :first-child {
-    padding: 8px 15px !important;
-    width: 100% !important;
   }
 
   header .user-menu-item:hover {
@@ -1155,4 +1151,4 @@
     font-size: 0.75rem !important;
     padding: 2px 5px !important;
   }
-}
+} 

@@ -333,7 +333,6 @@ header .container {
   transition: color 0.3s ease;
   box-sizing: border-box;
   width: 25%; /* Ensure each tab is exactly 25% width */
-  white-space: nowrap;
 }
 
 .form-tab:hover {

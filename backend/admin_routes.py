@@ -363,7 +363,6 @@ def get_site_settings():
                 # 'oidc_client_secret': '', # Not returned
                 'oidc_issuer_url': '',
                 'oidc_scope': 'openid email profile',
-                'oidc_admin_group': '',
                 # Apprise default settings
                 'apprise_enabled': 'false',
                 'apprise_urls': '',

@@ -1,7 +1,7 @@
 # backend/auth_routes.py
 # Updated: 2025-01-24 - Fixed API endpoints for notifications
 from flask import Blueprint, request, jsonify, current_app
-from datetime import datetime, UTC, timedelta
+from datetime import datetime, timedelta
 import uuid
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -117,13 +117,13 @@ def register():
             token = generate_token(user_id)
             
             # Update last login
-            cur.execute('UPDATE users SET last_login = %s WHERE id = %s', (datetime.now(UTC), user_id))
+            cur.execute('UPDATE users SET last_login = %s WHERE id = %s', (datetime.utcnow(), user_id))
             
             # Store session info
             ip_address = request.remote_addr
             user_agent = request.headers.get('User-Agent', '')
             session_token = str(uuid.uuid4())
-            expires_at = datetime.now(UTC) + current_app.config['JWT_EXPIRATION_DELTA']
+            expires_at = datetime.utcnow() + current_app.config['JWT_EXPIRATION_DELTA']
             
             cur.execute(
                 'INSERT INTO user_sessions (user_id, session_token, expires_at, ip_address, user_agent, login_method) VALUES (%s, %s, %s, %s, %s, %s)',
@@ -182,13 +182,13 @@ def login():
             token = generate_token(user_id)
             
             # Update last login
-            cur.execute('UPDATE users SET last_login = %s WHERE id = %s', (datetime.now(UTC), user_id))
+            cur.execute('UPDATE users SET last_login = %s WHERE id = %s', (datetime.utcnow(), user_id))
             
             # Store session info
             ip_address = request.remote_addr
             user_agent = request.headers.get('User-Agent', '')
             session_token = str(uuid.uuid4())
-            expires_at = datetime.now(UTC) + current_app.config['JWT_EXPIRATION_DELTA']
+            expires_at = datetime.utcnow() + current_app.config['JWT_EXPIRATION_DELTA']
             
             cur.execute(
                 'INSERT INTO user_sessions (user_id, session_token, expires_at, ip_address, user_agent, login_method) VALUES (%s, %s, %s, %s, %s, %s)',
@@ -204,8 +204,7 @@ def login():
                     'id': user_id,
                     'username': user[1],
                     'email': user[2],
-                    'is_admin': user[5],
-                    'oidc_managed': False
+                    'is_admin': user[5]  # Include is_admin flag
                 }
             }), 200
     except Exception as e:
@@ -259,8 +258,7 @@ def validate_token():
                 'username': request.user['username'],
                 'email': request.user['email'],
                 'is_admin': request.user['is_admin'],
-                'is_owner': request.user.get('is_owner', False),
-                'oidc_managed': request.user['oidc_managed']
+                'is_owner': request.user.get('is_owner', False)
             },
             'message': 'Token is valid'
         }), 200
@@ -284,12 +282,12 @@ def get_user():
             # Try to get user with is_owner column, fall back to without it if column doesn't exist
             try:
                 cur.execute(
-                    'SELECT id, username, email, first_name, last_name, is_admin, is_owner, oidc_sub FROM users WHERE id = %s',
+                    'SELECT id, username, email, first_name, last_name, is_admin, is_owner FROM users WHERE id = %s',
                     (user_id,)
                 )
                 user_data = cur.fetchone()
                 has_owner_column = True
-                columns = ['id', 'username', 'email', 'first_name', 'last_name', 'is_admin', 'is_owner', 'oidc_managed']
+                columns = ['id', 'username', 'email', 'first_name', 'last_name', 'is_admin', 'is_owner']
             except Exception as e:
                 # If the query fails (likely because is_owner column doesn't exist), rollback and try again
                 current_app.logger.warning(f"Failed to query with is_owner column in get_user, falling back: {e}")
@@ -300,7 +298,7 @@ def get_user():
                 )
                 user_data = cur.fetchone()
                 has_owner_column = False
-                columns = ['id', 'username', 'email', 'first_name', 'last_name', 'is_admin', 'oidc_managed']
+                columns = ['id', 'username', 'email', 'first_name', 'last_name', 'is_admin']
         # --- END DATABASE QUERY ---
 
         if not user_data:
@@ -312,9 +310,6 @@ def get_user():
         # Add is_owner field if it wasn't included in the query
         if not has_owner_column:
             user_info['is_owner'] = False
-
-        # Turn oidc_sub into a boolean
-        user_info['oidc_managed'] = user_info['oidc_managed'] is not None
 
         # Return the full user information
         return jsonify(user_info), 200
@@ -352,7 +347,7 @@ def request_password_reset():
             
             # Generate reset token
             reset_token = str(uuid.uuid4())
-            expires_at = datetime.now(UTC) + timedelta(hours=24)
+            expires_at = datetime.utcnow() + timedelta(hours=24)
             
             # Delete any existing tokens for this user
             cur.execute('DELETE FROM password_reset_tokens WHERE user_id = %s', (user_id,))
@@ -661,7 +656,7 @@ def reset_password():
             cur.execute('SELECT user_id, expires_at FROM password_reset_tokens WHERE token = %s', (token,))
             token_info = cur.fetchone()
             
-            if not token_info or token_info[1] < datetime.now(UTC):
+            if not token_info or token_info[1] < datetime.utcnow():
                 return jsonify({'message': 'Invalid or expired token!'}), 400
             
             user_id = token_info[0]
@@ -750,8 +745,6 @@ def send_password_reset_email(recipient_email, reset_link):
         smtp_port = int(os.environ.get('SMTP_PORT', 1025))
         smtp_username = os.environ.get('SMTP_USERNAME')
         smtp_password = os.environ.get('SMTP_PASSWORD')
-        if os.environ.get('SMTP_PASSWORD_FILE'):
-            smtp_password = open(os.environ.get('SMTP_PASSWORD_FILE'), 'r').read().strip()
         smtp_use_tls = os.environ.get('SMTP_USE_TLS', 'true').lower() == 'true'
         smtp_use_ssl = os.environ.get('SMTP_USE_SSL', 'false').lower() == 'true'
         sender_email = os.environ.get('SMTP_SENDER_EMAIL', 'noreply@warracker.com')

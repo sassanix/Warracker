@@ -41,8 +41,8 @@ def serve_file(filename):
             
         # Remove 'uploads/' prefix for send_from_directory
         file_path = filename[8:] if filename.startswith('uploads/') else filename
-
-        return send_from_directory(current_app.config['UPLOAD_FOLDER'], file_path)
+        
+        return send_from_directory('/data/uploads', file_path)
     except Exception as e:
         logger.error(f"Error serving file {filename}: {e}")
         return jsonify({"message": "Error accessing file"}), 500
@@ -121,23 +121,21 @@ def secure_file_access(filename):
             if not authorized:
                 logger.warning(f"[SECURE_FILE] Unauthorized file access attempt: '{filename}' (repr: {repr(filename)}) by user {user_id}. DB results count: {len(results) if results else 'None'}")
                 return jsonify({"message": "You are not authorized to access this file"}), 403
-
-            upload_dir = current_app.config['UPLOAD_FOLDER']
             
-            logger.info(f"[SECURE_FILE] User {user_id} authorized for file '{filename}'. Attempting to serve from {upload_dir}.")
+            logger.info(f"[SECURE_FILE] User {user_id} authorized for file '{filename}'. Attempting to serve from /data/uploads.")
             
             # Construct the full file path
-            target_file_path_for_send = os.path.join(upload_dir, filename)
+            target_file_path_for_send = os.path.join('/data/uploads', filename)
             logger.info(f"[SECURE_FILE] Path for verification: '{target_file_path_for_send}' (repr: {repr(target_file_path_for_send)})")
             
             # Enhanced file existence and readability checks
             if not os.path.exists(target_file_path_for_send):
                 logger.error(f"[SECURE_FILE] File '{target_file_path_for_send}' does not exist")
                 try:
-                    dir_contents = os.listdir(upload_dir)
-                    logger.info(f"[SECURE_FILE] Contents of {upload_dir}: {dir_contents}")
+                    dir_contents = os.listdir('/data/uploads')
+                    logger.info(f"[SECURE_FILE] Contents of /data/uploads: {dir_contents}")
                 except Exception as list_err:
-                    logger.error(f"[SECURE_FILE] Error listing {upload_dir}: {list_err}")
+                    logger.error(f"[SECURE_FILE] Error listing /data/uploads: {list_err}")
                 return jsonify({"message": "File not found"}), 404
             
             if not os.path.isfile(target_file_path_for_send):

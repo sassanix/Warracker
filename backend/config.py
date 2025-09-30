@@ -5,28 +5,11 @@ from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
-def get_try_create_secret():
-    secret = os.environ.get('SECRET_KEY')
-    if not secret:
-        secret_file = 'secret_key'
-        if os.path.exists(secret_file):
-            secret = open(secret_file, 'r').read().strip()
-        else:
-            try:
-                import base64
-                secret = base64.b64encode(os.urandom(32)).decode('ascii')
-                with open(secret_file, 'w') as f:
-                    f.write(secret)
-                logger.info(f"Generated new SECRET_KEY and saved to {secret_file}")
-            except Exception:
-                secret = 'your_default_secret_key_please_change_in_prod'
-    return secret
-
 class Config:
     """Base configuration class."""
     
     # Flask Core Configuration
-    SECRET_KEY = get_try_create_secret()
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'your_default_secret_key_please_change_in_prod')
     JWT_EXPIRATION_DELTA = timedelta(hours=int(os.environ.get('JWT_EXPIRATION_HOURS', '24')))
     
     # Security Warning for Default Secret Key
@@ -44,7 +27,7 @@ class Config:
     DB_ADMIN_PASSWORD = os.environ.get('DB_ADMIN_PASSWORD', 'change_this_password_in_production')
     
     # File Upload Configuration
-    UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', '/data/uploads')
+    UPLOAD_FOLDER = '/data/uploads'
     DEFAULT_MAX_UPLOAD_MB = 32
     
     @staticmethod
@@ -85,13 +68,6 @@ class Config:
     def init_app(app):
         """Initialize configuration-specific settings."""
         Config._check_secret_key()
-
-        if not os.path.exists(Config.UPLOAD_FOLDER):
-            try:
-                os.makedirs(Config.UPLOAD_FOLDER)
-                logger.info(f"Created upload folder at {Config.UPLOAD_FOLDER}")
-            except Exception as e:
-                logger.error(f"Failed to create upload folder at {Config.UPLOAD_FOLDER}: {e}")
         
         # Set upload configuration
         max_upload_mb = Config._get_max_upload_mb()

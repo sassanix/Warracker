@@ -146,15 +146,11 @@ header .container {
 }
 
 .user-menu-item {
+    padding: 8px 15px !important;
     cursor: pointer !important;
     transition: background-color 0.3s !important;
     display: flex !important;
     align-items: center !important;
-}
-
-.user-menu-item > :first-child {
-    padding: 8px 15px !important;
-    width: 100% !important;
 }
 
 .user-menu-item:hover {
