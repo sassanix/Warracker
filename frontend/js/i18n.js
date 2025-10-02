@@ -7,9 +7,9 @@
 window.i18n = {};
 
 // Supported languages
-const SUPPORTED_LANGUAGES = ['en', 'fr', 'es', 'de', 'it', 'cs', 'nl', 'hi', 'fa', 'ar', 'ru', 'uk', 'zh_CN', 'zh_HK', 'ja', 'pt', 'ko'];
+const SUPPORTED_LANGUAGES = ['en', 'he', 'fr', 'es', 'de', 'it', 'cs', 'nl', 'hi', 'fa', 'ar', 'ru', 'uk', 'zh_CN', 'zh_HK', 'ja', 'pt', 'ko'];
 const DEFAULT_LANGUAGE = 'en';
-const RTL_LANGUAGES = ['ar', 'fa']; // Arabic and Persian are RTL languages
+const RTL_LANGUAGES = ['he', 'ar', 'fa']; // Hebrew, Arabic and Persian are RTL languages
 
 /**
  * Initialize i18next with configuration
