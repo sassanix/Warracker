@@ -11,7 +11,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Supported languages
-SUPPORTED_LANGUAGES = ['en', 'fr', 'es', 'de', 'it', 'cs', 'nl', 'hi', 'fa', 'ar', 'ru', 'uk', 'zh_CN', 'zh_HK', 'ja', 'pt', 'ko']
+SUPPORTED_LANGUAGES = ['en', 'he','fr', 'es', 'de', 'it', 'cs', 'nl', 'hi', 'fa', 'ar', 'ru', 'uk', 'zh_CN', 'zh_HK', 'ja', 'pt', 'ko']
 DEFAULT_LANGUAGE = 'en'
 
 # Global babel instance
@@ -24,6 +24,7 @@ def init_babel(app):
     # Configure Babel
     app.config['LANGUAGES'] = {
         'en': 'English',
+        'he': 'Hebrew',        
         'fr': 'Français',
         'es': 'Español',
         'de': 'Deutsch',
@@ -32,7 +33,7 @@ def init_babel(app):
         'nl': 'Nederlands',
         'hi': 'हिन्दी',
         'fa': 'فارسی',
-        'ar': 'Hebrew',
+        'ar': 'العربية',
         'ru': 'Русский',
         'uk': 'Українська',
         'zh_CN': '简体中文',
