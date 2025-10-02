@@ -1,0 +1,196 @@
+# Hebrew translations for Warracker
+# Copyright (C) 2025 Warracker
+# This file is distributed under the same license as the Warracker project.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Warracker 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-06-29 12:36-0300\n"
+"PO-Revision-Date: 2025-10-02 12:00+0300\n"
+"Last-Translator: \n"
+"Language: he\n"
+"Language-Team: Hebrew\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+# -----------------------
+# Backend error messages
+# -----------------------
+
+#: backend/localization.py:177
+msgid "Validation error"
+msgstr "שגיאת אימות"
+
+#: backend/localization.py:178
+msgid "Authentication error"
+msgstr "שגיאת הזדהות"
+
+#: backend/localization.py:179
+msgid "Authorization error"
+msgstr "שגיאת הרשאה"
+
+#: backend/localization.py:180
+msgid "Resource not found"
+msgstr "המשאב לא נמצא"
+
+#: backend/localization.py:181
+msgid "Internal server error"
+msgstr "שגיאת שרת פנימית"
+
+#: backend/localization.py:182
+msgid "File is too large"
+msgstr "הקובץ גדול מדי"
+
+#: backend/localization.py:183
+msgid "Invalid file type"
+msgstr "סוג קובץ לא נתמך"
+
+#: backend/localization.py:186
+msgid "An error occurred"
+msgstr "אירעה שגיאה"
+
+# -----------------------
+# Common UI strings
+# -----------------------
+
+msgid "Login"
+msgstr "התחברות"
+
+msgid "Logout"
+msgstr "התנתקות"
+
+msgid "Register"
+msgstr "הרשמה"
+
+msgid "Username"
+msgstr "שם משתמש"
+
+msgid "Password"
+msgstr "סיסמה"
+
+msgid "Email"
+msgstr "דוא\"ל"
+
+msgid "First Name"
+msgstr "שם פרטי"
+
+msgid "Last Name"
+msgstr "שם משפחה"
+
+msgid "Home"
+msgstr "בית"
+
+msgid "Settings"
+msgstr "הגדרות"
+
+msgid "Status"
+msgstr "סטטוס"
+
+msgid "About"
+msgstr "אודות"
+
+msgid "Save"
+msgstr "שמירה"
+
+msgid "Cancel"
+msgstr "ביטול"
+
+msgid "Delete"
+msgstr "מחיקה"
+
+msgid "Edit"
+msgstr "עריכה"
+
+msgid "Search"
+msgstr "חיפוש"
+
+msgid "Export"
+msgstr "ייצוא"
+
+msgid "Import"
+msgstr "ייבוא"
+
+msgid "Success"
+msgstr "הצלחה"
+
+msgid "Error"
+msgstr "שגיאה"
+
+msgid "Warning"
+msgstr "אזהרה"
+
+msgid "Loading..."
+msgstr "טוען..."
+
+msgid "Saved successfully"
+msgstr "נשמר בהצלחה"
+
+msgid "Deleted successfully"
+msgstr "נמחק בהצלחה"
+
+msgid "Invalid request"
+msgstr "בקשה לא תקינה"
+
+msgid "Unauthorized"
+msgstr "ללא הרשאה"
+
+msgid "Not found"
+msgstr "לא נמצא"
+
+msgid "Server error"
+msgstr "שגיאת שרת"
+
+# -----------------------
+# Warranties domain
+# -----------------------
+
+msgid "Warranties"
+msgstr "אחריות"
+
+msgid "Warranty"
+msgstr "אחריות"
+
+msgid "Product Name"
+msgstr "שם מוצר"
+
+msgid "Purchase Date"
+msgstr "תאריך רכישה"
+
+msgid "Warranty Duration"
+msgstr "משך האחריות"
+
+msgid "Expiration Date"
+msgstr "תאריך תפוגה"
+
+msgid "Vendor"
+msgstr "ספק"
+
+# Note: "Status" appears also above as a common string; duplicated for safety
+msgid "status"
+msgstr "סטטוס"
+
+msgid "Active"
+msgstr "פעילה"
+
+msgid "Expired"
+msgstr "פגה"
+
+msgid "Expiring Soon"
+msgstr "פגה בקרוב"
+
+msgid "Lifetime"
+msgstr "לכל החיים"
+
+# Backend message keys used via gettext on API responses
+msgid "warranty_added_successfully"
+msgstr "האחריות נוספה בהצלחה"
+
+# (Optional) common pluralizable examples if needed in templates:
+# msgid "%(num)d warranty"
+# msgid_plural "%(num)d warranties"
+# msgstr[0] "%(num)d אחריות"
+# msgstr[1] "%(num)d אחריות"
