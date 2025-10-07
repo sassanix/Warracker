@@ -11,3 +11,6 @@ scripts/
 *.pyc
 __pycache__/
 .env
+
+# Ingore volumes created at run
+postgres_data/
