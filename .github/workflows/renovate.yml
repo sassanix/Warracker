@@ -1,4 +1,4 @@
-
+name: "Renovate"
 on:
   workflow_dispatch:
     inputs:
