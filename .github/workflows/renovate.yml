@@ -19,8 +19,9 @@ jobs:
         uses: renovatebot/github-action@v43.0.15
         with:
           token: ${{ secrets.RENOVATE_TOKEN }}
-        env: 
+        env:
           LOG_LEVEL: ${{ inputs.DEBUG == 'true' && 'debug' || 'info' }}
+          RENOVATE_REPOSITORIES: "['${{ github.repository }}']"
           RENOVATE_COMMIT_MESSAGE_SUFFIX: '{{#unless groupName}}{{#if (equals updateType "digest")}}(from {{currentDigestShort}}){{else}}(from {{currentVersion}}){{/if}}{{/unless}}'
           RENOVATE_LABELS: "['dependencies']"
           RENOVATE_DEPENDENCY_DASHBOARD_LABELS: "['dependencies']"
