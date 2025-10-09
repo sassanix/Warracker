@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "packageRules": [
+    {
+      "matchDatasources": ["deb"],
+      "registryUrls": ["https://deb.debian.org/debian?suite=trixie&components=main,contrib,non-free&binaryArch=amd64"],
+      "groupName": "Debian packages"
+    },
+    {
+      "matchManagers": ["pip_requirements"],
+      "groupName": "Python packages"
+    },
+    {
+      "matchDatasources": ["github-actions"],
+      "groupName": "GitHub Actions"
+    },
+    {
+      "matchManagers": ["docker-compose"],
+      "pinDigests": false,
+      "enabled": false
+    }
+  ]
+}

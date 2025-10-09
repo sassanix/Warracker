@@ -1,14 +1,42 @@
+# syntax=docker/dockerfile:1.19.0@sha256:b6afd42430b15f2d2a4c5a02b919e98a525b785b1aaff16747d2f623364e39b6
 
-FROM python:3.13-slim-trixie AS builder
+# renovate: datasource=deb depName=build-essential
+ARG BUILD_ESSENTIAL_VERSION=12.12
+# renovate: datasource=deb depName=libpq-dev
+ARG LIBPQ_DEV_VERSION=17.6-0+deb13u1
+# renovate: datasource=deb depName=libcurl4-openssl-dev
+ARG LIBCURL4_OPENSSL_DEV_VERSION=8.14.1-2
+# renovate: datasource=deb depName=libssl-dev
+ARG LIBSSL_DEV_VERSION=3.5.1-1
+# renovate: datasource=deb depName=pkg-config
+ARG PKG_CONFIG_VERSION=1.8.1-4
+# renovate: datasource=deb depName=nginx
+ARG NGINX_VERSION=1.26.3-3+deb13u1
+# renovate: datasource=deb depName=supervisor
+ARG SUPERVISOR_VERSION=4.2.5-3
+# renovate: datasource=deb depName=postgresql-client
+ARG POSTGRESQL_CLIENT_VERSION=15.10-0+deb13u1
+# renovate: datasource=deb depName=gettext-base
+ARG GETTEXT_BASE_VERSION=0.23.1-2
+# renovate: datasource=deb depName=curl
+ARG CURL_VERSION=8.14.1-2
+# renovate: datasource=deb depName=ca-certificates
+ARG CA_CERTIFICATES_VERSION=20250419
+# renovate: datasource=deb depName=libpq5
+ARG LIBPQ5_VERSION=17.6-0+deb13u1
+# renovate: datasource=deb depName=libssl3t64
+ARG LIBSSL3T64_VERSION=3.5.1-1
+
+FROM python:3.13-slim-trixie@sha256:087a9f3b880e8b2c7688debb9df2a5106e060225ebd18c264d5f1d7a73399db0 AS builder
 
 # Install build tools (only in builder stage)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        build-essential \
-        libpq-dev \
-        libcurl4-openssl-dev \
-        libssl-dev \
-        pkg-config && \
+        build-essential=${BUILD_ESSENTIAL_VERSION} \
+        libpq-dev=${LIBPQ_DEV_VERSION} \
+        libcurl4-openssl-dev=${LIBCURL4_OPENSSL_DEV_VERSION} \
+        libssl-dev=${LIBSSL_DEV_VERSION} \
+        pkg-config=${PKG_CONFIG_VERSION} && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -20,7 +48,7 @@ COPY backend/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 
-FROM python:3.13-slim-trixie AS runtime
+FROM python:3.13-slim-trixie@sha256:087a9f3b880e8b2c7688debb9df2a5106e060225ebd18c264d5f1d7a73399db0 AS runtime
 
 # Metadata for final image
 LABEL org.opencontainers.image.source="https://github.com/sassanix/Warracker"
@@ -29,15 +57,15 @@ LABEL org.opencontainers.image.description="Warracker - Warranty Tracker"
 # Install runtime dependencies only
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        nginx \
-        supervisor \
-        postgresql-client \
-        gettext-base \
-        curl \
-        ca-certificates \
-        libpq5 \
-        libcurl4 \
-        libssl3 && \
+        nginx=${NGINX_VERSION} \
+        supervisor=${SUPERVISOR_VERSION} \
+        postgresql-client=${POSTGRESQL_CLIENT_VERSION} \
+        gettext-base=${GETTEXT_BASE_VERSION} \
+        curl=${CURL_VERSION} \
+        ca-certificates=${CA_CERTIFICATES_VERSION} \
+        libpq5=${LIBPQ5_VERSION} \
+        libcurl4=${LIBCURL4_OPENSSL_DEV_VERSION} \
+        libssl3t64=${LIBSSL3_VERSION} && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 

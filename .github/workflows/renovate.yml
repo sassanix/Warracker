@@ -1,0 +1,29 @@
+name: "Renovate"
+on:
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: "Enable debug logging"
+        type: boolean
+        required: false
+        default: false
+  schedule:
+    - cron: "0 0 * * 1" # Triggers the workflow every Monday at midnight
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@e2421a9a80287bba9997b41a15ea1e5585d96925 # v43.0.16
+        with:
+          token: ${{ secrets.RENOVATE_TOKEN }}
+        env:
+          LOG_LEVEL: ${{ inputs.DEBUG == 'true' && 'debug' || 'info' }}
+          RENOVATE_REPOSITORIES: "['${{ github.repository }}']"
+          RENOVATE_COMMIT_MESSAGE_SUFFIX: '{{#unless groupName}}{{#if (equals updateType "digest")}}(from {{currentDigestShort}}){{else}}(from {{currentVersion}}){{/if}}{{/unless}}'
+          RENOVATE_LABELS: "['dependencies']"
+          RENOVATE_DEPENDENCY_DASHBOARD_LABELS: "['dependencies']"
+          RENOVATE_EXTENDS: '["config:best-practices","mergeConfidence:all-badges",":pinVersions","security:openssf-scorecard",":prHourlyLimitNone",":separateMultipleMajorReleases",":configMigration","customManagers:dockerfileVersions"]'
+          RENOVATE_PLATFORM: "github"
