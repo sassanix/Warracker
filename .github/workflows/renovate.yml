@@ -25,5 +25,5 @@ jobs:
           RENOVATE_COMMIT_MESSAGE_SUFFIX: '{{#unless groupName}}{{#if (equals updateType "digest")}}(from {{currentDigestShort}}){{else}}(from {{currentVersion}}){{/if}}{{/unless}}'
           RENOVATE_LABELS: "['dependencies']"
           RENOVATE_DEPENDENCY_DASHBOARD_LABELS: "['dependencies']"
-          RENOVATE_EXTENDS: '["config:best-practices","mergeConfidence:all-badges",":pinVersions","security:openssf-scorecard",":prHourlyLimitNone",":separateMultipleMajorReleases",":configMigration"]'
+          RENOVATE_EXTENDS: '["config:best-practices","mergeConfidence:all-badges",":pinVersions","security:openssf-scorecard",":prHourlyLimitNone",":separateMultipleMajorReleases",":configMigration","customManagers:dockerfileVersions"]'
           RENOVATE_PLATFORM: "github"
