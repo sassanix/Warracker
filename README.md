@@ -185,6 +185,8 @@ To get the docker compose file with environemts and .env example for warracker a
 <details>
 <summary><strong>Product Information Entry Requirements for CSV import</strong></summary>
 
+Click on **Data** > **Import**
+
 | Field Name     | Format / Example                          | Required?                                              | Notes                                                                 |
 |----------------|-------------------------------------------|--------------------------------------------------------|-----------------------------------------------------------------------|
 | **ProductName** | Text                                       | ✅ Yes                                                  | Provide the name of the product.                                     |
