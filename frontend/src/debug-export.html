@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Debug - Warracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .debug-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .debug-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .warranty-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            padding: 10px;
+            background: #f9f9f9;
+        }
+        .warranty-item {
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+        .warranty-item:last-child {
+            border-bottom: none;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .filters-display {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Export Debug Tool</h1>
+        <p>This page helps debug warranty export issues by showing what data is loaded and what filters are applied.</p>
+        
+        <div class="debug-section">
+            <h3>Authentication Status</h3>
+            <div id="authStatus">Checking...</div>
+        </div>
+        
+        <div class="debug-section">
+            <h3>Loaded Warranties</h3>
+            <div>Total warranties loaded: <span id="totalWarranties">0</span></div>
+            <button class="btn" onclick="loadWarrantiesDebug()">Load Warranties</button>
+            <div id="warrantiesList" class="warranty-list"></div>
+        </div>
+        
+        <div class="debug-section">
+            <h3>Current Filters</h3>
+            <div id="currentFilters" class="filters-display">No filters loaded</div>
+        </div>
+        
+        <div class="debug-section">
+            <h3>Export Test</h3>
+            <button class="btn" onclick="testExport()">Test Export (with debug)</button>
+            <div id="exportResults"></div>
+        </div>
+        
+        <div class="debug-section">
+            <h3>Console Logs</h3>
+            <p>Check the browser console (F12) for detailed debug information when you click the buttons above.</p>
+        </div>
+    </div>
+
+    <!-- i18next Local Scripts -->
+    <script type="module" src="/js/services/authService.js"></script>
+    <script type="module" src="/js/services/apiService.js"></script>
+    <script src="/js/lib/i18next.min.js?v=20250119001"></script>
+    <script src="/js/lib/i18nextHttpBackend.min.js?v=20250119001"></script>
+    <script src="/js/lib/i18nextBrowserLanguageDetector.min.js?v=20250119001"></script>
+    
+    <!-- i18n Configuration -->
+    <script src="/js/i18n.js?v=20250119001"></script>
+    
+    <script>
+        let warranties = [];
+        let currentFilters = {
+            status: 'all',
+            tag: 'all',
+            search: '',
+            sortBy: 'expiration',
+            vendor: 'all',
+            warranty_type: 'all'
+        };
+
+        // Check authentication status
+        function checkAuth() {
+            const token = localStorage.getItem('auth_token');
+            const userInfo = localStorage.getItem('user_info');
+            
+            if (token && userInfo) {
+                document.getElementById('authStatus').innerHTML = `
+                    <span class="success">✓ Authenticated</span><br>
+                    Token: ${token.substring(0, 20)}...<br>
+                    User: ${JSON.parse(userInfo).username || 'Unknown'}
+                `;
+                return true;
+            } else {
+                document.getElementById('authStatus').innerHTML = '<span class="error">✗ Not authenticated</span>';
+                return false;
+            }
+        }
+
+        // Load warranties with debug info
+        async function loadWarrantiesDebug() {
+            if (!checkAuth()) {
+                alert('Please log in first');
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch('/api/warranties', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                warranties = Array.isArray(data) ? data : [];
+                
+                console.log('[DEBUG] Loaded warranties:', warranties);
+                
+                document.getElementById('totalWarranties').textContent = warranties.length;
+                
+                const listHtml = warranties.map(w => 
+                    `<div class="warranty-item">
+                        ID: ${w.id} | ${w.product_name} | Status: ${w.status || 'N/A'} | Vendor: ${w.vendor || 'N/A'}
+                    </div>`
+                ).join('');
+                
+                document.getElementById('warrantiesList').innerHTML = listHtml;
+                
+                // Update filters display
+                document.getElementById('currentFilters').textContent = JSON.stringify(currentFilters, null, 2);
+                
+            } catch (error) {
+                console.error('Error loading warranties:', error);
+                document.getElementById('warrantiesList').innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Test export with debug
+        function testExport() {
+            if (warranties.length === 0) {
+                alert('Please load warranties first');
+                return;
+            }
+
+            console.log('[EXPORT DEBUG] Starting export test');
+            console.log('[EXPORT DEBUG] Total warranties:', warranties.length);
+            console.log('[EXPORT DEBUG] Current filters:', currentFilters);
+            
+            let warrantiesToExport = [...warranties];
+            console.log('[EXPORT DEBUG] Initial warranties to export:', warrantiesToExport.length);
+            
+            // Apply filters (same logic as main app)
+            if (currentFilters.search) {
+                const searchTerm = currentFilters.search.toLowerCase();
+                console.log('[EXPORT DEBUG] Applying search filter:', searchTerm);
+                warrantiesToExport = warrantiesToExport.filter(warranty => {
+                    const productNameMatch = warranty.product_name && warranty.product_name.toLowerCase().includes(searchTerm);
+                    const tagMatch = warranty.tags && Array.isArray(warranty.tags) && 
+                        warranty.tags.some(tag => tag.name && tag.name.toLowerCase().includes(searchTerm));
+                    const vendorMatch = warranty.vendor && warranty.vendor.toLowerCase().includes(searchTerm);
+                    return productNameMatch || tagMatch || vendorMatch;
+                });
+                console.log('[EXPORT DEBUG] After search filter:', warrantiesToExport.length);
+            }
+            
+            if (currentFilters.status !== 'all') {
+                console.log('[EXPORT DEBUG] Applying status filter:', currentFilters.status);
+                warrantiesToExport = warrantiesToExport.filter(warranty => 
+                    warranty.status === currentFilters.status
+                );
+                console.log('[EXPORT DEBUG] After status filter:', warrantiesToExport.length);
+            }
+            
+            if (currentFilters.tag !== 'all') {
+                const tagId = parseInt(currentFilters.tag);
+                console.log('[EXPORT DEBUG] Applying tag filter:', tagId);
+                warrantiesToExport = warrantiesToExport.filter(warranty => 
+                    warranty.tags && Array.isArray(warranty.tags) &&
+                    warranty.tags.some(tag => tag.id === tagId)
+                );
+                console.log('[EXPORT DEBUG] After tag filter:', warrantiesToExport.length);
+            }
+            
+            if (currentFilters.vendor !== 'all') {
+                console.log('[EXPORT DEBUG] Applying vendor filter:', currentFilters.vendor);
+                warrantiesToExport = warrantiesToExport.filter(warranty => 
+                    (warranty.vendor || '').toLowerCase() === currentFilters.vendor.toLowerCase()
+                );
+                console.log('[EXPORT DEBUG] After vendor filter:', warrantiesToExport.length);
+            }
+            
+            if (currentFilters.warranty_type !== 'all') {
+                console.log('[EXPORT DEBUG] Applying warranty type filter:', currentFilters.warranty_type);
+                warrantiesToExport = warrantiesToExport.filter(warranty => 
+                    (warranty.warranty_type || '').toLowerCase() === currentFilters.warranty_type.toLowerCase()
+                );
+                console.log('[EXPORT DEBUG] After warranty type filter:', warrantiesToExport.length);
+            }
+            
+            console.log('[EXPORT DEBUG] Final warranties to export:', warrantiesToExport.length);
+            console.log('[EXPORT DEBUG] Warranty IDs being exported:', warrantiesToExport.map(w => w.id));
+            
+            document.getElementById('exportResults').innerHTML = `
+                <div class="success">Export test completed!</div>
+                <div>Total warranties loaded: ${warranties.length}</div>
+                <div>Warranties that would be exported: ${warrantiesToExport.length}</div>
+                <div>Check console for detailed logs</div>
+            `;
+        }
+
+        // Initialize
+        checkAuth();
+    </script>
+</body>
+</html>

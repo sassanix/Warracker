@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Basic Meta Tags -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="about.title">About - Warracker</title>
+
+    <!-- Favicons -->
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png?v=2">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png?v=2">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon-512x512.png">
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/style.css?v=20250119004"> <!-- Main stylesheet -->
+    <link rel="stylesheet" href="/styles.css?v=20250119001"> <!-- Additional styles -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"> <!-- Font Awesome -->
+    <link rel="stylesheet" href="/header-fix.css?v=20250119001"> <!-- Header specific styles -->
+    <!-- Mobile Header specific styles -->
+    <link rel="stylesheet" href="/mobile-header.css?v=20250119002">
+
+    <!-- Scripts loaded in head -->
+    <script src="/theme-loader.js?v=20250119001"></script> <!-- Apply theme early -->
+    <script type="module" src="/js/services/authService.js"></script>
+    <script type="module" src="/js/services/apiService.js"></script>
+    
+    
+    <script src="/script.js?v=20250119001" defer></script>
+    <!-- i18next Local Scripts -->
+    <script src="/js/lib/i18next.min.js?v=20250119001"></script>
+    <script src="/js/lib/i18nextHttpBackend.min.js?v=20250119001"></script>
+    <script src="/js/lib/i18nextBrowserLanguageDetector.min.js?v=20250119001"></script>
+    <!-- i18n initialization script -->
+    <script src="/js/i18n.js?v=20250119001"></script>
+
+    <style>
+        .about-hero {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color, #4dabf7));
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .about-hero h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .about-hero .version {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .about-hero .description {
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+            opacity: 0.95;
+            line-height: 1.6;
+        }
+
+        .about-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .about-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid var(--border-color);
+        }
+
+        .about-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .about-card h3 {
+            color: var(--primary-color);
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .about-card h3 i {
+            font-size: 1.2rem;
+        }
+
+        .about-card p {
+            color: var(--text-color);
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .social-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .social-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: var(--card-bg);
+            color: var(--text-color);
+            text-decoration: none;
+            border-radius: 8px;
+            border: 2px solid var(--border-color);
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .social-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .social-link.github {
+            border-color: #333;
+            color: #333;
+        }
+
+        .social-link.github:hover {
+            background: #333;
+            color: white;
+        }
+
+        .social-link.discord {
+            border-color: #5865f2;
+            color: #5865f2;
+        }
+
+        .social-link.discord:hover {
+            background: #5865f2;
+            color: white;
+        }
+
+        .social-link.license {
+            border-color: #28a745;
+            color: #28a745;
+        }
+
+        .social-link.license:hover {
+            background: #28a745;
+            color: white;
+        }
+
+        .social-link.issues {
+            border-color: #dc3545;
+            color: #dc3545;
+        }
+
+        .social-link.issues:hover {
+            background: #dc3545;
+            color: white;
+        }
+
+        .social-link.releases {
+            border-color: #17a2b8;
+            color: #17a2b8;
+        }
+
+        .social-link.releases:hover {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .social-link.reddit {
+            border-color: #FF4500;
+            color: #FF4500;
+        }
+
+        .social-link.reddit:hover {
+            background: #FF4500;
+            color: white;
+        }
+
+        .social-link i {
+            font-size: 1.1rem;
+        }
+
+        .update-status {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .update-status h4 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .coffee-section {
+            text-align: center;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 40px;
+            margin: 30px 0;
+            border: 2px dashed var(--border-color);
+        }
+
+        .coffee-section h3 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .coffee-section p {
+            color: var(--text-muted);
+            margin-bottom: 25px;
+            font-size: 1.1rem;
+        }
+
+        /* Dark mode adjustments */
+        [data-theme="dark"] .social-link.github {
+            border-color: #f0f6fc;
+            color: #f0f6fc;
+        }
+
+        [data-theme="dark"] .social-link.github:hover {
+            background: #f0f6fc;
+            color: #0d1117;
+        }
+
+        @media (max-width: 768px) {
+            .about-hero h1 {
+                font-size: 2.2rem;
+            }
+
+            .about-hero .version {
+                font-size: 1rem;
+            }
+
+            .about-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .social-links {
+                justify-content: center;
+            }
+
+            .social-link {
+                flex: 1;
+                justify-content: center;
+                min-width: 140px;
+            }
+        }
+    </style>
+
+</head>
+<body>
+    <!-- Standard Header (Copied from index.html) -->
+    <header>
+        <div class="container">
+            <div class="app-title">
+                <i class="fas fa-shield-alt"></i>
+                <h1><a href="index.html" style="color: inherit; text-decoration: none; cursor: pointer;">Warracker</a></h1>
+            </div>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">
+                    <i class="fas fa-home"></i> <span data-i18n="nav.home">Home</span>
+                </a>
+                <a href="status.html" class="nav-link">
+                    <i class="fas fa-chart-pie"></i> <span data-i18n="nav.status">Status</span>
+                </a>
+            </div>
+            <!-- Group for right-aligned elements -->
+            <div class="header-right-group">
+                <button class="mobile-menu-toggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
+                <div id="authContainer" class="auth-buttons">
+                    <a href="login.html" class="auth-btn login-btn">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                    <a href="register.html" class="auth-btn register-btn">
+                        <i class="fas fa-user-plus"></i> Register
+                    </a>
+                </div>
+                <div id="userMenu" class="user-menu" style="display: none;">
+                    <button id="userMenuBtn" class="user-btn">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="userDisplayName">User</span>
+                    </button>
+                    <div id="userMenuDropdown" class="user-menu-dropdown">
+                        <div class="user-info">
+                            <div id="userName" class="user-name">User Name</div>
+                            <div id="userEmail" class="user-email">user@example.com</div>
+                        </div>
+                        <div class="user-menu-item">
+                            <a href="settings-new.html" style="color: inherit; text-decoration: none; display: block;">
+                                <i class="fas fa-cog"></i> <span data-i18n="nav.settings">Settings</span>
+                            </a>
+                        </div>
+                        <div class="user-menu-item">
+                            <a href="about.html" style="text-decoration: none; color: inherit;">
+                                <i class="fas fa-info-circle"></i> <span data-i18n="nav.about">About</span>
+                            </a>
+                        </div>
+                        <div class="user-menu-item" id="logoutMenuItem">
+                            <span><i class="fas fa-sign-out-alt"></i> <span data-i18n="auth.logout">Logout</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- End header-right-group -->
+        </div>
+    </header>
+    <div class="mobile-menu-panel" id="mobileMenuPanel"></div>
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+
+    <!-- Main Content Area -->
+    <div class="container" style="padding: 0;"> 
+        <div class="main-content" style="display: block;"> 
+
+            <!-- Hero Section -->
+            <div class="about-hero">
+                <h1><i class="fas fa-shield-alt"></i> Warracker</h1>
+                <div class="version" id="versionDisplay" data-i18n="about.version">Version v1.0.3</div>
+                <p class="description" data-i18n="about.description">
+                    A comprehensive warranty management system designed to help you track, organize, and manage all your product warranties in one secure, user-friendly platform.
+                </p>
+            </div>
+
+            <!-- Update Status Card -->
+            <div class="update-status">
+                <h4><i class="fas fa-sync-alt"></i> <span data-i18n="about.update_status">Update Status</span></h4>
+                <p id="updateStatus" data-i18n="about.checking_updates">Checking for updates...</p>
+                <a id="updateLink" href="#" target="_blank" rel="noopener noreferrer" style="display: none; color: var(--primary-color); text-decoration: none;">
+                    <i class="fas fa-external-link-alt"></i> <span data-i18n="about.view_release_notes">View Release Notes</span>
+                </a>
+            </div>
+
+            <!-- Information Cards -->
+            <div class="about-cards">
+                <!-- Project Information -->
+                <div class="about-card">
+                    <h3><i class="fas fa-info-circle"></i> <span data-i18n="about.project_info">Project Information</span></h3>
+                    <p data-i18n="about.project_description">Warracker is an open-source warranty management system built with modern web technologies. It provides a secure and intuitive way to manage product warranties, track expiration dates, and organize important documents.</p>
+                    
+                    <div class="social-links">
+                        <a href="https://github.com/sassanix/Warracker" target="_blank" rel="noopener noreferrer" class="social-link github">
+                            <i class="fab fa-github"></i> <span data-i18n="about.github_repository">GitHub Repository</span>
+                        </a>
+                        <a href="https://github.com/sassanix/Warracker/releases" target="_blank" rel="noopener noreferrer" class="social-link releases">
+                            <i class="fas fa-tags"></i> <span data-i18n="about.releases">Releases</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Community & Support -->
+                <div class="about-card">
+                    <h3><i class="fas fa-users"></i> <span data-i18n="about.community_support">Community & Support</span></h3>
+                    <p data-i18n="about.community_description">Join our community for support, discussions, and updates. Report bugs, request features, or get help from other users and contributors.</p>
+                    
+                    <div class="social-links">
+                        <a href="https://discord.gg/PGxVS3U2Nw" target="_blank" rel="noopener noreferrer" class="social-link discord">
+                            <i class="fab fa-discord"></i> <span data-i18n="about.discord_community">Discord Community</span>
+                        </a>
+                        <a href="https://www.reddit.com/r/Warracker/" target="_blank" rel="noopener noreferrer" class="social-link reddit">
+                            <i class="fab fa-reddit-alien"></i> <span data-i18n="about.reddit_community">Reddit Community</span>
+                        </a>
+                        <a href="https://github.com/sassanix/Warracker/issues" target="_blank" rel="noopener noreferrer" class="social-link issues">
+                            <i class="fas fa-bug"></i> <span data-i18n="about.report_issues">Report Issues</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Developer Information -->
+                <div class="about-card">
+                    <h3><i class="fas fa-code"></i> <span data-i18n="about.developer_info">Developer Information</span></h3>
+                    <p data-i18n="about.developer_description">Warracker is developed and maintained by Sassanix. The project is open-source and welcomes contributions from the community.</p>
+                    
+                    <div class="social-links">
+                        <a href="https://github.com/sassanix" target="_blank" rel="noopener noreferrer" class="social-link github">
+                            <i class="fab fa-github"></i> <span data-i18n="about.sassanix">Sassanix</span>
+                        </a>
+                        <a href="https://github.com/sassanix/Warracker/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" class="social-link license">
+                            <i class="fas fa-balance-scale"></i> <span data-i18n="about.agpl_license">AGPL-3.0 License</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Support the Project -->
+            <div class="coffee-section">
+                <h3><i class="fas fa-coffee"></i> <span data-i18n="about.support_project">Support the Project</span></h3>
+                <p data-i18n="about.support_description">If you find Warracker useful, consider supporting its development!</p>
+                <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="sassanix" data-color="#FFDD00" data-emoji=""  data-font="Poppins" data-text="Buy me a coffee" data-outline-color="#000000" data-font-color="#000000" data-coffee-color="#ffffff" ></script>
+            </div>
+
+        </div> 
+    </div> 
+
+    <!-- Scripts loaded at the end of body -->
+    
+    
+    <!-- Version Checker -->
+    <script src="/version-checker.js?v=20251030001" defer></script> <!-- Version checker script -->
+    
+    <!-- Footer Width Fix -->
+    <script src="/footer-fix.js?v=20251024001"></script>
+    
+    <!-- Footer Content Manager -->
+    <script src="/footer-content.js?v=20250119001"></script>
+    
+    <!-- Powered by Warracker Footer -->
+    <footer class="warracker-footer" id="warrackerFooter">
+        <!-- Content will be dynamically generated by footer-content.js -->
+    </footer>
+
+    <!-- Explicitly call setupUIEventListeners for this page -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('About page: DOMContentLoaded triggered');
+            
+            // Update version display dynamically
+            const versionDisplay = document.getElementById('versionDisplay');
+            if (versionDisplay && window.i18next) {
+                const currentVersion = '1.0.3'; // This should match version-checker.js
+                versionDisplay.textContent = window.i18next.t('about.version') + ' v' + currentVersion;
+            }
+            
+            // Add safe loading functions for about page
+            window.showLoading = function() {
+                const loadingContainer = document.getElementById('loadingContainer');
+                if (loadingContainer && loadingContainer.classList) {
+                    loadingContainer.classList.add('active');
+                    console.log('About page: Loading spinner shown');
+                } else {
+                    console.log('About page: Loading container not found or unavailable');
+                }
+            };
+            
+            window.hideLoading = function() {
+                const loadingContainer = document.getElementById('loadingContainer');
+                if (loadingContainer && loadingContainer.classList) {
+                    loadingContainer.classList.remove('active');
+                    console.log('About page: Loading spinner hidden');
+                } else {
+                    console.log('About page: Loading container not found or unavailable');
+                }
+            };
+            
+            // Keep theme initialization here if needed for specific timing
+            if (typeof initializeTheme === 'function') {
+                console.log('About page: Calling initializeTheme');
+                initializeTheme(); // Call theme initialization if it exists
+            }
+
+            // Add specific debugging for user menu elements
+            setTimeout(() => {
+                const userMenuBtn = document.getElementById('userMenuBtn');
+                const userMenuDropdown = document.getElementById('userMenuDropdown');
+                
+                console.log('About page: User menu debug info:', {
+                    userMenuBtn: !!userMenuBtn,
+                    userMenuDropdown: !!userMenuDropdown,
+                    userMenuBtnId: userMenuBtn ? userMenuBtn.id : 'not found',
+                    dropdownId: userMenuDropdown ? userMenuDropdown.id : 'not found',
+                    authModuleAvailable: !!window.auth,
+                    isAuthenticated: window.auth ? window.auth.isAuthenticated() : 'auth not available'
+                });
+                
+                if (userMenuBtn) {
+                    console.log('About page: userMenuBtn element:', userMenuBtn);
+                    console.log('About page: userMenuBtn element found, proceeding with backup handler setup');
+                }
+                
+                // Add a backup user menu handler specifically for about page
+                if (userMenuBtn && userMenuDropdown) {
+                    console.log('About page: Setting up backup user menu handler');
+                    console.log('About page: Current dropdown classes:', userMenuDropdown.className);
+                    console.log('About page: Current dropdown active state:', userMenuDropdown.classList.contains('active'));
+                    
+                    // Test CSS rules by temporarily adding/removing active class
+                    console.log('About page: Testing CSS rules...');
+                    userMenuDropdown.classList.add('active');
+                    const testDisplayActive = window.getComputedStyle(userMenuDropdown).display;
+                    userMenuDropdown.classList.remove('active');
+                    const testDisplayInactive = window.getComputedStyle(userMenuDropdown).display;
+                    console.log('About page: CSS test results:', {
+                        displayWhenActive: testDisplayActive,
+                        displayWhenInactive: testDisplayInactive
+                    });
+                    
+                    // Remove any existing click listeners and add our own
+                    const newUserMenuBtn = userMenuBtn.cloneNode(true);
+                    userMenuBtn.parentNode.replaceChild(newUserMenuBtn, userMenuBtn);
+                    
+                    newUserMenuBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('About page: Backup user menu clicked');
+                        console.log('About page: Dropdown before toggle:', {
+                            classes: userMenuDropdown.className,
+                            hasActive: userMenuDropdown.classList.contains('active'),
+                            style: userMenuDropdown.style.display
+                        });
+                        
+                        const isCurrentlyActive = userMenuDropdown.classList.contains('active');
+                        
+                        if (isCurrentlyActive) {
+                            userMenuDropdown.classList.remove('active');
+                            console.log('About page: User menu closed');
+                        } else {
+                            userMenuDropdown.classList.add('active');
+                            console.log('About page: User menu opened');
+                        }
+                        
+                        // Double-check the state after toggle
+                        console.log('About page: Dropdown after toggle:', {
+                            classes: userMenuDropdown.className,
+                            hasActive: userMenuDropdown.classList.contains('active'),
+                            computedStyle: window.getComputedStyle(userMenuDropdown).display
+                        });
+                    });
+                    
+                    // Add global click listener to close menu when clicking outside
+                    const outsideClickHandler = (e) => {
+                        if (userMenuDropdown.classList.contains('active') &&
+                            !userMenuDropdown.contains(e.target) &&
+                            !newUserMenuBtn.contains(e.target)) {
+                            userMenuDropdown.classList.remove('active');
+                            console.log('About page: User menu closed by outside click');
+                        }
+                    };
+                    
+                    // Use setTimeout to ensure this listener is added after any others
+                    setTimeout(() => {
+                        document.addEventListener('click', outsideClickHandler);
+                        console.log('About page: Outside click handler added');
+                    }, 10);
+                    
+                    console.log('About page: Backup user menu handler set up successfully');
+                    
+                    // Add specific logout handler for the about page
+                    const logoutMenuItem = document.getElementById('logoutMenuItem');
+                    if (logoutMenuItem) {
+                        // Clone the logout menu item to remove any existing listeners
+                        const newLogoutMenuItem = logoutMenuItem.cloneNode(true);
+                        logoutMenuItem.parentNode.replaceChild(newLogoutMenuItem, logoutMenuItem);
+                        
+                        newLogoutMenuItem.addEventListener('click', async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('About page: Logout clicked (backup handler)');
+                            
+                            // Close the user menu
+                            userMenuDropdown.classList.remove('active');
+                            
+                            try {
+                                // Clear auth data manually since showLoading might fail
+                                localStorage.removeItem('auth_token');
+                                localStorage.removeItem('user_info');
+                                
+                                // Try to call the auth manager logout if available
+                                if (window.auth && typeof window.auth.logout === 'function') {
+                                    console.log('About page: Calling auth.logout()');
+                                    await window.auth.logout();
+                                } else {
+                                    console.log('About page: Auth manager not available, redirecting manually');
+                                    // Redirect manually if auth manager fails
+                                    window.location.href = 'login.html';
+                                }
+                            } catch (error) {
+                                console.error('About page: Logout error, falling back to manual redirect:', error);
+                                // Clear auth data and redirect as fallback
+                                localStorage.removeItem('auth_token');
+                                localStorage.removeItem('user_info');
+                                window.location.href = 'login.html';
+                            }
+                        });
+                        
+                        console.log('About page: Backup logout handler set up');
+                    }
+                } else {
+                    console.error('About page: User menu elements not found!', {
+                        userMenuBtn: !!userMenuBtn,
+                        userMenuDropdown: !!userMenuDropdown
+                    });
+                }
+            }, 200); // Delay to allow auth.js to complete setup
+
+            // Move authentication check here, after auth.js has had time to set up
+            setTimeout(() => {
+                // Check if user is authenticated (with a small delay to allow auth.js to process)
+                const authToken = localStorage.getItem('auth_token');
+                const userInfo = localStorage.getItem('user_info');
+                
+                if (!authToken || !userInfo) {
+                    // User is not authenticated, redirect to login page
+                    console.log('About page: User not authenticated, redirecting to login');
+                    window.location.href = 'login.html';
+                    return;
+                }
+            }, 100); // Small delay to allow auth.js to complete setup
+        });
+    </script>
+
+    <!-- Loading Spinner -->
+    <div class="loading-container" id="loadingContainer">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <script>
+        function applyFooterStyles() {
+            const footer = document.getElementById('warrackerFooter');
+            const link = document.getElementById('warrackerFooterLink');
+            const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark' || document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode');
+            if (footer) {
+                if (isDarkMode) {
+                    // Dark mode styles - using same background as header (#2d2d2d)
+                    footer.style.cssText = 'margin-top: 50px; padding: 20px; text-align: center; border-top: 1px solid #444; background-color: #2d2d2d; color: #e0e0e0; font-size: 0.9rem;';
+                    if (link) link.style.cssText = 'color: #4dabf7; text-decoration: none; font-weight: 500;';
+                } else {
+                    // Light mode styles - using same background as header (#ffffff)
+                    footer.style.cssText = 'margin-top: 50px; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0; background-color: #ffffff; color: #333333; font-size: 0.9rem;';
+                    if (link) link.style.cssText = 'color: #3498db; text-decoration: none; font-weight: 500;';
+                }
+            }
+        }
+        document.addEventListener('DOMContentLoaded', applyFooterStyles);
+        const obs = new MutationObserver(applyFooterStyles);
+        obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
+        obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    </script>
+
+</body>
+</html>

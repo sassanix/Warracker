@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="/auth-redirect.js?v=20250119001" data-protected="false"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="auth.login_title">Login - Warracker</title>
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png?v=2">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png?v=2">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon-512x512.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/style.css?v=20250119004">
+    <script src="/theme-loader.js?v=20250119001"></script>
+    <script type="module" src="/js/services/authService.js"></script>
+    <script type="module" src="/js/services/apiService.js"></script>
+    <script>
+        // If user is authenticated and has a theme in user_info (from previous sessions), reflect it early
+        try {
+            const user = JSON.parse(localStorage.getItem('user_info') || '{}');
+            if (user && user.theme) {
+                document.documentElement.setAttribute('data-theme', user.theme);
+            }
+        } catch (_) {}
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
+    <script src="/js/lib/i18next.min.js?v=20250119001"></script>
+    <script src="/js/lib/i18nextHttpBackend.min.js?v=20250119001"></script>
+    <script src="/js/lib/i18nextBrowserLanguageDetector.min.js?v=20250119001"></script>
+    <script src="/js/i18n.js?v=20250119001"></script>
+    
+    
+</head>
+<body class="login-page-body">
+    
+
+    <div class="login-wrapper">
+        <div class="login-showcase">
+            <div class="showcase-content">
+                <div class="showcase-logo">
+                    <i class="fas fa-shield-alt"></i>
+                    <h1>Warracker</h1>
+                </div>
+                <p class="showcase-description" data-i18n="about.description">
+                    The easiest way to organize product warranties, monitor expiration dates, and store receipts or related documents.
+                </p>
+                <ul class="showcase-features">
+                    <li><i class="fas fa-bell"></i> <span>Proactive Expiration Alerts</span></li>
+                    <li><i class="fas fa-cloud-upload-alt"></i> <span>Secure Document Storage</span></li>
+                    <li><i class="fas fa-users"></i> <span>Multi-User Support</span></li>
+                    <li><i class="fas fa-search"></i> <span>Quick Search & Filter</span></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="login-form-container">
+            <div class="mobile-top-logo">
+                <img src="img/favicon-512x512.png" alt="Warracker">
+                <div class="mobile-top-logo-title"><span data-i18n="app_title">Warracker</span></div>
+            </div>
+            <div class="auth-container">
+                <div id="authMessage" class="auth-message"></div>
+                <form id="loginForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="username" data-i18n="auth.username">Username or Email</label>
+                        <div class="input-group">
+                            <i class="fas fa-user input-icon"></i>
+                            <input type="text" id="username" name="username" class="form-control" placeholder="e.g., yourname or email@example.com" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="password" data-i18n="auth.password">Password</label>
+                        <div class="input-group">
+                            <i class="fas fa-lock input-icon"></i>
+                            <input type="password" id="password" name="password" class="form-control" required>
+                            <button type="button" class="password-toggle" title="Show/Hide Password">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fas fa-sign-in-alt"></i> <span data-i18n="auth.login">Login</span>
+                    </button>
+                </form>
+                <div id="ssoSection" style="display: none;">
+                    <div class="separator"><span>OR</span></div>
+                    <a href="/api/oidc/login" id="oidcLoginButton" class="btn btn-secondary btn-block btn-sso" style="text-decoration: none;">
+                        <i class="fab fa-openid" style="margin-right: 8px;"></i> <span>Login with SSO Provider</span>
+                    </a>
+                </div>
+                <div class="auth-links">
+                    <a href="register.html" data-i18n="auth.create_account">Create Account</a>
+                    <a href="reset-password-request.html" data-i18n="auth.forgot_password">Forgot Password?</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check for OIDC errors in URL parameters and display them
+            const urlParams = new URLSearchParams(window.location.search);
+            const oidcError = urlParams.get('oidc_error');
+            
+            if (oidcError) {
+                let errorMessage = 'An unknown error occurred during SSO login.';
+                switch (oidcError) {
+                    case 'oidc_disabled':
+                        errorMessage = 'SSO login is currently disabled.';
+                        break;
+                    case 'oidc_misconfigured':
+                        errorMessage = 'SSO is not properly configured. Please contact your administrator.';
+                        break;
+                    case 'token_exchange_failed':
+                        errorMessage = 'Failed to exchange authorization code for tokens with the SSO provider.';
+                        break;
+                    case 'token_missing':
+                        errorMessage = 'Access token was not received from the SSO provider.';
+                        break;
+                    case 'userinfo_fetch_failed':
+                        errorMessage = 'Failed to fetch user information from the SSO provider.';
+                        break;
+                    case 'userinfo_missing':
+                        errorMessage = 'User information was not received from the SSO provider.';
+                        break;
+                    case 'subject_missing':
+                        errorMessage = 'User subject identifier (sub) was missing from SSO provider response.';
+                        break;
+                    case 'email_missing_for_new_user':
+                        errorMessage = 'Email address was not provided by SSO provider, which is required for new user registration.';
+                        break;
+                    case 'email_conflict_local_account':
+                        errorMessage = 'The email address from your SSO provider is already associated with an existing local account. Please log in with your local credentials or contact support.';
+                        break;
+                    case 'registration_disabled':
+                        errorMessage = 'New user registration via SSO is currently disabled. Only existing users can log in with SSO. Please contact your administrator if you need an account.';
+                        break;
+                    case 'user_processing_failed':
+                        errorMessage = 'Failed to process user information after SSO login.';
+                        break;
+                    case 'db_error':
+                        errorMessage = 'A database error occurred during SSO login. Please try again later.';
+                        break;
+                    case 'internal_error':
+                        errorMessage = 'An internal server error occurred during SSO login. Please try again later.';
+                        break;
+                }
+                showMessage(errorMessage, 'error');
+                
+                // Clean up the URL by removing the oidc_error parameter
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.delete('oidc_error');
+                window.history.replaceState({}, document.title, newUrl);
+            }
+            
+            // Fetch OIDC status and customize button based on provider
+            fetch('/api/auth/oidc-status')
+                .then(response => response.json())
+                .then(data => {
+                    const oidcButton = document.getElementById('oidcLoginButton');
+                    const separator = document.querySelector('.separator');
+                    const loginForm = document.getElementById('loginForm');
+                    const authLinks = document.querySelector('.auth-links');
+                    const authTitle = document.querySelector('.auth-title');
+                    const ssoSection = document.getElementById('ssoSection');
+
+                    if (!data.oidc_enabled) {
+                        if (ssoSection) ssoSection.style.display = 'none';
+                        if (oidcButton) oidcButton.style.display = 'none';
+                        if (separator) separator.style.display = 'none';
+                        return;
+                    }
+                    
+                    // OIDC is enabled: show the SSO section
+                    if (ssoSection) ssoSection.style.display = 'block';
+                    
+                    // Handle OIDC-only mode
+                    if (data.oidc_only_mode) {
+                        // Hide traditional login form and related elements
+                        if (loginForm) loginForm.style.display = 'none';
+                        if (separator) separator.style.display = 'none';
+                        if (authLinks) {
+                            // Hide register and forgot password links in OIDC-only mode
+                            const registerLink = authLinks.querySelector('a[href="register.html"]');
+                            const forgotPasswordLink = authLinks.querySelector('a[href="reset-password-request.html"]');
+                            if (registerLink) registerLink.style.display = 'none';
+                            if (forgotPasswordLink) forgotPasswordLink.style.display = 'none';
+                        }
+                        // Update page title to reflect OIDC-only mode
+                        if (authTitle) authTitle.textContent = 'Login with SSO';
+                    }
+                    
+                    // Customize button based on provider
+                    if (oidcButton && data.oidc_provider_display_name) {
+                        const providerName = data.oidc_provider_display_name.toLowerCase();
+                        let buttonText = `Login with ${data.oidc_provider_display_name}`;
+                        let iconClass = 'fab fa-openid'; // Default icon
+                        let buttonClass = 'btn-sso'; // Default class
+                        
+                        // Provider-specific customizations
+                        switch (providerName) {
+                            case 'google':
+                                iconClass = 'fab fa-google';
+                                buttonClass = 'btn-google';
+                                break;
+                            case 'github':
+                                iconClass = 'fab fa-github';
+                                buttonClass = 'btn-github';
+                                break;
+                            case 'microsoft':
+                            case 'azure':
+                            case 'office365':
+                                iconClass = 'fab fa-microsoft';
+                                buttonClass = 'btn-microsoft';
+                                break;
+                            case 'facebook':
+                                iconClass = 'fab fa-facebook-f';
+                                buttonClass = 'btn-facebook';
+                                break;
+                            case 'twitter':
+                                iconClass = 'fab fa-twitter';
+                                buttonClass = 'btn-twitter';
+                                break;
+                            case 'linkedin':
+                                iconClass = 'fab fa-linkedin-in';
+                                buttonClass = 'btn-linkedin';
+                                break;
+                            case 'apple':
+                                iconClass = 'fab fa-apple';
+                                buttonClass = 'btn-apple';
+                                break;
+                            case 'discord':
+                                iconClass = 'fab fa-discord';
+                                buttonClass = 'btn-discord';
+                                break;
+                            case 'gitlab':
+                                iconClass = 'fab fa-gitlab';
+                                buttonClass = 'btn-gitlab';
+                                break;
+                            case 'bitbucket':
+                                iconClass = 'fab fa-bitbucket';
+                                buttonClass = 'btn-bitbucket';
+                                break;
+                            case 'keycloak':
+                                iconClass = 'fas fa-key';
+                                buttonClass = 'btn-keycloak';
+                                break;
+                            case 'okta':
+                                iconClass = 'fas fa-shield-alt';
+                                buttonClass = 'btn-okta';
+                                break;
+                            default:
+                                // Keep generic styling for unknown providers
+                                buttonText = `Login with ${data.oidc_provider_display_name}`;
+                                break;
+                        }
+                        
+                        // Update button styling and content (preserve alignment and baseline styles)
+                        const classList = ['btn', 'btn-secondary', 'btn-block', 'btn-sso'];
+                        if (buttonClass && buttonClass !== 'btn-sso') classList.push(buttonClass);
+                        oidcButton.className = classList.join(' ');
+                        oidcButton.innerHTML = `<i class="${iconClass}"></i> ${buttonText}`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching OIDC status:', error);
+                    // Hide button on error as a safe default
+                    const oidcButton = document.getElementById('oidcLoginButton');
+                    const separator = document.querySelector('.separator');
+                    const ssoSection = document.getElementById('ssoSection');
+                    if (ssoSection) ssoSection.style.display = 'none';
+                    if (oidcButton) oidcButton.style.display = 'none';
+                    if (separator) separator.style.display = 'none';
+                });
+
+            // Toggle password visibility
+            const passwordToggle = document.querySelector('.password-toggle');
+            const passwordInput = document.getElementById('password');
+            
+            passwordToggle.addEventListener('click', function() {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                
+                // Toggle icon
+                const icon = this.querySelector('i');
+                icon.classList.toggle('fa-eye');
+                icon.classList.toggle('fa-eye-slash');
+            });
+            
+            // Handle form submission
+            document.getElementById('loginForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                
+                // Basic validation
+                if (!username || !password) {
+                    showMessage('Please enter both username and password', 'error');
+                    return;
+                }
+                
+                try {
+                    // Show loading state
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+                    submitBtn.disabled = true;
+                    
+                    // Make API request
+                    const response = await fetch('/api/auth/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ username, password })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Login failed');
+                    }
+                    
+                    // Store token in localStorage
+                    localStorage.setItem('auth_token', data.token);
+                    localStorage.setItem('user_info', JSON.stringify(data.user));
+                    
+                    // Show success message
+                    showMessage('Login successful! Redirecting...', 'success');
+                    
+                    // Redirect to home page after a short delay
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1000);
+                    
+                } catch (error) {
+                    console.error('Login error:', error);
+                    showMessage(error.message || 'Login failed. Please check your credentials.', 'error');
+                    
+                    // Reset button state
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> <span data-i18n="auth.login">Login</span>';
+                        submitBtn.disabled = false;
+                    }
+                }
+            });
+            
+            // Helper function to show messages
+            function showMessage(message, type) {
+                const authMessage = document.getElementById('authMessage');
+                authMessage.textContent = message;
+                authMessage.className = 'auth-message ' + type;
+                authMessage.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

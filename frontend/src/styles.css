@@ -1,0 +1,327 @@
+/* Tag Styles */
+.tags-container {
+    margin-bottom: 15px;
+}
+
+.selected-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 2px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tag .remove-tag {
+    margin-left: 6px;
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.tag:hover .remove-tag {
+    opacity: 1;
+}
+
+.tags-dropdown {
+    position: relative;
+}
+
+.tags-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.tags-list.show {
+    display: block;
+}
+
+.tag-option {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.tag-option:hover {
+    background-color: #f5f5f5;
+}
+
+/* Tag Management Modal */
+#tagManagementModal {
+    z-index: 1050;
+}
+
+.tag-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.tag-form input[type="color"] {
+    width: 50px;
+    padding: 0;
+    height: 38px;
+}
+
+.existing-tags {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.existing-tag {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+}
+
+.existing-tag-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.existing-tag-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+}
+
+.existing-tag-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.edit-tab-content .tags-container,
+.tab-content .tags-container {
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+
+.edit-tab-content .selected-tags,
+.tab-content .selected-tags {
+    margin-bottom: 10px;
+}
+
+#editTagSearch, #tagSearch {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+/* Fix for the tag modal to appear on top of other modals */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    overflow: auto;
+}
+
+.modal-content {
+    background-color: var(--bg-main);
+    margin: 50px auto;
+    padding: 0;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 600px;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--bg-secondary);
+    border-radius: 8px 8px 0 0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.modal .close {
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.modal .close:hover {
+    color: var(--text-primary);
+}
+
+/* Add tag indicator in warranty cards */
+.warranty-card .tags-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+/* Modal z-index layering */
+.modal {
+    z-index: 1000;
+}
+
+#editModal, #deleteModal {
+    z-index: 1000;
+}
+
+#tagManagementModal {
+    z-index: 1050;
+} 
+
+/* ============================================================================
+   Paperless-ngx Integration Styles
+   ============================================================================ */
+
+/* Storage Selection Styles */
+.storage-selection {
+    margin-bottom: 15px;
+    padding: 12px;
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.storage-options {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.storage-option {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    background-color: var(--bg-main);
+}
+
+.storage-option:hover {
+    background-color: var(--bg-accent);
+    border-color: var(--border-color);
+}
+
+.storage-option input[type="radio"] {
+    margin: 0;
+    margin-right: 8px;
+}
+
+.storage-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.storage-label i {
+    font-size: 14px;
+    width: 16px;
+    text-align: center;
+}
+
+.storage-option input[type="radio"]:checked + .storage-label {
+    color: var(--accent-color);
+}
+
+.storage-option input[type="radio"]:checked + .storage-label i {
+    color: var(--accent-color);
+}
+
+/* Paperless-ngx info alert */
+.alert {
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.alert-info {
+    background-color: #e7f3ff;
+    border-color: #b8d4f0;
+    color: #31708f;
+}
+
+.alert-info i {
+    color: #31708f;
+}
+
+/* Dark mode support for Paperless-ngx elements */
+.dark-mode .storage-selection {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+.dark-mode .storage-option {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+}
+
+.dark-mode .storage-option:hover {
+    background-color: var(--bg-accent);
+}
+
+.dark-mode .alert-info {
+    background-color: rgba(49, 112, 143, 0.1);
+    border-color: rgba(49, 112, 143, 0.3);
+    color: #a8c8e1;
+}
+
+.dark-mode .alert-info i {
+    color: #a8c8e1;
+}

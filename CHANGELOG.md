@@ -1,4 +1,82 @@
 # Changelog
+## 1.0.3 - 2025-11-07
+
+### Added  
+- **Vite build tool (multi-page app) for the frontend**  
+  - Initialized npm in `frontend/` with `dev`, `build`, and `preview` scripts.  
+  - Introduced `vite.config.js` with `root: 'src'`, `outDir: '../dist'`, `publicDir: 'public'`, a development `/api` proxy, and explicit multi-page HTML inputs.  
+  - Restructured frontend: moved sources to `frontend/src/` and static/non-module assets to `frontend/public/`.  
+  - _Files: `frontend/package.json`, `frontend/vite.config.js`, `frontend/src/**/*`, `frontend/public/**/*`_  
+
+- **Centralized Authentication Service**  
+  - New module `authService.js` exposes `initAuth`, `login`, `logout`, `getToken`, `getCurrentUser`, `isAuthenticated`.  
+  - Backwards compatibility: attaches a `window.auth` facade so existing code continues to work.  
+  - Handles header UI state, user menu/settings dropdown toggling, and dispatches a unified `authStateReady` event.  
+  - Robustly hides “Create Account” UI when registration is disabled (with a MutationObserver to keep it hidden after other scripts mutate the DOM).  
+  - _Files: `frontend/src/js/services/authService.js`, `frontend/src/*.html` (module includes)_  
+
+- **Dedicated API Service**  
+  - New `apiService.js` provides a `baseRequest` wrapper that injects the `Authorization` header and normalizes error handling.  
+  - Exposes named helpers (e.g., `getWarranties`, `updateWarranty`, `deleteWarranty`, `getStatistics`, `savePreferences`) and a `window.api` shim for non-module scripts.  
+  - Safe global `fetch` shim adds the Authorization header for `/api/...` calls when missing.  
+  - _Files: `frontend/src/js/services/apiService.js`, `frontend/src/*.html` (module includes)_  
+
+  - **Central State Management Store**
+  - Introduced a `store.js` module to act as a single source of truth for application data (warranties, filters, loading states), eliminating scattered global variables.
+  - UI updates are now driven by custom events, creating a predictable data flow.
+  - _Files: `frontend/src/js/store.js`_
+
+- **Component-Based UI Modules**
+  - Created a suite of new, reusable UI component modules to replace HTML string concatenation. Each is responsible for building a specific part of the UI via safe DOM manipulation.
+  - Modules include: `warrantyCard.js`, `tag.js`, `modals.js`, `editModal.js`, `claims.js`, `notes.js`, `paperless.js`, and `ui.js`.
+  - _Files: `frontend/src/js/components/*`_
+
+- **HTML `<template>` for Warranty Cards**
+  - Added a `<template id="warranty-card-template">` to `index.html` to define the warranty card structure, separating markup from rendering logic for improved performance and maintainability.
+  - _Files: `frontend/src/index.html`_
+
+### Enhanced  
+- **Dockerfile: multi-stage frontend build + runtime serving**  
+  - Added `frontend-build` stage using `node:20-alpine` to run `npm ci && npm run build`.  
+  - Final stage copies `frontend/dist/` to `/var/www/html` and includes `frontend/public/` assets in the build.  
+  - Unpinned Node digest to resolve `not found` errors on some hosts.  
+  - _Files: `Dockerfile`_  
+
+- **HTML and asset loading**  
+  - Switched all page `<script>` and `<link>` paths to root-relative (e.g., `/script.js`).  
+  - Ensured `script.js` is loaded with `defer` across pages to avoid early DOM access issues.  
+  - Moved non-module assets (e.g., `i18n.js`, `i18next*.js`, `script.js`, `theme-loader.js`, etc.) to `frontend/public/` so they are served verbatim in production.  
+  - _Files: `frontend/src/*.html`, `frontend/public/**/*`_  
+
+- **Build stability**  
+  - Moved `settings-styles.css` to `public/` to bypass a PostCSS parse error in production builds (no functional/visual changes).  
+  - _Files: `frontend/public/settings-styles.css`_  
+
+- **Major UI Refactor for Maintainability & Security**
+  - Replaced nearly all `innerHTML` assignments with a robust, component-based rendering approach. This makes the UI easier to debug, maintain, and more secure against XSS vulnerabilities.
+  - **Warranty List:** The main warranty display for grid, list, and table views is now rendered using the `warrantyCard.js` component.
+  - **Edit Modal:** The complex dynamic sections (serial numbers, current document displays for invoices/manuals/photos, and tag selection) are now built with the `editModal.js` component.
+  - **Claims Modal:** The entire claims view, including the header, loading/error states, and claims list, is now rendered by the `claims.js` component.
+  - **Other Modals:** Refactored the rendering logic for the Tag Management, Notes, and Paperless-ngx document browser modals to use their respective new components.
+  - _Files: `frontend/src/script.js`, `frontend/src/js/components/*`_
+
+### Fixed  
+- 404s for non-module assets in production by serving them from Vite `public/`.  
+- User menu not opening: restored click/close listeners within `authService.js`.  
+- Login page “Create Account” visible while registration disabled: force-hidden with strong CSS and observer.  
+- Status page edit actions blocked by early `document.body.appendChild(...)`: added `defer` to `script.js` includes. 
+- **Security:** Mitigated potential cross-site scripting (XSS) vulnerabilities by removing reliance on building the UI with `innerHTML` from dynamic data.
+- **Performance:** Improved rendering performance by using efficient DOM creation and appending (`<template>` clones, `document.createElement`) instead of causing the browser to re-parse large HTML strings on every update.
+- **Code Quality:** Drastically reduced code complexity and repetition in `script.js` by delegating UI creation to specialized component modules. 
+
+### Removed  
+- Legacy, scattered auth scripts now replaced by `authService.js`:  
+  - `frontend/src/auth.js`, `frontend/src/auth-new.js`, `frontend/src/include-auth-new.js`, `frontend/src/fix-auth-buttons.js`, `frontend/src/fix-auth-buttons-loader.js`, `frontend/src/registration-status.js`.  
+  - **Global State Variables**
+  - Eliminated global variables like `let warranties = []` and `let currentFilters = {}` from `script.js`, centralizing all state management within `store.js`.
+- **Hardcoded HTML Strings**
+  - Removed large, multi-line HTML string templates from JavaScript files, which were fragile and difficult to maintain.
+
 
 ## 1.0.2 - 2025-10-30
 

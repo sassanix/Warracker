@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Authentication redirect script -->
+    <script src="/auth-redirect.js?v=20250119001" data-protected="true"></script>
+    
+    <!-- Include authentication script first to handle login state immediately -->
+    
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Warracker</title>
+    <!-- Favicons -->
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png?v=2">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png?v=2">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon-512x512.png">
+    <link rel="manifest" href="/manifest.json">
+    <!-- Load the main site styles first -->
+    <link rel="stylesheet" href="/style.css?v=20250119004">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
+    <!-- Then load settings-specific styles -->
+    <link rel="stylesheet" href="/settings-styles.css?v=20250119001">
+    <!-- Apply theme immediately -->
+    <script src="/theme-loader.js?v=20250119001"></script> 
+    <script type="module" src="/js/services/authService.js"></script>
+    <script type="module" src="/js/services/apiService.js"></script>
+    <!-- Load header fix styles last to override any conflicting styles -->
+    <link rel="stylesheet" href="/header-fix.css?v=20250119001">
+    <!-- Mobile Header specific styles -->
+    <link rel="stylesheet" href="/mobile-header.css?v=20250119002">
+    <!-- Load fix for auth buttons -->
+    
+    
+    <!-- i18next Local Scripts -->
+    <script src="/js/lib/i18next.min.js?v=20250119001"></script>
+    <script src="/js/lib/i18nextHttpBackend.min.js?v=20250119001"></script>
+    <script src="/js/lib/i18nextBrowserLanguageDetector.min.js?v=20250119001"></script>
+    
+    <!-- i18n Configuration -->
+    <script src="/js/i18n.js?v=20250119001"></script>
+    
+    <!-- Temporary debug script -->
+    <script src="/js/i18n-debug.js?v=20250119001"></script>
+
+    <!-- Mobile menu logic isolated to avoid collisions on settings -->
+    <script src="/mobile-menu.js?v=20250119002" defer></script>
+    
+    <!-- Immediate authentication check script -->
+    <script>
+        // Check if user is logged in immediately to hide buttons
+        (function() {
+            if (localStorage.getItem('auth_token')) {
+                // Hide login and register buttons immediately
+                document.addEventListener('DOMContentLoaded', function() {
+                    console.log('Inline script: User is logged in, hiding login/register buttons');
+                    
+                    // Hide auth container
+                    var authContainer = document.getElementById('authContainer');
+                    if (authContainer) {
+                        authContainer.style.display = 'none';
+                        authContainer.style.visibility = 'hidden';
+                    }
+                    
+                    // Show user menu
+                    var userMenu = document.getElementById('userMenu');
+                    if (userMenu) {
+                        userMenu.style.display = 'block';
+                        userMenu.style.visibility = 'visible';
+                    }
+                    
+                    // Update user info if possible
+                    try {
+                        var userInfo = JSON.parse(localStorage.getItem('user_info'));
+                        if (userInfo) {
+                            var displayName = userInfo.first_name || userInfo.username || 'User';
+                            var userDisplayName = document.getElementById('userDisplayName');
+                            if (userDisplayName) {
+                                userDisplayName.textContent = displayName;
+                            }
+                            
+                            var userName = document.getElementById('userName');
+                            if (userName) {
+                                userName.textContent = (userInfo.first_name || '') + ' ' + (userInfo.last_name || '');
+                                if (!userName.textContent.trim()) userName.textContent = userInfo.username || 'User';
+                            }
+                            
+                            var userEmail = document.getElementById('userEmail');
+                            if (userEmail && userInfo.email) {
+                                userEmail.textContent = userInfo.email;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error updating user info:', e);
+                    }
+                }, { once: true });
+            }
+        })();
+    </script>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="app-title">
+                <i class="fas fa-shield-alt"></i>
+                <h1><a href="index.html" style="color: inherit; text-decoration: none; cursor: pointer;">Warracker</a></h1>
+            </div>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">
+                    <i class="fas fa-home"></i> <span data-i18n="nav.home">Home</span>
+                </a>
+                <a href="status.html" class="nav-link">
+                    <i class="fas fa-chart-pie"></i> <span data-i18n="nav.status">Status</span>
+                </a>
+                <a href="settings-new.html" class="nav-link active">
+                    <i class="fas fa-cog"></i> <span data-i18n="nav.settings">Settings</span>
+                </a>
+            </div>
+            <!-- Group for right-aligned elements -->
+            <div class="header-right-group">
+                <button class="mobile-menu-toggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
+                <div id="userMenu" class="user-menu" style="display: none;">
+                    <button class="user-btn" id="userMenuBtn">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="userDisplayName">User</span>
+                    </button>
+                    <div class="user-menu-dropdown" id="userMenuDropdown">
+                        <div class="user-info">
+                            <div id="userName" class="user-name">User Name</div>
+                            <div id="userEmail" class="user-email">user@example.com</div>
+                        </div>
+                        <div class="user-menu-item">
+                            <a href="settings-new.html" style="color: inherit; text-decoration: none; display: block;">
+                                <i class="fas fa-cog"></i> <span data-i18n="nav.settings">Settings</span>
+                            </a>
+                        </div>
+                        <div class="user-menu-item">
+                            <a href="about.html" style="text-decoration: none; color: inherit;">
+                                <i class="fas fa-info-circle"></i> <span data-i18n="nav.about">About</span>
+                            </a>
+                        </div>
+                        <div class="user-menu-item" id="logoutMenuItem">
+                            <span><i class="fas fa-sign-out-alt"></i> <span data-i18n="auth.logout">Logout</span></span>
+                        </div>
+                    </div>
+                </div>
+                <div id="authContainer" class="auth-buttons" style="display: none;">
+                    <a href="login.html" class="auth-btn login-btn"><i class="fas fa-sign-in-alt"></i> Login</a>
+                    <a href="register.html" class="auth-btn register-btn"><i class="fas fa-user-plus"></i> Register</a>
+                </div>
+                <!-- Note: The settings gear toggle from other pages is intentionally omitted here -->
+            </div> <!-- End header-right-group -->
+        </div>
+    </header>
+    <div class="mobile-menu-panel" id="mobileMenuPanel"></div>
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="content-wrapper">
+            <h2 data-i18n="settings.title">Settings</h2>
+            
+            <!-- Account Settings -->
+            <div class="card collapsible-card">
+                <div class="card-header collapsible-header" data-target="accountSettingsContent">
+                    <h3 data-i18n="settings.account_settings">Account Settings</h3>
+                    <i class="fas fa-chevron-down collapse-icon"></i>
+                </div>
+                <div class="card-body collapsible-content" id="accountSettingsContent">
+                    <div id="currentUserInfoDisplay" class="current-user-info" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border-color);">
+                        <p style="margin: 0; font-size: 1.1rem;"><strong data-i18n="settings.current_user">Editing Profile for:</strong> <span id="currentUserNameDisplay" style="font-weight: normal;">Loading...</span></p>
+                        <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: var(--text-muted);"><span data-i18n="settings.your_email">Your email:</span> <span id="currentUserEmailDisplay">Loading...</span></p>
+                    </div>
+                    <form id="profileForm">
+                        <div class="form-group">
+                            <label for="firstName" data-i18n="settings.first_name">First Name</label>
+                            <input type="text" id="firstName" name="firstName" class="form-control">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="lastName" data-i18n="settings.last_name">Last Name</label>
+                            <input type="text" id="lastName" name="lastName" class="form-control">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email" data-i18n="settings.email">Email</label>
+                            <input type="email" id="email" name="email" class="form-control">
+                        </div>
+                        
+                        <button type="button" id="saveProfileBtn" class="btn btn-primary" data-i18n="settings.save_profile">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Preferences -->
+            <div class="card collapsible-card">
+                <div class="card-header collapsible-header" data-target="preferencesContent">
+                    <h3 data-i18n="settings.preferences">Preferences</h3>
+                    <i class="fas fa-chevron-down collapse-icon"></i>
+                </div>
+                <div class="card-body collapsible-content" id="preferencesContent">
+                    <form id="preferencesForm">
+                        <div class="form-group">
+                            <div class="preference-item">
+                                <div>
+                                    <label data-i18n="settings.language">Language</label>
+                                    <p class="text-muted" data-i18n="settings.select_language">Select your preferred language</p>
+                                </div>
+                                <select id="languageSelect" class="form-control" style="max-width: 200px;">
+                                    <option value="en">English</option>
+                                    <option value="fr">Français</option>
+                                    <option value="es">Español</option>
+                                    <option value="de">Deutsch</option>
+                                    <option value="it">Italiano</option>
+                                    <option value="cs">Čeština</option>
+                                    <option value="nl">Nederlands</option>
+                                    <option value="hi">हिन्दी</option>
+                                    <option value="fa">فارسی</option>
+                                    <option value="ar">العربية</option>
+                                    <option value="ru">Русский</option>
+                                    <option value="uk">Українська</option>
+                                    <option value="zh_CN">简体中文</option>
+                                    <option value="zh_HK">繁體中文</option>
+                                    <option value="ja">日本語</option>
+                                    <option value="pt">Português</option>
+                                    <option value="ko">한국어</option>
+                                    <option value="tr">Türkçe</option>
+                                    <option value="pl">Polski</option>
+                                    <option value="he">עברית</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="preference-item">
+                                <div>
+                                    <label data-i18n="settings.dark_mode">Dark Mode</label>
+                                    <p class="text-muted" data-i18n="settings.dark_mode_desc">Switch between light and dark theme</p>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="darkModeToggleSetting">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="preference-item">
+                                <div>
+                                                    <label data-i18n="settings.default_view">Default View</label>
+                <p class="text-muted" data-i18n="settings.default_view_desc">Choose your preferred view for warranties</p>
+                                </div>
+                                <select id="defaultView" class="form-control">
+                                                        <option value="grid" data-i18n="settings.grid_view">Grid View</option>
+                    <option value="list" data-i18n="settings.list_view">List View</option>
+                    <option value="table" data-i18n="settings.table_view">Table View</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="preference-item">
+                                <div>
+                                                    <label data-i18n="settings.currency_symbol">Currency Symbol</label>
+                <p class="text-muted" data-i18n="settings.currency_symbol_desc">Choose the symbol to display for prices</p>
+                                </div>
+                                <select id="currencySymbolSelect" class="form-control" style="width: 120px; font-size: 1.1em;">
+                                    <option value="">Loading currencies...</option>
+                                </select>
+                                <input type="text" id="currencySymbolCustom" class="form-control" maxlength="6" style="width: 70px; text-align: center; font-size: 1.2em; display: none; margin-left: 10px;" placeholder="Custom">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="preference-item">
+                                <div>
+                                                    <label data-i18n="settings.currency_position">Currency Position</label>
+                <p class="text-muted" data-i18n="settings.currency_position_desc">Choose whether currency symbol appears on the left or right of numbers</p>
+                                </div>
+                                <select id="currencyPositionSelect" class="form-control" style="width: 150px;">
+                                    <option value="left">Left ($100.00)</option>
+                                    <option value="right">Right (100.00$)</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="preference-item">
+                                <div>
+                                    <label data-i18n="settings.expiring_soon_days">Expiring Soon Days</label>
+                <p class="text-muted" data-i18n="settings.expiring_soon_days_desc">Number of days before expiration to show warnings</p>
+                                    <p class="text-muted" data-i18n="settings.expiring_soon_days_desc">Number of days before warranty expiration to mark as "Expiring Soon"</p>
+                                </div>
+                                <input type="number" id="expiringSoonDays" class="form-control" min="1" max="365" value="30">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="preference-item">
+                                <div>
+                                                    <label for="dateFormat" data-i18n="settings.date_format">Date Format</label>
+                <p class="text-muted" data-i18n="settings.date_format_desc">Choose how dates are displayed</p>
+                                </div>
+                                <select id="dateFormat" class="form-control">
+                                    <option value="MDY">Month/Day/Year (e.g., 12/31/2024)</option>
+                                    <option value="DMY">Day/Month/Year (e.g., 31/12/2024)</option>
+                                    <option value="YMD">Year-Month-Day (e.g., 2024-12-31)</option>
+                                    <option value="MDY_WORDS">Mon Day, Year (e.g., Dec 31, 2024)</option>
+                                    <option value="DMY_WORDS">Day Mon Year (e.g., 31 Dec 2024)</option>
+                                    <option value="YMD_WORDS">Year Mon Day (e.g., 2024 Dec 31)</option>
+                                </select>
+                            </div>
+                        </div>
+                                                
+                        <button type="button" id="savePreferencesBtn" class="btn btn-primary" data-i18n="settings.save_preferences">Save Preferences</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Notification Settings -->
+            <div class="card collapsible-card">
+                <div class="card-header collapsible-header" data-target="notificationSettingsContent">
+                    <h3 data-i18n="settings.notification_settings">Notification Settings</h3>
+                    <i class="fas fa-chevron-down collapse-icon"></i>
+                </div>
+                <div class="card-body collapsible-content" id="notificationSettingsContent">
+                    <form id="notificationPreferencesForm">
+                        <div class="form-group">
+                            <div class="preference-item">
+                                <div>
+                                    <label data-i18n="settings.notification_channel">Notification Channel</label>
+                                    <p class="text-muted" data-i18n="settings.notification_channel_desc">Choose how you want to receive notifications.</p>
+                                </div>
+                                <select id="notificationChannel" class="form-control">
+                                                        <option value="none" data-i18n="settings.notification_disabled">Disabled</option>
+                    <option value="email" data-i18n="settings.notification_email">Email</option>
+                    <option value="apprise" data-i18n="settings.notification_apprise">Apprise</option>
+                    <option value="both" data-i18n="settings.notification_both">Both</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="emailSettingsContainer" style="display: none;">
+                            <h4 data-i18n="settings.email_settings">Email Settings</h4>
+                            <div class="form-group">
+                                <div class="preference-item">
+                                    <div>
+                                                        <label data-i18n="settings.notification_frequency">Notification Frequency</label>
+                <p class="text-muted" data-i18n="settings.notification_frequency_desc">How often to receive email notifications</p>
+                                    </div>
+                                    <select id="notificationFrequency" class="form-control">
+                                        <option value="daily" data-i18n="settings.daily">Daily</option>
+                                        <option value="weekly" data-i18n="settings.weekly">Weekly</option>
+                                        <option value="monthly" data-i18n="settings.monthly">Monthly</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="preference-item">
+                                    <div>
+                                        <label data-i18n="settings.notification_time">Notification Time</label>
+                                        <p class="text-muted" data-i18n="settings.time_of_day_notification">Time of day to receive notifications (in 24-hour format)</p>
+                                    </div>
+                                    <input type="time" id="notificationTime" class="form-control" value="09:00">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="preference-item">
+                                    <div>
+                                                                <label data-i18n="settings.timezone">Timezone</label>
+                        <p class="text-muted" data-i18n="settings.timezone_desc">Your local timezone for notifications</p>
+                                    </div>
+                                    <select id="timezone" class="form-control">
+                                        <option value="">Loading timezones...</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="userAppriseSettingsContainer" style="display: none;">
+                            <h4 data-i18n="settings.apprise_settings">Apprise Settings</h4>
+                            <div class="form-group">
+                                <div class="preference-item">
+                                    <div>
+                                                                <label data-i18n="settings.apprise_frequency">Apprise Notification Frequency</label>
+                        <p class="text-muted" data-i18n="settings.apprise_frequency_desc">How often to receive Apprise notifications</p>
+                                    </div>
+                                    <select id="userAppriseNotificationFrequency" class="form-control">
+                                        <option value="daily" data-i18n="settings.daily">Daily</option>
+                                        <option value="weekly" data-i18n="settings.weekly">Weekly</option>
+                                        <option value="monthly" data-i18n="settings.monthly">Monthly</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="preference-item">
+                                    <div>
+                                        <label data-i18n="settings.apprise_time">Apprise Notification Time</label>
+                                        <p class="text-muted" data-i18n="settings.time_of_day_notification">Time of day to receive Apprise notifications (in 24-hour format)</p>
+                                    </div>
+                                    <input type="time" id="userAppriseNotificationTime" class="form-control" value="09:00">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="preference-item">
+                                    <div>
+                                                                <label data-i18n="settings.apprise_timezone">Apprise Timezone</label>
+                        <p class="text-muted" data-i18n="settings.apprise_timezone_desc">Your local timezone for Apprise notifications</p>
+                                    </div>
+                                    <select id="userAppriseTimezone" class="form-control">
+                                        <option value="">Loading timezones...</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" id="saveNotificationSettingsBtn" class="btn btn-primary" data-i18n="settings.save_notification_settings">Save Notification Settings</button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Security -->
+            <div id="securitySection" class="card">
+                <div class="card-header">
+                    <h3 data-i18n="settings.security">Security</h3>
+                </div>
+                <div class="card-body">
+                    <div class="preference-item">
+                        <div>
+                            <label data-i18n="settings.change_password">Change Password</label>
+                            <p class="text-muted" data-i18n="settings.change_password_desc">Update your account password</p>
+                        </div>
+                        <button id="changePasswordBtn" class="btn btn-outline-primary" data-i18n="settings.change">Change</button>
+                    </div>
+                    
+                    <div id="passwordChangeForm" style="display: none; margin-top: 20px;">
+                        <div class="form-group">
+                            <label for="currentPassword" data-i18n="settings.current_password">Current Password</label>
+                            <input type="password" id="currentPassword" name="currentPassword" class="form-control">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="newPassword" data-i18n="settings.new_password">New Password</label>
+                            <input type="password" id="newPassword" name="newPassword" class="form-control">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="confirmPassword" data-i18n="settings.confirm_password">Confirm New Password</label>
+                            <input type="password" id="confirmPassword" name="confirmPassword" class="form-control">
+                        </div>
+                        
+                        <div class="button-group">
+                            <button type="button" id="savePasswordBtn" class="btn btn-primary" data-i18n="settings.update_password">Update Password</button>
+                            <button type="button" id="cancelPasswordBtn" class="btn btn-secondary" data-i18n="settings.cancel">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Danger Zone -->
+            <div class="card danger-card">
+                <div class="card-header">
+                    <h3 data-i18n="settings.danger_zone">Danger Zone</h3>
+                </div>
+                <div class="card-body">
+                    <div class="preference-item">
+                        <div>
+                            <label data-i18n="settings.delete_account">Delete Account</label>
+                            <p class="text-muted" data-i18n="settings.delete_account_desc">Permanently delete your account and all data</p>
+                        </div>
+                        <button id="deleteAccountBtn" class="btn btn-danger" data-i18n="settings.delete_account">Delete Account</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Admin Section - Only visible to admins -->
+            <div id="adminSection" class="admin-section" style="display: none;">
+                <h2 data-i18n="settings.admin_settings">Admin Settings</h2>
+                
+                <!-- Admin Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 data-i18n="settings.admin_actions">Admin Actions</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="admin-actions-grid">
+                            <button id="refreshUsersBtn" class="admin-action-btn">
+                                <i class="fas fa-sync-alt"></i>
+                                <span data-i18n="settings.refresh_data">Refresh Data</span>
+                            </button>
+                            <button id="checkAdminBtn" class="admin-action-btn">
+                                <i class="fas fa-user-shield"></i>
+                                <span data-i18n="settings.check_admin_status">Check Admin Status</span>
+                            </button>
+                            <button id="showUsersBtn" class="admin-action-btn">
+                                <i class="fas fa-users"></i>
+                                <span data-i18n="settings.show_users_list">Show Users List</span>
+                            </button>
+                            <button id="testApiBtn" class="admin-action-btn">
+                                <i class="fas fa-vial"></i>
+                                <span data-i18n="settings.test_api">Test API</span>
+                            </button>
+                            <button id="triggerNotificationsBtn" class="admin-action-btn">
+                                <i class="fas fa-envelope"></i>
+                                <span data-i18n="settings.send_notifications">Send Warranty Notifications</span>
+                            </button>
+                            <button id="schedulerStatusBtn" class="admin-action-btn">
+                                <i class="fas fa-clock"></i>
+                                <span data-i18n="settings.check_scheduler">Check Scheduler Status</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Site Settings -->
+                <div class="card collapsible-card">
+                    <div class="card-header collapsible-header" data-target="siteSettingsContent">
+                        <h3 data-i18n="settings.site_settings">Site Settings</h3>
+                        <i class="fas fa-chevron-down collapse-icon"></i>
+                    </div>
+                    <div class="card-body collapsible-content" id="siteSettingsContent">
+                        <form id="siteSettingsForm">
+                            <div class="form-group">
+                                <div class="preference-item">
+                                    <div>
+                                                                <label data-i18n="settings.registration_enabled">Registration Enabled</label>
+                        <p class="text-muted" data-i18n="settings.registration_enabled_desc">Allow new users to register</p>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="registrationEnabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Email Base URL Setting -->
+                            <div class="form-group">
+                                 <div class="preference-item">
+                                    <div>
+                                        <label for="emailBaseUrl" data-i18n="settings.email_base_url">Email Base URL</label>
+                                        <p class="text-muted">The base URL (e.g., http://yourdomain.com) used for links in emails. No trailing slash.</p>
+                                    </div>
+                                    <input type="text" id="emailBaseUrl" class="form-control" placeholder="http://localhost:8080">
+                                </div>
+                           </div>
+
+                            <!-- Global View Setting -->
+                            <div class="form-group">
+                                <div class="preference-item">
+                                    <div>
+                                        <label data-i18n="settings.global_view_enabled">Global View Enabled</label>
+                                        <p class="text-muted">Allow users to view all warranties from all users (read-only for non-owners)</p>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="globalViewEnabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Global View Admin Only Setting -->
+                            <div class="form-group">
+                                <div class="preference-item">
+                                    <div>
+                                        <label data-i18n="settings.global_view_admin_only">Global View Admin Only</label>
+                                        <p class="text-muted">Restrict global view access to administrators only (requires Global View to be enabled)</p>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="globalViewAdminOnly">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <button type="button" id="saveSiteSettingsBtn" class="btn btn-primary" data-i18n="settings.save_site_settings">Save Site Settings</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- OIDC SSO Configuration Card -->
+                <div class="card collapsible-card">
+                    <div class="card-header collapsible-header" data-target="oidcSettingsContent">
+                        <h3 data-i18n="settings.oidc_configuration">OIDC SSO Configuration</h3>
+                        <i class="fas fa-chevron-down collapse-icon"></i>
+                    </div>
+                    <div class="card-body collapsible-content" id="oidcSettingsContent">
+                        <form id="oidcSettingsForm">
+                            <div class="form-group">
+                                <div class="preference-item">
+                                    <div>
+                                        <label for="oidcEnabled" data-i18n="settings.enable_oidc">Enable OIDC SSO</label>
+                                        <p class="text-muted" data-i18n="settings.oidc_sso_desc">Allow users to log in via an OIDC provider.</p>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="oidcEnabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="preference-item">
+                                    <div>
+                                        <label for="oidcOnlyMode" data-i18n="settings.oidc_only_mode">OIDC-Only Login Mode</label>
+                                        <p class="text-muted" data-i18n="settings.oidc_only_mode_desc">Hide traditional username/password login form and only allow OIDC login. <strong>Warning:</strong> Ensure OIDC is properly configured before enabling this option.</p>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="oidcOnlyMode">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="oidcProviderName" data-i18n="settings.oidc_provider_name">OIDC Provider Name</label>
+                                <input type="text" id="oidcProviderName" class="form-control" placeholder="e.g., oidc, keycloak, google">
+                                <small class="text-muted" data-i18n="settings.oidc_provider_name_desc">Internal name for the OIDC client (e.g., 'oidc').</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="oidcClientId" data-i18n="settings.client_id">Client ID</label>
+                                <input type="text" id="oidcClientId" class="form-control" placeholder="Enter OIDC Client ID">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="oidcClientSecret" data-i18n="settings.client_secret">Client Secret</label>
+                                <input type="password" id="oidcClientSecret" class="form-control" placeholder="Enter new secret or leave blank to keep existing">
+                                <small class="text-muted" data-i18n="settings.client_secret_desc">Sensitive value. Stored in the database. An application restart is required for changes to take effect.</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="oidcIssuerUrl" data-i18n="settings.issuer_url">Issuer URL</label>
+                                <input type="url" id="oidcIssuerUrl" class="form-control" placeholder="e.g., https://your-provider.com/realms/your-realm">
+                                <small class="text-muted" data-i18n="settings.issuer_url_desc">The base URL of your OIDC provider.</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="oidcScope" data-i18n="settings.scope">Scope</label>
+                                <input type="text" id="oidcScope" class="form-control" placeholder="e.g., openid email profile">
+                                <small class="text-muted" data-i18n="settings.scope_desc">Space-separated OIDC scopes.</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="oidcAdminGroup" data-i18n="settings.oidc_admin_group">OIDC Admin Group</label>
+                                <input type="text" id="oidcAdminGroup" class="form-control" />
+                                <small class="text-muted" data-i18n="settings.oidc_admin_desc">Group that is given admin privileges. Leave blank to disable.</small>
+                            </div>
+                            
+                            <button type="button" id="saveOidcSettingsBtn" class="btn btn-primary" data-i18n="settings.save_oidc_settings">Save OIDC Settings</button>
+                            <p id="oidcRestartMessage" class="text-muted" style="margin-top: 10px; display: none;" data-i18n="settings.oidc_restart_message">Application restart is required for OIDC settings to take full effect.</p>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Paperless-ngx Integration Configuration Card -->
+                <div class="card collapsible-card">
+                    <div class="card-header collapsible-header" data-target="paperlessSettingsContent">
+                        <h3 data-i18n="settings.paperless_ngx_settings">Paperless-ngx Integration</h3>
+                        <i class="fas fa-chevron-down collapse-icon"></i>
+                    </div>
+                    <div class="card-body collapsible-content" id="paperlessSettingsContent">
+                        <div class="alert alert-info" style="margin-bottom: 20px;">
+                            <i class="fas fa-info-circle"></i>
+                            <strong data-i18n="settings.paperless_ngx_about_title">About Paperless-ngx Integration:</strong> 
+                            <span data-i18n="settings.paperless_ngx_about_desc">This optional feature allows you to store warranty documents in your self-hosted Paperless-ngx instance instead of locally. 
+                            When enabled, users can choose where to store each document: locally or in Paperless-ngx.</span>
+                        </div>
+                        
+                        <form id="paperlessSettingsForm">
+                            <div class="form-group">
+                                <div class="preference-item">
+                                    <div>
+                                        <label data-i18n="settings.enable_paperless">Enable Paperless-ngx Integration</label>
+                                        <p class="text-muted" data-i18n="settings.paperless_ngx_desc">Allow users to store warranty documents in Paperless-ngx</p>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="paperlessEnabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div id="paperlessSettingsContainer" style="display: none;">
+                                <div class="form-group">
+                                    <label for="paperlessUrl" data-i18n="settings.paperless_url">Paperless-ngx URL</label>
+                                    <input type="url" id="paperlessUrl" class="form-control" placeholder="https://paperless.yourdomain.com">
+                                    <small class="text-muted" data-i18n="settings.paperless_url_desc">The base URL of your Paperless-ngx instance (without trailing slash).</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="paperlessApiToken" data-i18n="settings.paperless_token">API Token</label>
+                                    <input type="password" id="paperlessApiToken" class="form-control" placeholder="Enter API token or leave blank to keep existing">
+                                    <small class="text-muted" data-i18n="settings.paperless_token_desc_generate">Generate an API token from your Paperless-ngx instance (Settings → API Tokens).</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <div class="preference-item">
+                                        <div>
+                                            <label data-i18n="settings.paperless_view_in_app">View Documents in Warracker</label>
+                                            <p class="text-muted" data-i18n="settings.paperless_view_in_app_desc">View Paperless-ngx documents within Warracker instead of opening them in Paperless domain</p>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="paperlessViewInApp">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="form-group" style="margin-top: 20px;">
+                                    <label data-i18n="settings.connection_testing">Connection Testing</label>
+                                    <div class="paperless-button-group">
+                                        <button type="button" id="testPaperlessConnectionBtn" class="btn btn-secondary">
+                                            <i class="fas fa-plug"></i> <span data-i18n="settings.test_paperless">Test Connection</span>
+                                        </button>
+                                        <button type="button" id="debugPaperlessBtn" class="btn btn-info">
+                                            <i class="fas fa-bug"></i> <span data-i18n="settings.debug_config">Debug Config</span>
+                                        </button>
+                                        <button type="button" id="testFileUploadBtn" class="btn btn-warning">
+                                            <i class="fas fa-upload"></i> <span data-i18n="settings.test_upload">Test Upload</span>
+                                        </button>
+                                    </div>
+                                    <div id="paperlessConnectionStatus" class="paperless-status-message"></div>
+                                </div>
+                            </div>
+                            
+                            <button type="button" id="savePaperlessSettingsBtn" class="btn btn-primary" style="margin-top: 15px;">
+                                <i class="fas fa-save"></i> <span data-i18n="settings.save_paperless_settings">Save Paperless-ngx Settings</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Apprise Notifications Configuration Card -->
+                <div class="card collapsible-card">
+                    <div class="card-header collapsible-header" data-target="appriseNotificationsContent">
+                        <h3 data-i18n="settings.apprise_notifications">Apprise Notifications</h3> <span class="badge" id="appriseStatusBadge" data-i18n="settings.loading">Loading...</span>
+                        <i class="fas fa-chevron-down collapse-icon"></i>
+                    </div>
+                    <div class="card-body collapsible-content" id="appriseNotificationsContent">
+                        <div id="appriseNotAvailable" class="alert alert-warning" style="display: none;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong data-i18n="settings.apprise_not_available_title">Apprise Not Available:</strong> <span data-i18n="settings.apprise_not_available_desc">The Apprise notification library is not installed or available. Notification features are disabled.</span>
+                        </div>
+                        
+                        <form id="appriseSettingsForm">
+                            <div class="form-group">
+                                <div class="preference-item">
+                                    <div>
+                                        <label data-i18n="settings.enable_apprise">Enable Apprise Notifications</label>
+                                        <p class="text-muted" data-i18n="settings.apprise_desc_system_wide">Enable or disable Apprise notifications system-wide</p>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="appriseEnabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div id="appriseSettingsContainer" style="display: none;">
+                                <h4 data-i18n="settings.apprise_settings">Apprise Settings</h4>
+                                
+                                <div class="form-group">
+                                    <div class="preference-item">
+                                        <div>
+                                            <label data-i18n="settings.apprise_mode">Notification Mode</label>
+                                            <p class="text-muted" data-i18n="settings.apprise_mode_desc">Choose how Apprise notifications are sent.</p>
+                                        </div>
+                                        <select id="appriseNotificationMode" class="form-control" style="max-width: 200px;">
+                                            <option value="global" data-i18n="settings.apprise_mode_global">Global Summary</option>
+                                            <option value="individual" data-i18n="settings.apprise_mode_individual">Per User</option>
+                                        </select>
+                                    </div>
+                                    <div class="mode-description text-muted" id="appriseModeDescription" style="margin-top: 5px; padding-left: 10px; border-left: 2px solid var(--border-color);">
+                                        <!-- Description will be updated by JS -->
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <div class="preference-item">
+                                        <div>
+                                            <label data-i18n="settings.apprise_warranty_scope">Warranty Scope</label>
+                                            <p class="text-muted" data-i18n="settings.apprise_warranty_scope_desc">Choose which warranties to include in notifications.</p>
+                                        </div>
+                                        <select id="appriseWarrantyScope" class="form-control" style="max-width: 200px;">
+                                            <option value="all" data-i18n="settings.all_users_warranties">All Users' Warranties</option>
+                                            <option value="admin" data-i18n="settings.admin_warranties_only">Admin's Warranties Only</option>
+                                        </select>
+                                    </div>
+                                    <div class="scope-description text-muted" id="appriseScopeDescription" style="margin-top: 5px; padding-left: 10px; border-left: 2px solid var(--border-color);">
+                                        <!-- Description will be updated by JS -->
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="appriseUrls" data-i18n="settings.apprise_url">Notification URLs</label>
+                                <textarea id="appriseUrls" class="form-control" rows="4" placeholder="Enter Apprise notification URLs, one per line or comma-separated:&#10;&#10;mailto://user:password@gmail.com&#10;discord://webhook_id/webhook_token&#10;slack://TokenA/TokenB/TokenC/Channel&#10;telegram://BotToken/ChatID"></textarea>
+                                <small class="text-muted" data-i18n="settings.apprise_url_desc">
+                                    Configure notification services using Apprise URL format. 
+                                    <a href="https://github.com/caronc/apprise/wiki" target="_blank" rel="noopener">View supported services and URL formats</a>
+                                </small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="appriseExpirationDays" data-i18n="settings.apprise_notification_days">Notification Days</label>
+                                <input type="text" id="appriseExpirationDays" class="form-control" placeholder="7,30" value="7,30">
+                                <small class="text-muted" data-i18n="settings.apprise_notification_days_desc">Days before expiration to send notifications (comma-separated, e.g., "7,30" for 7 days and 30 days before)</small>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="preference-item">
+                                    <div>
+                                        <label data-i18n="settings.apprise_check_frequency">Check Frequency</label>
+                                        <p class="text-muted" data-i18n="settings.apprise_check_frequency_desc">How often the system checks for expiring warranties (global setting)</p>
+                                    </div>
+                                    <select id="appriseNotificationFrequency" class="form-control">
+                                        <option value="daily" data-i18n="settings.daily">Daily</option>
+                                        <option value="weekly" data-i18n="settings.weekly">Weekly</option>
+                                        <option value="monthly" data-i18n="settings.monthly">Monthly</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="appriseTitlePrefix" data-i18n="settings.apprise_title_prefix">Message Title Prefix</label>
+                                <input type="text" id="appriseTitlePrefix" class="form-control" placeholder="[Warracker]" value="[Warracker]">
+                                <small class="text-muted" data-i18n="settings.apprise_title_prefix_desc">Prefix added to notification titles (e.g., "[Warracker]" results in "[Warracker] Warranties Expiring Soon")</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="appriseTestUrl" data-i18n="settings.apprise_test_url">Test URL (Optional)</label>
+                                <input type="text" id="appriseTestUrl" class="form-control" placeholder="mailto://test@example.com or discord://webhook_id/webhook_token">
+                                <small class="text-muted" data-i18n="settings.apprise_test_url_desc">Optional: URL for sending test notifications only (won't be saved to main configuration)</small>
+                            </div>
+                            
+                            <div class="apprise-actions" style="margin-top: 20px;">
+                                <button type="button" id="saveAppriseSettingsBtn" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> <span data-i18n="settings.save_apprise_settings">Save Apprise Settings</span>
+                                </button>
+                                <button type="button" id="testAppriseBtn" class="btn btn-secondary">
+                                    <i class="fas fa-paper-plane"></i> <span data-i18n="settings.test_apprise">Send Test Notification</span>
+                                </button>
+                                <button type="button" id="validateAppriseUrlBtn" class="btn btn-info">
+                                    <i class="fas fa-check-circle"></i> <span data-i18n="settings.validate_urls">Validate URLs</span>
+                                </button>
+                                <button type="button" id="triggerAppriseNotificationsBtn" class="btn btn-warning">
+                                    <i class="fas fa-bell"></i> <span data-i18n="settings.send_expiration_notifications_now">Send Expiration Notifications Now</span>
+                                </button>
+                            </div>
+
+                            <div id="appriseCurrentStatus" class="mt-3" style="margin-top: 15px;">
+                                <h4 data-i18n="settings.apprise_current_status">Current Status</h4>
+                                <div class="status-grid">
+                                    <div class="status-item">
+                                        <span class="status-label" data-i18n="settings.apprise_urls_configured">URLs Configured:</span>
+                                        <span id="appriseUrlsCount" class="status-value">0</span>
+                                    </div>
+                                    <div class="status-item">
+                                        <span class="status-label" data-i18n="settings.apprise_notification_days">Notification Days:</span>
+                                        <span id="currentAppriseExpirationDays" class="status-value">-</span>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            <div id="appriseSupportedServices" class="mt-3" style="margin-top: 15px;">
+                                <h4 data-i18n="settings.apprise_supported_services">Supported Services</h4>
+                                <div class="services-info">
+                                    <p class="text-muted" data-i18n="settings.apprise_supported_services_desc">
+                                        Apprise supports 80+ notification services including:
+                                        Discord, Slack, Telegram, Email (Gmail, Outlook), Webhooks, Microsoft Teams, 
+                                        Matrix, Pushover, Ntfy, Gotify, and many more.
+                                    </p>
+                                    <button type="button" id="viewSupportedServicesBtn" class="btn btn-link">
+                                        <i class="fas fa-external-link-alt"></i> <span data-i18n="settings.view_full_list_of_supported_services">View Full List of Supported Services</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                
+
+            </div>
+            
+            <!-- Audit Trail Section (Standalone) -->
+            <div id="auditTrailSection" class="admin-section" style="display: block; margin-top: 24px;">
+                <h2><i class="fas fa-history" style="margin-right: 8px;"></i>Audit Trail</h2>
+                <div class="card collapsible-card">
+                    <div class="card-header collapsible-header" data-target="auditTrailContent">
+                        <h3><i class="fas fa-list"></i> Recent Changes</h3>
+                        <i class="fas fa-chevron-down collapse-icon"></i>
+                    </div>
+                    <div class="card-body collapsible-content" id="auditTrailContent">
+                        <p class="text-muted">View a log of recent changes made by administrators and users.</p>
+                        <button id="viewAuditTrailBtn" class="btn btn-primary">
+                            <i class="fas fa-eye"></i> View Audit Log
+                        </button>
+                        <div id="auditTrailDisplay" style="display: none; margin-top: 20px;">
+                            <div id="auditTrailLoading" style="text-align: center;">
+                                <i class="fas fa-spinner fa-spin"></i> Loading log...
+                            </div>
+                            <div class="table-responsive">
+                               <table id="auditTrailTable" class="table" style="display: none; width: 100%;">
+                                    <thead>
+                                        <tr>
+                                            <th>Timestamp</th>
+                                            <th>User</th>
+                                            <th>Action</th>
+                                            <th>Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="auditTrailTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ownership Management Section - Only visible to the owner -->
+            <div id="ownershipSection" class="ownership-section" style="display: none;">
+                <h2><i class="fas fa-crown" style="color: #f39c12; margin-right: 8px;"></i><span data-i18n="settings.ownership_management">Ownership Management</span></h2>
+                
+                <div id="ownershipCard" class="card danger-card">
+                    <div class="card-header">
+                        <h3 data-i18n="settings.transfer_ownership">Transfer Ownership</h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-danger"><strong data-i18n="settings.warning_title">Warning:</strong> <span data-i18n="settings.transfer_ownership_warning">Transfer application ownership to another admin user. This action is irreversible.</span></p>
+                        <p data-i18n="settings.transfer_ownership_desc">Once ownership is transferred, you will become a regular admin and the new owner will have ultimate control over the application.</p>
+                        <div class="form-group">
+                            <label for="newOwnerSelect" data-i18n="settings.select_new_owner">Select New Owner (must be an admin)</label>
+                            <select id="newOwnerSelect" class="form-control">
+                                <option value="" data-i18n="settings.select_admin_user">Select an admin user...</option>
+                            </select>
+                        </div>
+                        <button id="transferOwnershipBtn" class="btn btn-danger" disabled data-i18n="settings.transfer_ownership_button">Transfer Ownership</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transfer Ownership Confirmation Modal -->
+    <div id="transferOwnershipModal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-crown" style="color: #f39c12; margin-right: 8px;"></i><span data-i18n="settings.transfer_ownership">Transfer Ownership</span></h3>
+                <button class="close-btn" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="text-danger"><strong data-i18n="settings.warning_title">Warning:</strong> <span data-i18n="settings.transfer_ownership_irreversible">This action cannot be undone.</span></p>
+                <p><span data-i18n="settings.transfer_ownership_confirmation">You are about to transfer application ownership to</span> <strong><span id="transferTargetUsername"></span></strong>.</p>
+                <p data-i18n="settings.after_this_transfer">After this transfer:</p>
+                <ul>
+                    <li data-i18n="settings.transfer_ownership_consequence_1">You will become a regular admin</li>
+                    <li data-i18n="settings.transfer_ownership_consequence_2">The new owner will have ultimate control over the application</li>
+                    <li data-i18n="settings.transfer_ownership_consequence_3">Only the new owner can transfer ownership again</li>
+                </ul>
+                <p data-i18n="settings.transfer_ownership_type_to_confirm">To confirm, please type <strong>"TRANSFER"</strong> in the field below:</p>
+                <input type="text" id="transferConfirmInput" class="form-control" placeholder="Type TRANSFER to confirm">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-dismiss="modal" data-i18n="actions.cancel">Cancel</button>
+                <button id="confirmTransferOwnershipBtn" class="btn btn-danger" disabled data-i18n="settings.transfer_ownership_button">Transfer Ownership</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Account Modal -->
+    <div id="deleteAccountModal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Delete Account</h3>
+                <button class="close-btn" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="text-danger"><strong>Warning: This action cannot be undone.</strong></p>
+                <p>All your data, including warranties, will be permanently deleted.</p>
+                <p>To confirm, please type "DELETE" in the field below:</p>
+                <input type="text" id="deleteConfirmInput" class="form-control" placeholder="Type DELETE to confirm">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button id="confirmDeleteAccountBtn" class="btn btn-danger" disabled>Delete My Account</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Success Modal -->
+    <div id="passwordSuccessModal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Password Updated</h3>
+                <button class="close-btn" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body text-center">
+                <i class="fas fa-check-circle success-icon"></i>
+                <p>Your password has been successfully updated.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" data-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal (Admin) -->
+    <div id="editUserModal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit User</h3>
+                <button class="close-btn" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId">
+                    
+                    <div class="form-group">
+                        <label for="editUsername">Username</label>
+                        <input type="text" id="editUsername" class="form-control" disabled>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editEmail">Email</label>
+                        <input type="email" id="editEmail" class="form-control" disabled>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="preference-item">
+                            <div>
+                                <label>Active Status</label>
+                                <p class="text-muted">Enable or disable user access</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="editUserActive">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="preference-item">
+                            <div>
+                                <label>Admin Status</label>
+                                <p class="text-muted">Grant or revoke admin privileges</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="editUserAdmin">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button id="saveUserBtn" class="btn btn-primary">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete User Confirmation Modal (Admin) -->
+    <div id="deleteUserModal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Delete User</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="deleteUserForm">
+                    <input type="hidden" id="deleteUserId" name="userId">
+                    <p>Are you sure you want to delete user <span id="deleteUserName"></span>?</p>
+                    <p style="font-size: 0.8em; color: #666;">User ID: <span id="displayUserId"></span></p>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary close-modal">Cancel</button>
+                        <button type="button" id="confirmDeleteUserBtn" class="btn btn-danger" onclick="deleteUser()">Delete</button>
+                    </div>
+                    <div style="margin-top: 20px; border-top: 1px solid #ddd; padding-top: 10px;">
+                        <p><small>If the delete button doesn't work, try these alternatives:</small></p>
+                        <ul style="font-size: 0.8em;">
+                            <li><a href="#" id="directDeleteLink" style="color: #dc3545;" onclick="deleteUser(); return false;">Alternative 1: Direct function call</a></li>
+                            <li><a href="#" id="directAPILink" style="color: #dc3545;" onclick="directDeleteUserAPI(document.getElementById('deleteUserId').value); return false;">Alternative 2: Direct API call</a></li>
+                            <li><button type="submit" class="btn btn-sm btn-danger">Alternative 3: Form Submit</button></li>
+                        </ul>
+                        <div style="margin-top: 10px;">
+                            <button type="button" id="emergencyDeleteBtn" class="btn btn-sm btn-danger" 
+                                    onclick="(function() {
+                                        const userId = document.getElementById('deleteUserId').value || document.getElementById('displayUserId').textContent;
+                                        if (!userId) {
+                                            alert('Error: User ID is missing');
+                                            return;
+                                        }
+                                        const token = localStorage.getItem('auth_token');
+                                        if (!token) {
+                                            alert('Error: Authentication token is missing');
+                                            return;
+                                        }
+                                        alert('Emergency delete for user ID: ' + userId);
+                                        fetch('/api/admin/users/' + userId, {
+                                            method: 'DELETE',
+                                            headers: {
+                                                'Authorization': 'Bearer ' + token,
+                                                'Content-Type': 'application/json'
+                                            }
+                                        })
+                                        .then(response => {
+                                            alert('Response status: ' + response.status);
+                                            if (response.status >= 200 && response.status < 300) {
+                                                alert('User deleted successfully');
+                                                document.querySelectorAll('.modal-backdrop').forEach(m => m.style.display = 'none');
+                                                location.reload();
+                                            } else {
+                                                alert('Failed to delete user: ' + response.status);
+                                            }
+                                        })
+                                        .catch(error => {
+                                            alert('Error: ' + error.message);
+                                        });
+                                    })(); return false;">
+                                Emergency Delete (Inline JS)
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users List Modal (Admin) -->
+    <div id="usersModal" class="modal-backdrop">
+        <div class="modal" style="max-width: 90%; width: 1000px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Users List</h3>
+                <button class="close-btn" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 0;">
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; margin: 0;">
+                        <thead>
+                            <tr style="background-color: var(--card-bg); border-bottom: 2px solid var(--border-color);">
+                                <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: var(--text-color); border-right: 1px solid var(--border-color); min-width: 40px;">ID</th>
+                                <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: var(--text-color); border-right: 1px solid var(--border-color); min-width: 120px;">Username</th>
+                                <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: var(--text-color); border-right: 1px solid var(--border-color); min-width: 180px;">Email</th>
+                                <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: var(--text-color); border-right: 1px solid var(--border-color); min-width: 120px;">Name</th>
+                                <th style="padding: 12px 8px; text-align: center; font-weight: 600; color: var(--text-color); border-right: 1px solid var(--border-color); min-width: 80px;">Admin</th>
+                                <th style="padding: 12px 8px; text-align: center; font-weight: 600; color: var(--text-color); border-right: 1px solid var(--border-color); min-width: 80px;">Active</th>
+                                <th style="padding: 12px 8px; text-align: center; font-weight: 600; color: var(--text-color); min-width: 100px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <!-- Users will be populated here by loadUsers() -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Container -->
+    <div id="loadingContainer" class="loading-container">
+        <div class="spinner"></div>
+    </div>
+    
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+    
+    <!-- Scripts -->
+    
+    <script src="/settings-new.js?v=20250119001"></script>
+    
+    <!-- Footer Width Fix -->
+    <script src="/footer-fix.js?v=20251024001"></script>
+    
+    <!-- Footer Content Manager -->
+    <script src="/footer-content.js?v=20250119001"></script>
+
+<!-- Powered by Warracker Footer -->
+<footer class="warracker-footer" id="warrackerFooter">
+    <!-- Content will be dynamically generated by footer-content.js -->
+</footer>
+
+</body>
+</html>

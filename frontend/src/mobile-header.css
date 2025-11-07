@@ -1,0 +1,1254 @@
+@media (max-width: 768px) {
+  /* Header Responsive Styles with increased specificity */
+  header .container {
+    flex-wrap: wrap !important; /* Allow header items to wrap */
+    justify-content: space-between !important; /* Push title left, right-group right */
+    align-items: center !important; /* Vertically align items in the top row */
+    gap: 10px 15px !important; /* Add space between wrapped items */
+    padding: 10px 15px !important; /* Adjust padding */
+    /* Ensure theme variables are applied */
+    background-color: var(--card-bg) !important;
+    color: var(--text-color) !important;
+  }
+
+  header {
+    /* Ensure header inherits theme variables on mobile */
+    background-color: var(--card-bg) !important;
+    box-shadow: var(--shadow) !important;
+    padding: 20px 0 !important;
+    margin-bottom: 30px !important;
+  }
+
+  header .app-title {
+    /* flex-basis: 100%; Remove - allow sharing row */
+    text-align: left !important; /* Align title text left */
+    margin-bottom: 0 !important; /* Remove bottom margin */
+  }
+
+  header .app-title h1 {
+    font-size: 1.8rem !important; /* Slightly reduce title size */
+    margin: 0 auto !important; /* Center title text if needed */
+    color: var(--primary-color) !important; /* Ensure theme color */
+  }
+  
+  header .app-title i {
+    font-size: 1.6rem !important; /* Slightly reduce icon size */
+    margin-right: 10px !important;
+    color: var(--primary-color) !important; /* Ensure theme color */
+    /* display: none; /* Optionally hide icon on very small screens */
+  }
+  
+  /* Group user/settings/auth buttons together */
+  .header-right-group {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: flex-end !important; /* Keep content aligned right within the group */
+      /* flex-basis: 100%; Remove - allow sharing row */
+      flex-wrap: nowrap !important; 
+      gap: 10px !important; 
+  }
+
+  header .nav-links {
+      order: 3 !important; /* Ensure nav links are last */
+      flex-basis: 100% !important; /* Make nav links take full width */
+      justify-content: center !important; /* Center nav links */
+      margin: 10px 0 0 0 !important; 
+      padding-bottom: 5px !important; 
+      gap: 15px !important; 
+  }
+
+  /* Navigation link styling for mobile */
+  header .nav-link {
+    color: var(--text-color) !important;
+    text-decoration: none !important;
+    padding: 8px 12px !important;
+    border-radius: 4px !important;
+    transition: background-color 0.3s !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  header .nav-link:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+  }
+
+  /* Dark mode hover for nav links */
+  :root[data-theme="dark"] header .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  header .nav-link.active {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+    font-weight: 600 !important;
+  }
+
+  /* Dark mode active nav link */
+  :root[data-theme="dark"] header .nav-link.active {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* Override specific margins from header-fix.css */
+  header .auth-buttons,
+  header .user-menu,
+  header .settings-container {
+      margin: 0 5px !important; /* Override margin-left from header-fix.css */
+      flex-shrink: 0 !important; /* Prevent shrinking */
+  }
+
+  /* Auth button styling for mobile with theme support */
+  header .auth-btn {
+    padding: 5px 15px !important;
+    border-radius: 20px !important;
+    font-size: 0.9rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    text-decoration: none !important;
+  }
+
+  header .login-btn {
+    background-color: transparent !important;
+    border: 1px solid var(--primary-color) !important;
+    color: var(--primary-color) !important;
+  }
+
+  header .login-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+  }
+
+  /* Dark mode login button hover */
+  :root[data-theme="dark"] header .login-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  header .register-btn {
+    background-color: var(--primary-color) !important;
+    border: 1px solid var(--primary-color) !important;
+    color: white !important;
+  }
+
+  header .register-btn:hover {
+    background-color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+  }
+
+  /* User menu styling for mobile */
+  header .user-btn {
+    background: none !important;
+    border: none !important;
+    color: var(--text-color) !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    font-size: 0.9rem !important;
+    padding: 5px 10px !important;
+    border-radius: 20px !important;
+    transition: background-color 0.3s !important;
+  }
+
+  header .user-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+  }
+
+  /* Dark mode user button hover */
+  :root[data-theme="dark"] header .user-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* User menu dropdown for mobile */
+  header .user-menu-dropdown {
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    background-color: var(--card-bg) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px var(--shadow-color) !important;
+    width: 200px !important;
+    z-index: 1000 !important;
+    display: none !important;
+    padding: 10px 0 !important;
+    margin-top: 5px !important;
+    border: 1px solid var(--border-color) !important;
+  }
+
+  header .user-menu-dropdown.active {
+    display: block !important;
+  }
+
+  header .user-info {
+    padding: 10px 15px !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    margin-bottom: 5px !important;
+  }
+
+  header .user-name {
+    font-weight: bold !important;
+    margin-bottom: 5px !important;
+    color: var(--text-color) !important;
+  }
+
+  header .user-email {
+    font-size: 0.8rem !important;
+    color: var(--dark-gray) !important;
+    word-break: break-all !important;
+  }
+
+  header .user-menu-item {
+    cursor: pointer !important;
+    transition: background-color 0.3s !important;
+    display: flex !important;
+    align-items: center !important;
+    color: var(--text-color) !important;
+  }
+
+  header .user-menu-item > :first-child {
+    padding: 8px 15px !important;
+    width: 100% !important;
+  }
+
+  header .user-menu-item:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+  }
+
+  /* Dark mode user menu item hover */
+  :root[data-theme="dark"] header .user-menu-item:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  header .user-menu-item i {
+    margin-right: 10px !important;
+    width: 16px !important;
+    text-align: center !important;
+    color: var(--text-color) !important;
+  }
+
+  /* Settings container for mobile */
+  header .settings-container {
+    position: relative !important;
+    margin-left: 10px !important;
+  }
+
+  header .settings-btn {
+    background: none !important;
+    border: none !important;
+    color: var(--text-color) !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.2rem !important;
+    padding: 8px !important;
+    border-radius: 50% !important;
+    transition: background-color 0.3s !important;
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  header .settings-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+  }
+
+  /* Dark mode settings button hover */
+  :root[data-theme="dark"] header .settings-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* ===== MOBILE SEARCH CONTAINER AND ACTION BUTTONS ===== */
+  
+  /* Override the default mobile stacking behavior from style.css */
+  .search-container {
+    display: flex !important;
+    flex-direction: row !important; /* Keep horizontal layout */
+    width: 100% !important;
+    gap: 8px !important;
+    align-items: center !important;
+    flex-wrap: wrap !important; /* Allow wrapping when needed */
+  }
+
+  /* On tablets (<=768px), force search box to full row; buttons come on next row */
+  .search-container .search-box {
+    flex: 0 0 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Place Filter/Sort/Data/Tags on the same row under the search */
+  .search-container .filter-sort-container,
+  .search-container .secondary-actions {
+    order: 2 !important;
+    display: flex !important;
+    gap: 8px !important; /* spacing between the buttons */
+    flex-wrap: wrap !important; 
+    flex: 0 0 auto !important;
+    align-items: center !important;
+    width: 100% !important; /* ensure full-width row on tablets too */
+  }
+
+  /* Tablet (600-768px): place Filter/Sort next to Search on the first row */
+  @media (min-width: 600px) and (max-width: 768px) {
+    .search-container {
+      flex-direction: row !important;
+      align-items: center !important;
+      flex-wrap: wrap !important; /* keep secondary actions on next line */
+    }
+
+    /* Let search box share the row */
+    .search-container .search-box {
+      flex: 1 1 0 !important;
+      min-width: 220px !important;
+      max-width: none !important;
+    }
+
+    /* Keep Filter/Sort on the same line as Search */
+    .search-container .filter-sort-container {
+      order: 1 !important;
+      width: auto !important;
+      flex: 0 0 auto !important;
+      gap: 8px !important;
+    }
+
+    /* Prevent Filter/Sort buttons from stretching full-width on tablets */
+    .search-container .filter-sort-container .action-btn {
+      width: auto !important;
+    }
+
+    /* Move Data/Tags/View/Scope to the next line */
+    .search-container .secondary-actions {
+      order: 2 !important; /* second row */
+      flex: 0 0 100% !important;
+      width: 100% !important;
+    }
+  }
+
+  /* Stack View and Scope vertically like Filter/Sort on mobile */
+  #viewMenuBtn,
+  #scopeMenuBtn {
+    width: 100% !important; /* full width to match Filter/Sort */
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* Make their containers span full width so buttons can center within */
+  #viewDropdownContainer {
+    width: 100% !important;
+    display: block !important;
+  }
+  #scopeDropdown {
+    width: 100% !important;
+    /* Do not force display; JS controls visibility when global view is disabled */
+  }
+
+  /* Ensure action buttons match sizing on tablet width */
+  .filter-controls .action-btn,
+  .search-container #globalManageTagsBtn {
+    height: 36px !important;
+    padding: 6px 10px !important;
+  }
+
+  /* Hide legacy Import/Export buttons on mobile; use Data menu instead */
+  .search-container .export-btn,
+  .search-container .import-btn {
+    display: none !important;
+  }
+
+  /* Action button styling for the visible Tags button on mobile
+     Match look/behavior of other action buttons (Filter/Sort/Data) */
+  .search-container #globalManageTagsBtn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    padding: 6px 10px !important;
+    border-radius: var(--border-radius) !important;
+    border: 1px solid var(--border-color) !important;
+    background-color: var(--bg-color) !important;
+    color: var(--text-color) !important;
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: var(--transition) !important;
+    height: 36px !important;
+    white-space: nowrap !Important;
+    min-width: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Import button previously got secondary styling; keep only for Tags button */
+  .search-container #globalManageTagsBtn {
+    background-color: var(--bg-color) !important;
+    color: var(--text-color) !important;
+  }
+
+  /* Hover states for action buttons */
+  .search-container #globalManageTagsBtn:hover {
+    background-color: var(--light-gray) !important;
+    color: var(--primary-color) !important;
+  }
+
+  /* Icon spacing in action buttons */
+  .search-container #globalManageTagsBtn i {
+    font-size: 0.8rem !important;
+    margin-right: 4px !important;
+  }
+
+  /* Dark mode styles for action buttons */
+  :root[data-theme="dark"] .search-container #globalManageTagsBtn {
+    background-color: var(--bg-color) !important;
+    color: var(--text-color) !important;
+    border-color: var(--border-color) !important;
+  }
+
+  :root[data-theme="dark"] .search-container #globalManageTagsBtn:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: var(--primary-color) !important;
+  }
+
+  /* Tablet layout: make View and Scope share the row equally */
+  @media (min-width: 481px) and (max-width: 768px) {
+    /* Keep Data, Tags, View, Scope inline on tablets */
+    .search-container .secondary-actions {
+      flex-wrap: nowrap !important;
+      gap: 8px !important;
+    }
+    .search-container .secondary-actions #viewDropdownContainer,
+    .search-container .secondary-actions #scopeDropdown {
+      width: auto !important;
+      flex: 0 1 auto !important;
+      display: block !important;
+      min-width: 0 !important;
+    }
+    #viewMenuBtn,
+    #scopeMenuBtn {
+      width: auto !important;
+      height: 36px !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      flex: 0 1 auto !important;
+    }
+  }
+
+  /* Stronger tablet override (600–768px): ensure all four controls fit one row */
+  @media (min-width: 600px) and (max-width: 768px) {
+    .search-container .secondary-actions {
+      order: 2 !important;
+      width: auto !important;
+      flex: 0 0 100% !important; /* stay as one row container */
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      gap: 8px !important;
+      align-items: center !important;
+    }
+
+    .search-container .secondary-actions > .data-dropdown,
+    .search-container .secondary-actions > #globalManageTagsBtn,
+    .search-container .secondary-actions > #viewDropdownContainer,
+    .search-container .secondary-actions > #scopeDropdown {
+      flex: 0 1 auto !important;
+      width: auto !important;
+      min-width: 0 !important;
+    }
+  }
+
+  /* Mobile L/M/S: keep Filter & Sort next to Search; pair secondary buttons 2-per-row */
+  @media (max-width: 480px) {
+    /* First row: Search full-width; Row 2: Filter | Sort | Data; Row 3: Tags | View | Scope */
+    .search-container {
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      grid-template-areas:
+        "search search search"
+        "filtersort filtersort data"
+        "tags view scope" !important;
+      grid-template-rows: auto auto !important;
+      align-items: center !important;
+      gap: 8px !important;
+      width: 100% !important;
+    }
+
+    .search-container .search-box {
+      grid-area: search !important; /* search takes full top row */
+      min-width: 120px !important;
+      max-width: none !important;
+      width: auto !important;
+    }
+
+    /* Ensure Filter/Sort do not stretch */
+    .search-container .filter-sort-container .action-btn {
+      width: auto !important;
+      min-width: 0 !important;
+      flex: 0 0 auto !important;
+    }
+
+    /* Flatten secondary-actions so its children participate in the parent grid */
+    .search-container .secondary-actions {
+      grid-column: 1 / -1 !important; /* second row grid area */
+      display: contents !important;
+    }
+
+    /* Keep Filter/Sort within a two-column subgrid to preserve popover anchoring */
+    .search-container .filter-sort-container {
+      grid-area: filtersort !important;
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 6px !important;
+      align-items: center !important;
+      justify-content: stretch !important;
+    }
+
+    /* Position Data, Tags, View, Scope */
+    .search-container .secondary-actions > .data-dropdown:first-child { grid-area: data !important; }
+    .search-container #globalManageTagsBtn { grid-area: tags !important; }
+    .search-container #viewDropdownContainer { grid-area: view !important; }
+    .search-container #scopeDropdown { grid-area: scope !important; }
+
+    /* Make the button inside each grid cell fill its container */
+    .search-container .secondary-actions .data-dropdown > .action-btn,
+    .search-container .secondary-actions #globalManageTagsBtn,
+    .search-container .secondary-actions #viewDropdownContainer > .action-btn,
+    .search-container .secondary-actions #scopeDropdown > .action-btn {
+      width: 100% !important;
+    }
+
+    /* Compact button sizing for 3-column rows */
+    .search-container .filter-sort-container .action-btn,
+    .search-container .secondary-actions .action-btn,
+    .search-container #globalManageTagsBtn,
+    #viewMenuBtn,
+    #scopeMenuBtn {
+      height: 32px !important;
+      padding: 6px 8px !important;
+      gap: 4px !important;
+      font-size: 0.9rem !important;
+    }
+
+    .search-container .secondary-actions .action-btn i,
+    .search-container .filter-sort-container .action-btn i,
+    #globalManageTagsBtn i {
+      font-size: 0.95rem !important;
+    }
+
+    /* Icon-only labels for all six buttons to ensure 3-per-row fit */
+    .search-container .secondary-actions .action-btn span,
+    .search-container #globalManageTagsBtn span {
+      display: none !important;
+    }
+  }
+
+  /* Auto-hide labels on Filter/Sort when space is tight (extend to 425px) */
+  @media (max-width: 425px) {
+    .search-container .filter-sort-container .action-btn span {
+      display: none !important; /* icons only */
+    }
+    .search-container .filter-sort-container .action-btn {
+      gap: 0 !important;
+      padding: 6px 8px !important;
+      min-width: 36px !important;
+    }
+    /* Hide Tags label as well on very small screens */
+    .search-container #globalManageTagsBtn span {
+      display: none !important;
+    }
+    .search-container #globalManageTagsBtn {
+      gap: 0 !important;
+      padding: 6px 8px !important;
+      min-width: 36px !important;
+    }
+  }
+
+  /* Ultra-small tweaks */
+  @media (max-width: 340px) {
+    .search-container { gap: 6px !important; }
+    .search-container .filter-sort-container .action-btn i { font-size: 0.95rem !important; }
+  }
+
+  /* ===== MOBILE STATUS DASHBOARD ===== */
+  
+  /* Status cards 2x2 grid layout for mobile */
+  .status-cards {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 15px !important;
+    margin-bottom: 25px !important;
+  }
+
+  /* Align scope switcher with view switcher in mobile action bar */
+  .filter-options .action-bar {
+    align-items: flex-start !important;
+  }
+  .view-switcher,
+  .admin-view-switcher {
+    margin-top: 0 !important;
+  }
+  .admin-view-switcher {
+    align-self: flex-end !important; /* keep scope aligned to bottom-right of row */
+  }
+
+  /* Stack bottom View and Scope switchers vertically */
+  .filter-options .action-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+  .filter-options .action-bar .admin-view-switcher {
+    margin-left: 0 !important;
+    align-self: auto !important;
+  }
+
+  /* Individual status card mobile optimization */
+  .status-card {
+    background-color: var(--card-bg) !important;
+    border-radius: 8px !important;
+    padding: 15px !important;
+    box-shadow: var(--shadow) !important;
+    display: flex !important;
+    align-items: center !important;
+    transition: transform 0.3s, box-shadow 0.3s !important;
+    border: 1px solid var(--border-color) !important;
+    min-height: 80px !important;
+  }
+
+  .status-card:hover {
+    transform: translateY(-2px) !important; /* Reduced for mobile */
+    box-shadow: 0 4px 12px var(--shadow-color) !important;
+  }
+
+  /* Card icon sizing for mobile */
+  .status-card .card-icon {
+    font-size: 2rem !important; /* Slightly smaller for mobile */
+    margin-right: 12px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Card content text sizing for mobile */
+  .status-card .card-content h3 {
+    margin: 0 0 4px 0 !important;
+    font-size: 0.85rem !important; /* Smaller text */
+    color: var(--dark-gray) !important;
+    line-height: 1.2 !important;
+  }
+
+  .status-card .card-content .count {
+    font-size: 1.6rem !important; /* Slightly smaller number */
+    font-weight: 700 !important;
+    margin: 0 !important;
+    color: var(--text-color) !important;
+    line-height: 1 !important;
+  }
+
+  /* Ensure proper theme colors for status card icons */
+  .status-card[data-status="active"] .card-icon {
+    color: #4CAF50 !important;
+  }
+
+  .status-card[data-status="expiring"] .card-icon {
+    color: #FF9800 !important;
+  }
+
+  .status-card[data-status="expired"] .card-icon {
+    color: #F44336 !important;
+  }
+
+  .status-card[data-status="total"] .card-icon {
+    color: var(--primary-color) !important;
+  }
+
+  /* Dark mode adjustments for better visibility */
+  :root[data-theme="dark"] .status-card {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+    box-shadow: var(--shadow) !important;
+  }
+
+  :root[data-theme="dark"] .status-card:hover {
+    box-shadow: 0 4px 12px var(--shadow-color) !important;
+  }
+
+  :root[data-theme="dark"] .status-card .card-content h3 {
+    color: var(--dark-gray) !important;
+  }
+
+  :root[data-theme="dark"] .status-card .card-content .count {
+    color: var(--text-color) !important;
+  }
+}
+
+/* ===== PHONE-SPECIFIC STATUS CARD FIXES ===== */
+/* iPhone SE, iPhone 12/13 mini: 375px */
+@media (max-width: 375px) and (min-width: 361px) {
+  .status-content .status-cards,
+  body .status-cards,
+  .container .status-cards,
+  .status-cards {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .status-content .status-card,
+  body .status-card,
+  .container .status-card,
+  .status-card {
+    background-color: var(--card-bg) !important;
+    border-radius: 6px !important;
+    padding: 10px !important;
+    box-shadow: var(--shadow) !important;
+    display: flex !important;
+    align-items: center !important;
+    min-height: 65px !important;
+  }
+
+  .status-card .card-icon {
+    font-size: 1.6rem !important;
+    margin-right: 8px !important;
+  }
+
+  .status-card .card-content h3 {
+    font-size: 0.75rem !important;
+    margin: 0 0 2px 0 !important;
+  }
+
+  .status-card .card-content .count {
+    font-size: 1.3rem !important;
+  }
+}
+
+/* iPhone 12/13/14, most Android phones: 390px-414px */
+@media (max-width: 414px) and (min-width: 376px) {
+  .status-content .status-cards,
+  body .status-cards,
+  .container .status-cards,
+  .status-cards {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .status-content .status-card,
+  body .status-card,
+  .container .status-card,
+  .status-card {
+    background-color: var(--card-bg) !important;
+    border-radius: 8px !important;
+    padding: 12px !important;
+    box-shadow: var(--shadow) !important;
+    display: flex !important;
+    align-items: center !important;
+    min-height: 70px !important;
+  }
+
+  .status-card .card-icon {
+    font-size: 1.8rem !important;
+    margin-right: 10px !important;
+  }
+
+  .status-card .card-content h3 {
+    font-size: 0.8rem !important;
+    margin: 0 0 3px 0 !important;
+  }
+
+  .status-card .card-content .count {
+    font-size: 1.4rem !important;
+  }
+}
+
+/* iPhone 14 Plus and larger phones: 428px+ */
+@media (max-width: 480px) and (min-width: 415px) {
+  .status-content .status-cards,
+  body .status-cards,
+  .container .status-cards,
+  .status-cards {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 15px !important;
+    margin-bottom: 25px !important;
+  }
+
+  .status-content .status-card,
+  body .status-card,
+  .container .status-card,
+  .status-card {
+    background-color: var(--card-bg) !important;
+    border-radius: 8px !important;
+    padding: 15px !important;
+    box-shadow: var(--shadow) !important;
+    display: flex !important;
+    align-items: center !important;
+    min-height: 75px !important;
+  }
+
+  .status-card .card-icon {
+    font-size: 2rem !important;
+    margin-right: 12px !important;
+  }
+
+  .status-card .card-content h3 {
+    font-size: 0.85rem !important;
+    margin: 0 0 4px 0 !important;
+  }
+
+  .status-card .card-content .count {
+    font-size: 1.5rem !important;
+  }
+}
+
+/* ===== SPECIFIC FIX FOR 425PX SCREENS ===== */
+@media (max-width: 425px) and (min-width: 361px) {
+  /* Force 2x2 grid layout for 425px screens with higher specificity */
+  .status-content .status-cards,
+  body .status-cards,
+  .container .status-cards {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+    margin-bottom: 20px !important;
+  }
+
+  /* Compact status cards for 425px */
+  .status-content .status-card,
+  body .status-card,
+  .container .status-card {
+    background-color: var(--card-bg) !important;
+    border-radius: 8px !important;
+    padding: 12px !important;
+    box-shadow: var(--shadow) !important;
+    display: flex !important;
+    align-items: center !important;
+    transition: transform 0.3s, box-shadow 0.3s !important;
+    border: 1px solid var(--border-color) !important;
+    min-height: 70px !important;
+  }
+
+  /* Icon and text sizing for 425px */
+  .status-card .card-icon {
+    font-size: 1.8rem !important;
+    margin-right: 10px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .status-card .card-content h3 {
+    font-size: 0.8rem !important;
+    margin: 0 0 3px 0 !important;
+    color: var(--dark-gray) !important;
+    line-height: 1.2 !important;
+  }
+
+  .status-card .card-content .count {
+    font-size: 1.4rem !important;
+    font-weight: 700 !important;
+    margin: 0 !important;
+    color: var(--text-color) !important;
+    line-height: 1 !important;
+  }
+}
+
+/* ===== EXTENDED MOBILE SUPPORT FOR 425PX AND SMALLER ===== */
+@media (max-width: 480px) {
+  /* Override the default single-column behavior from style.css for status cards */
+  /* Keep the 2x2 grid layout down to 375px for better organization */
+  .status-cards {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important; /* Slightly tighter spacing */
+    margin-bottom: 20px !important;
+  }
+
+  /* Adjust status cards for smaller screens (425px and below) */
+  .status-card {
+    padding: 12px !important; /* Reduced padding for smaller screens */
+    min-height: 70px !important; /* Slightly shorter cards */
+  }
+
+  /* Smaller icon and text for very compact cards */
+  .status-card .card-icon {
+    font-size: 1.8rem !important; /* Smaller icon */
+    margin-right: 10px !important; /* Tighter spacing */
+  }
+
+  .status-card .card-content h3 {
+    font-size: 0.8rem !important; /* Even smaller label text */
+    margin: 0 0 3px 0 !important;
+  }
+
+  .status-card .card-content .count {
+    font-size: 1.4rem !important; /* Smaller but still prominent numbers */
+  }
+}
+
+/* ===== VERY SMALL SCREENS (360px and below) ===== */
+@media (max-width: 360px) {
+  /* Only at very small screens, switch to single column */
+  .status-cards {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Full-width cards for tiny screens */
+  .status-card {
+    padding: 15px !important; /* Back to more padding since we have full width */
+    min-height: 60px !important;
+  }
+
+  .status-card .card-icon {
+    font-size: 1.6rem !important;
+    margin-right: 12px !important;
+  }
+
+  .status-card .card-content h3 {
+    font-size: 0.85rem !important;
+  }
+
+  .status-card .card-content .count {
+    font-size: 1.5rem !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .warranties-list.list-view {
+    display: block !important;
+  }
+
+  .warranties-list.list-view .warranty-card {
+    display: block !important;
+    margin-bottom: 15px !important;
+  }
+
+  /* ===== MOBILE LIST VIEW OPTIMIZATIONS ===== */
+  
+  /* Reduce padding and margins for mobile list view cards */
+  .list-view .warranty-card {
+    margin-bottom: 10px !important;
+    border-radius: 6px !important;
+  }
+  
+  /* Optimize product name header for mobile */
+  .list-view .product-name-header {
+    padding: 10px 12px !important;
+    font-size: 1rem !important;
+  }
+  
+  .list-view .product-name-header .warranty-title {
+    font-size: 1rem !important;
+    line-height: 1.3 !important;
+    white-space: normal !important; /* Allow wrapping on mobile */
+    overflow: visible !important;
+    text-overflow: clip !important;
+    max-width: calc(100% - 70px) !important; /* Make room for action buttons */
+  }
+  
+  /* Optimize warranty content padding */
+  .list-view .warranty-content {
+    padding: 10px 12px !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  
+  /* Optimize warranty info layout for mobile */
+  .list-view .warranty-info {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+    margin-bottom: 10px !important;
+  }
+  
+  .list-view .warranty-info > div {
+    margin-right: 0 !important;
+    margin-bottom: 0 !important;
+    font-size: 0.9rem !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+  
+  .list-view .warranty-info > div i {
+    width: 18px !important;
+    margin-right: 6px !important;
+    font-size: 0.85rem !important;
+    flex-shrink: 0 !important;
+  }
+  
+  .list-view .warranty-info > div span {
+    margin-left: 4px !important;
+    font-weight: 500 !important;
+  }
+  
+  /* Optimize product photo for mobile list view */
+  .list-view .product-photo-thumbnail {
+    position: static !important;
+    margin-bottom: 10px !important;
+    text-align: center !important;
+    width: 100% !important;
+  }
+  
+  .list-view .product-photo-thumbnail img {
+    width: 80px !important;
+    height: 80px !important;
+    border-radius: 6px !important;
+    object-fit: cover !important;
+  }
+  
+  /* Optimize warranty status row */
+  .list-view .warranty-status-row {
+    padding: 8px 12px !important;
+    margin: 0 !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+  }
+  
+  /* Optimize document links for mobile list view */
+  .list-view .document-links-row {
+    padding: 8px 12px !important;
+    gap: 8px !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-start !important;
+  }
+  
+  .list-view .document-links-row a {
+    font-size: 0.85rem !important;
+    padding: 4px 8px !important;
+    margin-bottom: 4px !important;
+    white-space: nowrap !important;
+  }
+  
+  /* Optimize tags row for mobile list view */
+  .list-view .warranty-card .tags-row {
+    padding: 8px 12px !important;
+    gap: 6px !important;
+  }
+  
+  .list-view .tag {
+    font-size: 0.8rem !important;
+    padding: 3px 8px !important;
+    margin: 2px !important;
+  }
+  
+  /* Serial numbers optimization for mobile list view */
+  .list-view .serial-numbers {
+    margin-top: 0 !important;
+    font-size: 0.9rem !important;
+  }
+  
+  .list-view .serial-numbers ul {
+    margin: 5px 0 0 0 !important;
+    padding-left: 18px !important;
+  }
+  
+  .list-view .serial-numbers li {
+    margin-bottom: 2px !important;
+    font-size: 0.85rem !important;
+  }
+}
+
+/* ===== MOBILE LIST VIEW - SMALLER SCREENS ===== */
+@media (max-width: 480px) {
+  /* Further optimize for very small screens */
+  .list-view .warranty-card {
+    margin-bottom: 8px !important;
+  }
+  
+  .list-view .product-name-header {
+    padding: 8px 10px !important;
+  }
+  
+  .list-view .product-name-header .warranty-title {
+    font-size: 0.95rem !important;
+    max-width: calc(100% - 60px) !important;
+  }
+  
+  .list-view .warranty-content {
+    padding: 8px 10px !important;
+  }
+  
+  .list-view .warranty-info {
+    gap: 6px !important;
+  }
+  
+  .list-view .warranty-info > div {
+    font-size: 0.85rem !important;
+  }
+  
+  .list-view .warranty-info > div i {
+    width: 16px !important;
+    margin-right: 5px !important;
+    font-size: 0.8rem !important;
+  }
+  
+  .list-view .product-photo-thumbnail img {
+    width: 60px !important;
+    height: 60px !important;
+  }
+  
+  .list-view .warranty-status-row {
+    padding: 6px 10px !important;
+    font-size: 0.85rem !important;
+  }
+  
+  .list-view .document-links-row {
+    padding: 6px 10px !important;
+    gap: 6px !important;
+  }
+  
+  .list-view .document-links-row a {
+    font-size: 0.8rem !important;
+    padding: 3px 6px !important;
+  }
+  
+  .list-view .warranty-card .tags-row {
+    padding: 6px 10px !important;
+    gap: 4px !important;
+  }
+  
+  .list-view .tag {
+    font-size: 0.75rem !important;
+    padding: 2px 6px !important;
+    margin: 1px !important;
+  }
+}
+
+/* ===== MOBILE LIST VIEW - VERY SMALL SCREENS ===== */
+@media (max-width: 360px) {
+  /* Ultra-compact for tiny screens */
+  .list-view .warranty-card {
+    margin-bottom: 6px !important;
+  }
+  
+  .list-view .product-name-header {
+    padding: 6px 8px !important;
+  }
+  
+  .list-view .product-name-header .warranty-title {
+    font-size: 0.9rem !important;
+    max-width: calc(100% - 55px) !important;
+  }
+  
+  .list-view .warranty-content {
+    padding: 6px 8px !important;
+  }
+  
+  .list-view .warranty-info > div {
+    font-size: 0.8rem !important;
+  }
+  
+  .list-view .product-photo-thumbnail img {
+    width: 50px !important;
+    height: 50px !important;
+  }
+  
+  .list-view .warranty-status-row {
+    padding: 5px 8px !important;
+    font-size: 0.8rem !important;
+  }
+  
+  .list-view .document-links-row {
+    padding: 5px 8px !important;
+    gap: 4px !important;
+  }
+  
+  .list-view .document-links-row a {
+    font-size: 0.75rem !important;
+    padding: 2px 5px !important;
+  }
+}
+
+/* ===== MOBILE HAMBURGER MENU - BASE ===== */
+.mobile-menu-toggle {
+  display: none;
+}
+
+/* ===== MOBILE HAMBURGER MENU ===== */
+@media (max-width: 768px) {
+  header .nav-links {
+    display: none !important;
+  }
+
+  /* Hide user menu button on mobile; hamburger remains */
+  header .user-menu, header #userMenuBtn, header .user-btn {
+    display: none !important;
+  }
+
+  .mobile-menu-toggle {
+    display: block !important;
+    background: none !important;
+    border: none !important;
+    color: var(--text-color) !important;
+    font-size: 1.5rem !important;
+    cursor: pointer !important;
+    padding: 8px !important;
+  }
+
+  .mobile-menu-panel {
+    position: fixed !important;
+    top: 0 !important;
+    right: -280px !important;
+    width: 280px !important;
+    height: 100% !important;
+    background-color: var(--card-bg) !important;
+    box-shadow: -2px 0 15px rgba(0,0,0,0.2) !important;
+    transition: right 0.3s ease-in-out !important;
+    z-index: 1100 !important;
+    padding: 20px !important;
+    overflow-y: auto !important;
+  }
+
+  .mobile-menu-panel.is-open {
+    right: 0 !important;
+  }
+
+  .mobile-menu-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s !important;
+    z-index: 1099 !important;
+  }
+
+  .mobile-menu-overlay.is-open {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  body.mobile-menu-active {
+    overflow: hidden !important;
+  }
+
+  .mobile-menu-panel .section-title {
+    font-weight: 600 !important;
+    margin: 10px 0 !important;
+    color: var(--text-color) !important;
+    opacity: 0.8 !important;
+  }
+
+  .mobile-menu-panel .menu-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    margin: 0 0 12px 0 !important;
+    padding: 0 !important;
+  }
+
+  .mobile-menu-panel a,
+  .mobile-menu-panel .user-menu-item > * {
+    display: block !important;
+    padding: 10px 8px !important;
+    color: var(--text-color) !important;
+    text-decoration: none !important;
+    border-radius: 6px !important;
+  }
+
+  .mobile-menu-panel a:hover,
+  .mobile-menu-panel .user-menu-item:hover {
+    background-color: var(--hover-bg) !important;
+  }
+}

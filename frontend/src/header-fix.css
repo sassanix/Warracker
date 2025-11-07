@@ -1,0 +1,317 @@
+/* Header Fix CSS */
+
+/* Reset header styles to match the main site */
+header {
+    background-color: var(--card-bg) !important;
+    box-shadow: var(--shadow) !important;
+    padding: 20px 0 !important;
+    margin-bottom: 30px !important;
+}
+
+header .container {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 0 20px !important;
+}
+
+.app-title {
+    display: flex !important;
+    align-items: center !important;
+}
+
+.app-title h1 {
+    color: var(--primary-color) !important;
+    font-size: 2.2rem !important;
+    margin: 0 !important;
+}
+
+.app-title i {
+    font-size: 2rem !important;
+    margin-right: 15px !important;
+    color: var(--primary-color) !important;
+}
+
+/* Group for right-aligned header elements */
+.header-right-group {
+    display: flex !important; /* Ensure horizontal layout */
+    align-items: center !important; /* Align items vertically */
+    gap: 10px !important; /* Add space between items */
+}
+
+/* Navigation Links */
+.nav-links {
+    display: flex !important;
+    gap: 20px !important;
+    margin: 0 20px !important;
+}
+
+.nav-link {
+    text-decoration: none !important;
+    color: var(--text-color) !important;
+    padding: 8px 12px !important;
+    border-radius: 4px !important;
+    transition: background-color 0.3s !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.nav-link:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.nav-link.active {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+    font-weight: 600 !important;
+}
+
+/* Dark mode interaction styles for nav links */
+:root[data-theme="dark"] .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+:root[data-theme="dark"] .nav-link.active {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.nav-link i {
+    font-size: 1rem !important;
+}
+
+/* User Menu */
+.user-menu {
+    position: relative !important;
+    margin-left: 15px !important;
+}
+
+.user-btn {
+    background: none !important;
+    border: none !important;
+    color: var(--text-color) !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    font-size: 0.9rem !important;
+    padding: 5px 10px !important;
+    border-radius: 20px !important;
+    transition: background-color 0.3s !important;
+}
+
+.user-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.dark-mode .user-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.user-btn i {
+    margin-right: 5px !important;
+}
+
+.user-menu-dropdown {
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    background-color: var(--card-bg) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    width: 200px !important;
+    z-index: 1000 !important;
+    display: none !important;
+    padding: 10px 0 !important;
+    margin-top: 5px !important;
+}
+
+.user-menu-dropdown.active {
+    display: block !important;
+}
+
+.user-info {
+    padding: 10px 15px !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    margin-bottom: 5px !important;
+}
+
+.user-name {
+    font-weight: bold !important;
+    margin-bottom: 5px !important;
+}
+
+.user-email {
+    font-size: 0.8rem !important;
+    color: var(--text-muted) !important;
+    word-break: break-all !important;
+}
+
+.user-menu-item {
+    cursor: pointer !important;
+    transition: background-color 0.3s !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.user-menu-item > :first-child {
+    padding: 8px 15px !important;
+    width: 100% !important;
+}
+
+.user-menu-item:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.user-menu-item i {
+    margin-right: 10px !important;
+    width: 16px !important;
+    text-align: center !important;
+}
+
+/* Auth Buttons */
+.auth-buttons {
+    display: flex !important;
+    gap: 10px !important;
+    margin-left: 15px !important;
+}
+
+.auth-btn {
+    padding: 5px 15px !important;
+    border-radius: 20px !important;
+    font-size: 0.9rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+}
+
+.auth-btn i {
+    margin-right: 5px !important;
+}
+
+.login-btn {
+    background-color: transparent !important;
+    border: 1px solid var(--primary-color) !important;
+    color: var(--primary-color) !important;
+}
+
+.login-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.register-btn {
+    background-color: var(--primary-color) !important;
+    border: 1px solid var(--primary-color) !important;
+    color: white !important;
+}
+
+.register-btn:hover {
+    background-color: var(--primary-dark) !important;
+}
+
+/* Settings Button */
+.settings-container {
+    position: relative !important;
+    margin-left: 10px !important;
+    z-index: 100 !important;
+}
+
+.settings-btn {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--primary-color) !important;
+    font-size: 1.2rem !important;
+    cursor: pointer !important;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.3s ease !important;
+    position: relative !important;
+    z-index: 101 !important;
+    pointer-events: auto !important;
+    box-shadow: var(--shadow) !important;
+}
+
+.settings-btn:hover {
+    transform: rotate(30deg) !important;
+    background-color: var(--primary-color) !important;
+    color: var(--white) !important;
+}
+
+.dark-mode .settings-btn:hover {
+    background-color: var(--primary-color) !important;
+    color: var(--white) !important;
+}
+
+.settings-menu {
+    position: absolute !important;
+    top: calc(100% + 10px) !important;
+    right: 0 !important;
+    background-color: var(--card-bg) !important;
+    border-radius: var(--border-radius) !important;
+    box-shadow: var(--shadow) !important;
+    padding: 15px !important;
+    min-width: 220px !important;
+    z-index: 102 !important;
+    display: none !important;
+    border: 1px solid var(--border-color) !important;
+    pointer-events: auto !important;
+}
+
+.settings-menu.active {
+    display: block !important;
+    animation: slide-in-top 0.3s forwards !important;
+}
+
+@keyframes slide-in-top {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.settings-item {
+    padding: 10px 0 !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+.settings-item:last-child {
+    border-bottom: none !important;
+}
+
+.settings-link {
+    color: var(--text-color) !important;
+    text-decoration: none !important;
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    transition: color 0.3s !important;
+}
+
+.settings-link:hover {
+    color: var(--primary-color) !important;
+}
+
+.settings-link i {
+    margin-right: 10px !important;
+    width: 16px !important;
+    text-align: center !important;
+}
+
+.github-link {
+    color: var(--text-color) !important;
+}
+
+.github-link:hover {
+    color: #6e5494 !important;
+} 

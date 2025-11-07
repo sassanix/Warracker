@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Authentication redirect script -->
+    <script src="/auth-redirect.js?v=20250119001" data-protected="true"></script>
+    
+    <!-- Include authentication script first to handle login state immediately -->
+    
+    
+    <!-- File utilities script for secure file handling -->
+    <script src="/file-utils.js?v=20250119001"></script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="status.title">Status - Warracker</title>
+    <!-- Favicons -->
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png?v=2">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png?v=2">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon-512x512.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/style.css?v=20250119004">
+    <script src="/theme-loader.js?v=20250119001"></script> <!-- Apply theme early -->
+    <script type="module" src="/js/store.js"></script>
+    <script type="module" src="/js/services/authService.js"></script>
+    <script type="module" src="/js/services/apiService.js"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
+    <!-- Load header fix styles to ensure consistent header styling -->
+    <link rel="stylesheet" href="/header-fix.css?v=20250119001">
+    <!-- Mobile Header specific styles -->
+    <link rel="stylesheet" href="/mobile-header.css?v=20250119002">
+    <!-- Chart.js for visualizations -->
+    <script src="/chart.js?v=20250119001"></script>
+    <!-- i18next Local Scripts -->
+    <script src="/js/lib/i18next.min.js?v=20250119001"></script>
+    <script src="/js/lib/i18nextHttpBackend.min.js?v=20250119001"></script>
+    <script src="/js/lib/i18nextBrowserLanguageDetector.min.js?v=20250119001"></script>
+    <!-- i18n initialization script -->
+    <script src="/js/i18n.js?v=20250119001"></script>
+    <!-- Load fix for auth buttons -->
+    
+    <script src="/script.js?v=20250119002" defer></script> <!-- Added script.js -->
+    <script type="module" src="/status.js?v=20250119001"></script> <!-- Status page specific functionality -->
+    <style>
+        .user-menu {
+            position: relative;
+            margin-left: 15px;
+        }
+        
+        .user-btn {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+            padding: 5px 10px;
+            border-radius: 20px;
+            transition: background-color 0.3s;
+        }
+        
+        .user-btn:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        .dark-mode .user-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .user-btn i {
+            margin-right: 5px;
+        }
+        
+        .user-menu-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 200px;
+            z-index: 1000;
+            display: none;
+            padding: 10px 0;
+            margin-top: 5px;
+        }
+        
+        .user-menu-dropdown.active {
+            display: block;
+        }
+        
+        .user-info {
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 5px;
+        }
+        
+        .user-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .user-email {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            word-break: break-all;
+        }
+        
+        .user-menu-item {
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .user-menu-item:hover {
+            background-color: var(--hover-bg);
+        }
+        
+        .user-menu-item i {
+            margin-right: 10px;
+            width: 16px;
+            text-align: center;
+        }
+        
+        .auth-buttons {
+            display: flex;
+            gap: 10px;
+            margin-left: 15px;
+        }
+        
+        .auth-btn {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .auth-btn i {
+            margin-right: 5px;
+        }
+        
+        .login-btn {
+            background-color: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .login-btn:hover {
+            background-color: rgba(var(--primary-rgb), 0.1);
+        }
+        
+        .register-btn {
+            background-color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            color: white;
+        }
+        
+        .register-btn:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        @media (max-width: 768px) {
+            .export-btn .export-text {
+                display: none;
+            }
+        }
+
+        /* Dashboard header styles */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .dashboard-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        /* View switcher styles */
+        .view-switcher {
+            display: flex;
+            align-items: center;
+        }
+
+        .toggle-group {
+            display: flex;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-color);
+            min-width: 100px;
+            justify-content: center;
+        }
+
+        .toggle-btn:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .toggle-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .toggle-btn.active:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .toggle-btn i {
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .dashboard-controls {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .toggle-btn {
+                min-width: 80px;
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+
+    <!-- Immediate authentication check script -->
+    <script>
+        // Check if user is logged in immediately to hide buttons
+        (function() {
+            if (localStorage.getItem('auth_token')) {
+                // Hide login and register buttons immediately
+                document.addEventListener('DOMContentLoaded', function() {
+                    console.log('Inline script: User is logged in, hiding login/register buttons');
+                    
+                    // Hide auth container
+                    var authContainer = document.getElementById('authContainer');
+                    if (authContainer) {
+                        authContainer.style.display = 'none';
+                        authContainer.style.visibility = 'hidden';
+                    }
+                    
+                    // Show user menu
+                    var userMenu = document.getElementById('userMenu');
+                    if (userMenu) {
+                        userMenu.style.display = 'block';
+                        userMenu.style.visibility = 'visible';
+                    }
+                    
+                    // Update user info if possible
+                    try {
+                        var userInfo = JSON.parse(localStorage.getItem('user_info'));
+                        if (userInfo) {
+                            var displayName = userInfo.first_name || userInfo.username || 'User';
+                            var userDisplayName = document.getElementById('userDisplayName');
+                            if (userDisplayName) {
+                                userDisplayName.textContent = displayName;
+                            }
+                            
+                            var userName = document.getElementById('userName');
+                            if (userName) {
+                                userName.textContent = (userInfo.first_name || '') + ' ' + (userInfo.last_name || '');
+                                if (!userName.textContent.trim()) userName.textContent = userInfo.username || 'User';
+                            }
+                            
+                            var userEmail = document.getElementById('userEmail');
+                            if (userEmail && userInfo.email) {
+                                userEmail.textContent = userInfo.email;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error updating user info:', e);
+                    }
+                }, { once: true });
+            }
+        })();
+    </script>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="app-title">
+                <i class="fas fa-shield-alt"></i>
+                <h1><a href="index.html" style="color: inherit; text-decoration: none; cursor: pointer;">Warracker</a></h1>
+            </div>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">
+                    <i class="fas fa-home"></i> <span data-i18n="nav.home">Home</span>
+                </a>
+                <a href="status.html" class="nav-link active">
+                    <i class="fas fa-chart-pie"></i> <span data-i18n="nav.status">Status</span>
+                </a>
+            </div>
+            <!-- Group for right-aligned elements -->
+            <div class="header-right-group">
+                <button class="mobile-menu-toggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
+                <div id="authContainer" class="auth-buttons">
+                    <a href="login.html" class="auth-btn login-btn">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                    <a href="register.html" class="auth-btn register-btn">
+                        <i class="fas fa-user-plus"></i> Register
+                    </a>
+                </div>
+                <div id="userMenu" class="user-menu" style="display: none;">
+                    <button id="userMenuBtn" class="user-btn">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="userDisplayName">User</span>
+                    </button>
+                    <div id="userMenuDropdown" class="user-menu-dropdown">
+                        <div class="user-info">
+                            <div id="userName" class="user-name">User Name</div>
+                            <div id="userEmail" class="user-email">user@example.com</div>
+                        </div>
+                        <div class="user-menu-item">
+                            <a href="settings-new.html" style="color: inherit; text-decoration: none; display: block;">
+                                <i class="fas fa-cog"></i> <span data-i18n="nav.settings">Settings</span>
+                            </a>
+                        </div>
+                        <div class="user-menu-item">
+                            <a href="about.html" style="text-decoration: none; color: inherit;">
+                                <i class="fas fa-info-circle"></i> <span data-i18n="nav.about">About</span>
+                            </a>
+                        </div>
+                        <div class="user-menu-item" id="logoutMenuItem">
+                            <span><i class="fas fa-sign-out-alt"></i> <span data-i18n="auth.logout">Logout</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- End header-right-group -->
+        </div>
+    </header>
+    <div class="mobile-menu-panel" id="mobileMenuPanel"></div>
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="status-content">
+            <div class="dashboard-header">
+                <h2 id="dashboardTitle" data-i18n="status.dashboard_title">Warranty Status Dashboard</h2>
+                <div class="dashboard-controls">
+                    <!-- Global View Controls (hidden by default, shown for eligible users) -->
+                    <div id="viewSwitcher" class="view-switcher" style="display: none;">
+                        <div class="toggle-group">
+                            <button id="personalViewBtn" class="toggle-btn active">
+                                <i class="fas fa-user"></i>
+                            </button>
+                            <button id="globalViewBtn" class="toggle-btn">
+                                <i class="fas fa-globe"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button id="refreshDashboardBtn" class="refresh-btn" title="Refresh dashboard">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Loading Indicator -->
+            <div id="loadingIndicator" class="loading-container active">
+                <div class="loading-spinner"></div>
+            </div>
+            
+            <!-- Error Message Container -->
+            <div id="errorContainer" style="display: none;" class="error-message">
+                <i class="fas fa-exclamation-circle"></i>
+                <h3>Error Loading Dashboard</h3>
+                <p id="errorMessage">There was a problem loading the warranty statistics. Please try refreshing the page.</p>
+                <p id="errorDetails" class="error-details"></p>
+            </div>
+            
+            <!-- Dashboard Content -->
+            <div id="dashboardContent">
+                <!-- Summary Cards -->
+                <div class="status-cards">
+                    <div class="status-card" data-status="active">
+                        <div class="card-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 data-i18n="status.active_warranties">Active</h3>
+                            <p class="count" id="activeCount">0</p>
+                        </div>
+                    </div>
+                    
+                    <div class="status-card" data-status="expiring">
+                        <div class="card-icon">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 data-i18n="status.expiring_soon">Expiring Soon</h3>
+                            <p class="count" id="expiringCount">0</p>
+                        </div>
+                    </div>
+                    
+                    <div class="status-card" data-status="expired">
+                        <div class="card-icon">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 data-i18n="status.expired_warranties">Expired</h3>
+                            <p class="count" id="expiredCount">0</p>
+                        </div>
+                    </div>
+                    
+                    <div class="status-card" data-status="total">
+                        <div class="card-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 data-i18n="status.total_warranties">Total</h3>
+                            <p class="count" id="totalCount">0</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Charts Section -->
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <h3 data-i18n="status.warranty_distribution">Warranty Status Distribution</h3>
+                        <div class="chart-container">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <h3 data-i18n="status.expiration_timeline">Expiration Timeline</h3>
+                        <div class="chart-container">
+                            <canvas id="timelineChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Expirations -->
+                <div class="recent-expirations">
+                    <div class="table-header">
+                        <h3 data-i18n="status.recent_expirations">Recently Expired or Expiring Soon</h3>
+                        <div class="table-actions">
+                            <div class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="searchWarranties" placeholder="Search warranties..." data-i18n="[placeholder]warranties.search_placeholder">
+                            </div>
+                            <div class="filter-options">
+                                <select id="statusFilter" class="filter-select">
+                                    <option value="all" data-i18n="filters.all_status">All Statuses</option>
+                                    <option value="active" data-i18n="warranties.active">Active</option>
+                                    <option value="expiring" data-i18n="warranties.expiring_soon">Expiring Soon</option>
+                                    <option value="expired" data-i18n="warranties.expired">Expired</option>
+                                    <option value="archived" data-i18n="warranties.archived">Archived</option>
+                                </select>
+                            </div>
+                            <button id="exportBtn" class="export-btn" title="Export data">
+                                <i class="fas fa-download"></i> <span class="export-text" data-i18n="actions.export">Export</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table id="recentExpirationsTable">
+                            <thead>
+                                <tr id="tableHeader">
+                                    <th class="sortable" data-sort="product"><span data-i18n="warranties.product">Product</span> <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort="purchase"><span data-i18n="warranties.purchase_date">Purchase Date</span> <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort="expiration"><span data-i18n="warranties.expiration_date">Expiration Date</span> <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort="status"><span data-i18n="warranties.status">Status</span> <i class="fas fa-sort"></i></th>
+                                    <th id="ownerHeader" class="sortable" data-sort="owner" style="display: none;"><span data-i18n="warranties.owner">Owner</span> <i class="fas fa-sort"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentExpirationsBody">
+                                <!-- Data will be filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <!-- Edit Warranty Modal -->
+    <div id="editModal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" data-i18n="warranties.edit_warranty">Edit Warranty</h3>
+                <button class="close-btn" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Tab Navigation -->
+                <div class="edit-tabs-nav">
+                    <button type="button" class="edit-tab-btn active" data-tab="edit-product-info">
+                        <i class="fas fa-box"></i> <span data-i18n="warranties.product">Product</span>
+                    </button>
+                    <button type="button" class="edit-tab-btn" data-tab="edit-warranty-details">
+                        <i class="fas fa-shield-alt"></i> <span data-i18n="warranties.warranty">Warranty</span>
+                    </button>
+                    <button type="button" class="edit-tab-btn" data-tab="edit-documents">
+                        <i class="fas fa-file-alt"></i> <span data-i18n="warranties.documents">Documents</span>
+                    </button>
+                    <button type="button" class="edit-tab-btn" data-tab="edit-tags">
+                        <i class="fas fa-tags"></i> <span data-i18n="warranties.tags">Tags</span>
+                    </button>
+                </div>
+                
+                <form id="editWarrantyForm">
+                    <input type="hidden" id="editWarrantyId">
+                    
+                    <!-- Product Info Tab -->
+                    <div class="edit-tab-content active" id="edit-product-info">
+                        <div class="form-group">
+                            <label for="editProductName" data-i18n="warranties.product_name">Product Name</label>
+                            <input type="text" id="editProductName" name="product_name" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="editProductUrl" data-i18n="warranties.product_url_optional">Product URL (Optional)</label>
+                            <input type="text" id="editProductUrl" name="product_url" class="form-control" placeholder="https://example.com/product">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label data-i18n="warranties.serial_numbers">Serial Numbers</label>
+                            <div id="editSerialNumbersContainer">
+                                <!-- Serial number inputs will be added dynamically -->
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="editModelNumber" data-i18n="warranties.model_number_optional">Model Number (Optional)</label>
+                            <input type="text" id="editModelNumber" name="model_number" class="form-control" data-i18n-placeholder="warranties.model_number_placeholder" placeholder="e.g. SM-G991U1">
+                        </div>
+                        <div class="form-group">
+                            <label for="editVendor" data-i18n="warranties.vendor_optional">Vendor (Optional)</label>
+                            <input type="text" id="editVendor" name="vendor" class="form-control" data-i18n-placeholder="warranties.vendor_placeholder" placeholder="e.g. Amazon, Best Buy, etc.">
+                        </div>
+                    </div>
+                    
+                    <!-- Warranty Details Tab -->
+                    <div class="edit-tab-content" id="edit-warranty-details">
+                        <div class="form-group">
+                            <label for="editPurchaseDate" data-i18n="warranties.purchase_date">Purchase Date</label>
+                            <input type="date" id="editPurchaseDate" name="purchase_date" class="form-control" required>
+                        </div>
+                        
+                        <!-- Add Lifetime Checkbox -->
+                        <div class="form-group">
+                            <label class="lifetime-label">
+                                <input type="checkbox" id="editIsLifetime" name="is_lifetime" value="true">
+                                <span data-i18n="warranties.lifetime_warranty">Lifetime Warranty</span>
+                            </label>
+                        </div>
+                        <!-- End Lifetime Checkbox -->
+                        
+                        <!-- Warranty Entry Method Selection -->
+                        <div class="form-group" id="editWarrantyEntryMethod">
+                            <label data-i18n="warranties.warranty_entry_method">Warranty Entry Method</label>
+                            <div class="warranty-method-options">
+                                <label class="radio-option">
+                                    <input type="radio" id="editDurationMethod" name="edit_warranty_method" value="duration" checked>
+                                    <span data-i18n="warranties.warranty_duration_option">Warranty Duration</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" id="editExactDateMethod" name="edit_warranty_method" value="exact_date">
+                                    <span data-i18n="warranties.exact_expiration_option">Exact Expiration Date</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div id="editWarrantyDurationFields">
+                            <div class="form-group">
+                                <label for="editWarrantyDurationYears" data-i18n="warranties.warranty_period">Warranty Period</label>
+                                <div class="duration-inputs">
+                                    <div>
+                                        <input type="number" id="editWarrantyDurationYears" name="warranty_duration_years" class="form-control" min="0" max="999" data-i18n-placeholder="warranties.years" placeholder="Years">
+                                        <small data-i18n="warranties.years">Years</small>
+                                    </div>
+                                    <div>
+                                        <input type="number" id="editWarrantyDurationMonths" name="warranty_duration_months" class="form-control" min="0" max="999" data-i18n-placeholder="warranties.months" placeholder="Months">
+                                        <small data-i18n="warranties.months">Months</small>
+                                    </div>
+                                    <div>
+                                        <input type="number" id="editWarrantyDurationDays" name="warranty_duration_days" class="form-control" min="0" max="9999" data-i18n-placeholder="warranties.days" placeholder="Days">
+                                        <small data-i18n="warranties.days">Days</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="editExactExpirationField" style="display: none;">
+                            <div class="form-group">
+                                <label for="editExactExpirationDate" data-i18n="warranties.expiration_date_label">Expiration Date</label>
+                                <input type="date" id="editExactExpirationDate" name="exact_expiration_date" class="form-control">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="editWarrantyType" data-i18n="warranties.warranty_type_optional">Warranty Type (Optional)</label>
+                            <select id="editWarrantyType" name="warranty_type" class="form-control">
+                                <option value="" data-i18n="warranties.select_warranty_type">Select warranty type...</option>
+                                <option value="Standard" data-i18n="warranties.warranty_type_standard">Standard</option>
+                                <option value="Extended" data-i18n="warranties.warranty_type_extended">Extended</option>
+                                <option value="Manufacturer" data-i18n="warranties.warranty_type_manufacturer">Manufacturer</option>
+                                <option value="Third Party" data-i18n="warranties.warranty_type_third_party">Third Party</option>
+                                <option value="Store" data-i18n="warranties.warranty_type_store">Store</option>
+                                <option value="Premium" data-i18n="warranties.warranty_type_premium">Premium</option>
+                                <option value="Limited" data-i18n="warranties.warranty_type_limited">Limited</option>
+                                <option value="Full" data-i18n="warranties.warranty_type_full">Full</option>
+                                <option value="Parts Only" data-i18n="warranties.warranty_type_parts_only">Parts Only</option>
+                                <option value="Labor Only" data-i18n="warranties.warranty_type_labor_only">Labor Only</option>
+                                <option value="International" data-i18n="warranties.warranty_type_international">International</option>
+                                <option value="Accidental Damage" data-i18n="warranties.warranty_type_accidental_damage">Accidental Damage</option>
+                                <option value="other" data-i18n="warranties.warranty_type_other">Other (Custom)</option>
+                            </select>
+                            <input type="text" id="editWarrantyTypeCustom" name="warranty_type_custom" class="form-control" style="display: none; margin-top: 8px;" data-i18n-placeholder="warranties.warranty_type_custom_placeholder" placeholder="Enter custom warranty type">
+                        </div>
+                        <div class="form-group">
+                            <label for="editCurrency" data-i18n="warranties.currency">Currency</label>
+                            <select id="editCurrency" name="currency" class="form-control">
+                                <option value="USD">USD - US Dollar ($)</option>
+                                <!-- Currency options will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="editPurchasePrice" data-i18n="warranties.purchase_price_optional">Purchase Price (Optional)</label>
+                            <div class="price-input-wrapper" id="editPriceInputWrapper">
+                                <span class="currency-symbol" id="editCurrencySymbol">$</span>
+                                <input type="number" id="editPurchasePrice" name="purchase_price" class="form-control" min="0" step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="editNotes" data-i18n="warranties.notes_optional">Notes (Optional)</label>
+                            <textarea id="editNotes" name="notes" class="form-control" rows="3" data-i18n-placeholder="warranties.notes_placeholder" placeholder="Add any notes about this warranty..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Documents Tab -->
+                    <div class="edit-tab-content" id="edit-documents">
+                        <div class="form-group">
+                            <label data-i18n="warranties.product_photo_optional">Product Photo (Optional)</label>
+                            <div class="file-input-wrapper">
+                                <label for="editProductPhoto" class="file-input-label">
+                                    <i class="fas fa-upload"></i> <span data-i18n="warranties.choose_photo">Choose Photo</span>
+                                </label>
+                                <input type="file" id="editProductPhoto" name="product_photo" class="file-input" accept=".png,.jpg,.jpeg,.webp">
+                            </div>
+                            <div id="editProductPhotoFileName" class="file-name"></div>
+                            <div id="editProductPhotoPreview" class="photo-preview" style="display: none;">
+                                <img id="editProductPhotoImg" src="" alt="Product Photo Preview" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 10px;">
+                            </div>
+                            <div id="currentProductPhoto" class="mt-10"></div>
+                            <button type="button" id="deleteProductPhotoBtn" class="btn btn-danger btn-sm mt-2" style="display:none;"><i class="fas fa-trash"></i> <span data-i18n="warranties.delete_photo">Delete Photo</span></button>
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="warranties.invoice_receipt">Invoice/Receipt</label>
+                            <div class="file-input-wrapper">
+                                <label for="editInvoice" class="file-input-label">
+                                    <i class="fas fa-upload"></i> <span data-i18n="warranties.choose_file">Choose File</span>
+                                </label>
+                                <input type="file" id="editInvoice" name="invoice" class="file-input" accept=".pdf,.png,.jpg,.jpeg">
+                            </div>
+                            <div id="editFileName" class="file-name"></div>
+                            <div id="currentInvoice" class="mt-10"></div>
+                            <button type="button" id="deleteInvoiceBtn" class="btn btn-danger btn-sm mt-2" style="display:none;"><i class="fas fa-trash"></i> <span data-i18n="warranties.delete_invoice">Delete Invoice</span></button>
+                            <!-- URL Input for Invoice -->
+                            <div class="form-group url-input-group">
+                                <label for="editInvoiceUrl" data-i18n="warranties.or_link_to_invoice_url">Or Link to Invoice URL</label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-link"></i>
+                                    <input type="url" id="editInvoiceUrl" name="invoice_url" class="form-control" placeholder="https://example.com/invoice.pdf">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="warranties.product_manual_optional">Product Manual (Optional)</label>
+                            <div class="file-input-wrapper">
+                                <label for="editManual" class="file-input-label">
+                                    <i class="fas fa-upload"></i> <span data-i18n="warranties.choose_file">Choose File</span>
+                                </label>
+                                <input type="file" id="editManual" name="manual" class="file-input" accept=".pdf,.png,.jpg,.jpeg">
+                            </div>
+                            <div id="editManualFileName" class="file-name"></div>
+                            <div id="currentManual" class="mt-10"></div>
+                            <button type="button" id="deleteManualBtn" class="btn btn-danger btn-sm mt-2" style="display:none;"><i class="fas fa-trash"></i> <span data-i18n="warranties.delete_manual">Delete Manual</span></button>
+                            <!-- URL Input for Manual -->
+                            <div class="form-group url-input-group">
+                                <label for="editManualUrl" data-i18n="warranties.or_link_to_manual_url">Or Link to Manual URL</label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-link"></i>
+                                    <input type="url" id="editManualUrl" name="manual_url" class="form-control" placeholder="https://example.com/manual.pdf">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="warranties.files_optional">Files (ZIP/RAR, Optional)</label>
+                            <div class="file-input-wrapper">
+                                <label for="editOtherDocument" class="file-input-label">
+                                    <i class="fas fa-upload"></i> <span data-i18n="warranties.choose_file">Choose File</span>
+                                </label>
+                                <input type="file" id="editOtherDocument" name="other_document" class="file-input" accept=".zip,.rar">
+                            </div>
+                            <div id="editOtherDocumentFileName" class="file-name"></div>
+                            <div id="currentOtherDocument" class="mt-10"></div>
+                            <button type="button" id="deleteOtherDocumentBtn" class="btn btn-danger btn-sm mt-2" style="display:none;"><i class="fas fa-trash"></i> <span data-i18n="warranties.delete_files">Delete Files</span></button>
+                            <!-- URL Input for Other Document -->
+                            <div class="form-group url-input-group">
+                                <label for="editOtherDocumentUrl" data-i18n="warranties.or_link_to_files_url">Or Link to Files URL</label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-link"></i>
+                                    <input type="url" id="editOtherDocumentUrl" name="other_document_url" class="form-control" placeholder="https://example.com/files.zip">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tags Tab -->
+                    <div class="edit-tab-content" id="edit-tags">
+                        <div class="form-group">
+                            <label data-i18n="warranties.add_tags">Add Tags</label>
+                            <p class="text-muted" data-i18n="warranties.tags_help_text">Tags help you organize and filter your warranties</p>
+                            
+                            <div class="tags-container">
+                                <div class="selected-tags" id="editSelectedTags">
+                                    <!-- Selected tags will be displayed here -->
+                                </div>
+                                
+                                <div class="tags-dropdown">
+                                    <input type="text" id="editTagSearch" class="form-control" data-i18n-placeholder="warranties.search_add_tag_placeholder" placeholder="Search or add new tag...">
+                                    <div class="tags-list" id="editTagsList">
+                                        <!-- Tag options will be populated by JavaScript -->
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-10">
+                                    <button type="button" id="editManageTagsBtn" class="btn btn-secondary btn-sm">
+                                        <i class="fas fa-cog"></i> <span data-i18n="warranties.manage_tags">Manage Tags</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" data-dismiss="modal" data-i18n="actions.cancel">Cancel</button>
+                <button id="saveWarrantyBtn" class="btn btn-primary" data-i18n="actions.save_changes">Save Changes</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confirm Delete Modal -->
+    <div id="deleteModal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" data-i18n="warranties.confirm_delete">Confirm Delete</h3>
+                <button class="close-btn" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p data-i18n="warranties.confirm_delete_message">Are you sure you want to delete this warranty? This action cannot be undone.</p>
+                <p><strong data-i18n="warranties.product">Product:</strong> <span id="deleteProductName"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-dismiss="modal" data-i18n="actions.cancel">Cancel</button>
+                <button id="confirmDeleteBtn" class="btn btn-danger" data-i18n="actions.delete">Delete</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tag Management Modal -->
+    <div id="tagManagementModal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" data-i18n="warranties.manage_tags">Manage Tags</h3>
+                <button class="close-btn" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="newTagForm" class="tag-form">
+                    <input type="text" id="newTagName" class="form-control" data-i18n-placeholder="warranties.new_tag_name" placeholder="New tag name" required>
+                    <input type="color" id="newTagColor" value="#808080">
+                    <button type="submit" class="btn btn-primary" data-i18n="warranties.add_tag">Add Tag</button>
+                </form>
+                
+                <h4 class="mt-20" data-i18n="warranties.existing_tags">Existing Tags</h4>
+                <div id="existingTags" class="existing-tags">
+                    <!-- Tags will be populated here by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-dismiss="modal" data-i18n="actions.close">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Spinner -->
+    <div class="loading-container" id="loadingContainer">
+        <div class="loading-spinner"></div>
+    </div>
+
+    
+    <script type="module" src="/status.js?v=20250119001"></script>
+
+    <!-- Footer Width Fix -->
+    <script src="/footer-fix.js?v=20251024001"></script>
+    
+    <!-- Footer Content Manager -->
+    <script src="/footer-content.js?v=20250119001"></script>
+
+    <!-- Powered by Warracker Footer -->
+    <footer class="warracker-footer" id="warrackerFooter">
+        <!-- Content will be dynamically generated by footer-content.js -->
+    </footer>
+
+    <script>
+        // Apply footer styles based on theme
+        function applyFooterStyles() {
+            const footer = document.getElementById('warrackerFooter');
+            const link = document.getElementById('warrackerFooterLink');
+            const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark' || 
+                              document.documentElement.classList.contains('dark-mode') ||
+                              document.body.classList.contains('dark-mode');
+            
+            if (footer) {
+                if (isDarkMode) {
+                    footer.style.cssText = 'margin-top: 50px; padding: 20px; text-align: center; border-top: 1px solid #444; background-color: #2d2d2d; color: #e0e0e0; font-size: 0.9rem;';
+                    if (link) link.style.cssText = 'color: #4dabf7; text-decoration: none; font-weight: 500;';
+                } else {
+                    footer.style.cssText = 'margin-top: 50px; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0; background-color: #ffffff; color: #333333; font-size: 0.9rem;';
+                    if (link) link.style.cssText = 'color: #3498db; text-decoration: none; font-weight: 500;';
+                }
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', applyFooterStyles);
+        const observer = new MutationObserver(applyFooterStyles);
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
+        observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    </script>
+
+</body>
+</html>
