@@ -68,6 +68,8 @@
 - **Security:** Mitigated potential cross-site scripting (XSS) vulnerabilities by removing reliance on building the UI with `innerHTML` from dynamic data.
 - **Performance:** Improved rendering performance by using efficient DOM creation and appending (`<template>` clones, `document.createElement`) instead of causing the browser to re-parse large HTML strings on every update.
 - **Code Quality:** Drastically reduced code complexity and repetition in `script.js` by delegating UI creation to specialized component modules. 
+ - Eliminated 404s for removed stylesheet by deleting the `/styles.css` link in `frontend/src/about.html` and removing it from the service worker pre-cache (`frontend/public/sw.js`).
+   - _Files: `frontend/src/about.html`, `frontend/public/sw.js`_
 
 ### Removed  
 - Legacy, scattered auth scripts now replaced by `authService.js`:  
@@ -76,6 +78,19 @@
   - Eliminated global variables like `let warranties = []` and `let currentFilters = {}` from `script.js`, centralizing all state management within `store.js`.
 - **Hardcoded HTML Strings**
   - Removed large, multi-line HTML string templates from JavaScript files, which were fragile and difficult to maintain.
+
+ - Frontend duplicate/unused assets removed in favor of `frontend/public` copies:
+   - `frontend/src/js/i18n.js`, `frontend/src/js/i18n-debug.js`, and `frontend/src/js/lib/*` (kept `frontend/public/js` versions)
+   - Root-level duplicates in `frontend/src/`: `chart.js`, `file-utils.js`, `footer-content.js`, `footer-fix.js`, `mobile-menu.js`, `script.js`, `settings-new.js`, `theme-loader.js`, `version-checker.js`, `auth-redirect.js`, `sw.js`
+   - Removed unused stylesheet: `frontend/src/styles.css`
+   - Removed debug files: `frontend/public/js/i18n-debug.js`, `frontend/src/temp-toast-debug.js`
+
+ - Backend cleanup: removed unused `backend/fix_notification_columns.py`.
+
+### House Cleaning
+- Deleted generated artifacts not needed in repo: `frontend/dist`, `frontend/node_modules` (Docker builds frontend in-image)
+- Purged Python caches: `backend/**/__pycache__`, stray `.pyc`
+- Removed old backup: `backend/fix_permissions.sql.bak`
 
 
 ## 1.0.2 - 2025-10-30

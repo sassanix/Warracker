@@ -15,7 +15,6 @@ const urlsToCache = [
 
   // Stylesheets (versioned)
   './style.css?v=20250119004',
-  './styles.css?v=20250119001',
   './settings-styles.css?v=20250119001',
   './header-fix.css?v=20250119001',
   './mobile-header.css?v=20250119002',
