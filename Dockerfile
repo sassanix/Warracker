@@ -54,6 +54,17 @@ COPY backend/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 
+FROM node:20-alpine AS frontend-build
+
+WORKDIR /app/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+COPY frontend/vite.config.js ./
+COPY frontend/public ./public
+COPY frontend/src ./src
+
+RUN npm ci --no-audit --no-fund && npm run build
+
+
 FROM python:3.13-slim-trixie@sha256:079601253d5d25ae095110937ea8cfd7403917b53b077870bccd8b026dc7c42f AS runtime
 
 ARG NGINX_VERSION
@@ -112,8 +123,8 @@ COPY --chown=warracker:warracker backend/migrations/ ./migrations/
 COPY --chown=warracker:warracker locales/ ./locales/
 COPY --chown=warracker:warracker locales/ /var/www/html/locales/
 
-# 4. Frontend (bundled in one instruction)
-COPY --chown=warracker:warracker frontend/ /var/www/html/
+# 4. Frontend (built with Vite)
+COPY --chown=warracker:warracker --from=frontend-build /app/frontend/dist/ /var/www/html/
 
 # 5. Backend (bundled in one instruction)
 COPY --chown=warracker:warracker backend/ ./backend/
