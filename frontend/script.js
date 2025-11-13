@@ -161,27 +161,23 @@ console.log('[DEBUG] script.js loaded and running');
 // alert('script.js loaded!'); // Remove alert after confirming script loads
 
 // Global variables
-let warranties = [];
 let warrantiesLoaded = false; // Track if warranties have been loaded from API
 let lastLoadedArchived = false; // Track if the current warranties array came from archived endpoint
 let lastLoadedIncludesArchived = false; // Track if the current warranties list includes archived items
 let currentTabIndex = 0;
 let tabContents = []; // Initialize as empty array
+
+// Read-only bridges for module access (keep internal state source of truth here)
+try {
+	Object.defineProperty(window, 'lastLoadedArchived', { get: () => lastLoadedArchived, set: (v) => { lastLoadedArchived = !!v; } });
+	Object.defineProperty(window, 'lastLoadedIncludesArchived', { get: () => lastLoadedIncludesArchived, set: (v) => { lastLoadedIncludesArchived = !!v; } });
+} catch (_) {}
 let editMode = false;
 let currentWarrantyId = null;
 let userPreferencePrefix = null; // <<< ADDED GLOBAL PREFIX VARIABLE
 let isGlobalView = false; // Track if admin is viewing all users' warranties
-let currentFilters = {
-    status: 'all',
-    tag: 'all',
-    search: '',
-    sortBy: 'expiration',
-    vendor: 'all', // Added vendor filter
-    warranty_type: 'all' // Added warranty type filter
-};
 
 // Tag related variables
-let allTags = [];
 let selectedTags = []; // Will hold objects with id, name, color
 
 // Global variable for edit mode tags
@@ -583,7 +579,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (searchBtn && searchInput) {
         searchBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            currentFilters.search = searchInput.value.toLowerCase();
+            if (window.store && window.store.updateFilter) window.store.updateFilter('search', searchInput.value.toLowerCase());
             applyFilters();
         });
     }
@@ -592,7 +588,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const globalManageTagsBtn = document.getElementById('globalManageTagsBtn');
     if (globalManageTagsBtn) {
         globalManageTagsBtn.addEventListener('click', async () => {
-            if (!allTags || allTags.length === 0) {
+            const __tags = (window.store && window.store.getAllTags && window.store.getAllTags()) || [];
+            if (!__tags || __tags.length === 0) {
                 showLoadingSpinner();
                 try {
                     await loadTags();
@@ -756,7 +753,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (document.getElementById('warrantiesList')) {
                 console.log("[runAuthenticatedTasks] Loading warranty data...");
                 await loadWarranties(true); // Pass true
-                console.log('[DEBUG] After loadWarranties, warranties array:', warranties);
+                console.log('[DEBUG] After loadWarranties, warranties array:', (window.store && window.store.getWarranties && window.store.getWarranties()) || []);
                 // After warranties are loaded and filter dropdowns populated, load filter/sort prefs and apply
                 loadFilterAndSortPreferences();
                 // Reflect saved filters in UI selects if present
@@ -765,11 +762,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 const vendorFilterEl = document.getElementById('vendorFilter');
                 const warrantyTypeFilterEl = document.getElementById('warrantyTypeFilter');
                 const sortByEl = document.getElementById('sortBy');
-                if (statusFilterEl && currentFilters.status) statusFilterEl.value = currentFilters.status;
-                if (tagFilterEl && currentFilters.tag) tagFilterEl.value = currentFilters.tag;
-                if (vendorFilterEl && currentFilters.vendor) vendorFilterEl.value = currentFilters.vendor;
-                if (warrantyTypeFilterEl && currentFilters.warranty_type) warrantyTypeFilterEl.value = currentFilters.warranty_type;
-                if (sortByEl && currentFilters.sortBy) sortByEl.value = currentFilters.sortBy;
+                const __filters = (window.store && window.store.getFilters && window.store.getFilters()) || {};
+                if (statusFilterEl && __filters.status) statusFilterEl.value = __filters.status;
+                if (tagFilterEl && __filters.tag) tagFilterEl.value = __filters.tag;
+                if (vendorFilterEl && __filters.vendor) vendorFilterEl.value = __filters.vendor;
+                if (warrantyTypeFilterEl && __filters.warranty_type) warrantyTypeFilterEl.value = __filters.warranty_type;
+                if (sortByEl && __filters.sortBy) sortByEl.value = __filters.sortBy;
                 // Update the filter indicator if available
                 if (typeof window.updateFilterIndicator === 'function') {
                     window.updateFilterIndicator();
@@ -832,6 +830,14 @@ function initializeTheme() {
 // Variables
 let currentView = 'grid'; // Default view
 let expiringSoonDays = 30; // Default value, will be updated from user preferences
+try {
+	Object.defineProperty(window, 'currentView', { get: () => currentView });
+} catch (_) {}
+
+// Bridge for global view flag
+try {
+	Object.defineProperty(window, 'isGlobalView', { get: () => isGlobalView, set: (v) => { isGlobalView = !!v; } });
+} catch (_) {}
 
 // API URL
 const API_URL = '/api/warranties';
@@ -1489,16 +1495,18 @@ function resetForm() {
 
 async function exportWarranties() {
     console.log('[EXPORT DEBUG] Starting export process');
-    console.log('[EXPORT DEBUG] Total warranties in memory:', warranties.length);
-    console.log('[EXPORT DEBUG] Current filters:', currentFilters);
+    const __warrantiesData = (window.store && window.store.getWarranties && window.store.getWarranties()) || [];
+    const __filters = (window.store && window.store.getFilters && window.store.getFilters()) || {};
+    console.log('[EXPORT DEBUG] Total warranties in memory:', __warrantiesData.length);
+    console.log('[EXPORT DEBUG] Current filters:', __filters);
     
     // Get filtered warranties
-    let warrantiesToExport = [...warranties];
+    let warrantiesToExport = [...__warrantiesData];
     console.log('[EXPORT DEBUG] Initial warranties to export:', warrantiesToExport.length);
     
     // Apply current filters
-    if (currentFilters.search) {
-        const searchTerm = currentFilters.search.toLowerCase();
+    if (__filters.search) {
+        const searchTerm = __filters.search.toLowerCase();
         console.log('[EXPORT DEBUG] Applying search filter:', searchTerm);
         warrantiesToExport = warrantiesToExport.filter(warranty => {
             // Check if product name contains search term
@@ -1517,17 +1525,17 @@ async function exportWarranties() {
         console.log('[EXPORT DEBUG] After search filter:', warrantiesToExport.length);
     }
     
-    if (currentFilters.status !== 'all') {
-        console.log('[EXPORT DEBUG] Applying status filter:', currentFilters.status);
+    if (__filters.status !== 'all') {
+        console.log('[EXPORT DEBUG] Applying status filter:', __filters.status);
         warrantiesToExport = warrantiesToExport.filter(warranty => 
-            warranty.status === currentFilters.status
+            warranty.status === __filters.status
         );
         console.log('[EXPORT DEBUG] After status filter:', warrantiesToExport.length);
     }
     
     // Apply tag filter
-    if (currentFilters.tag !== 'all') {
-        const tagId = parseInt(currentFilters.tag);
+    if (__filters.tag !== 'all') {
+        const tagId = parseInt(__filters.tag);
         console.log('[EXPORT DEBUG] Applying tag filter:', tagId);
         warrantiesToExport = warrantiesToExport.filter(warranty => 
             warranty.tags && Array.isArray(warranty.tags) &&
@@ -1537,19 +1545,19 @@ async function exportWarranties() {
     }
     
     // Apply vendor filter
-    if (currentFilters.vendor !== 'all') {
-        console.log('[EXPORT DEBUG] Applying vendor filter:', currentFilters.vendor);
+    if (__filters.vendor !== 'all') {
+        console.log('[EXPORT DEBUG] Applying vendor filter:', __filters.vendor);
         warrantiesToExport = warrantiesToExport.filter(warranty => 
-            (warranty.vendor || '').toLowerCase() === currentFilters.vendor.toLowerCase()
+            (warranty.vendor || '').toLowerCase() === __filters.vendor.toLowerCase()
         );
         console.log('[EXPORT DEBUG] After vendor filter:', warrantiesToExport.length);
     }
     
     // Apply warranty type filter
-    if (currentFilters.warranty_type !== 'all') {
-        console.log('[EXPORT DEBUG] Applying warranty type filter:', currentFilters.warranty_type);
+    if (__filters.warranty_type !== 'all') {
+        console.log('[EXPORT DEBUG] Applying warranty type filter:', __filters.warranty_type);
         warrantiesToExport = warrantiesToExport.filter(warranty => 
-            (warranty.warranty_type || '').toLowerCase() === currentFilters.warranty_type.toLowerCase()
+            (warranty.warranty_type || '').toLowerCase() === __filters.warranty_type.toLowerCase()
         );
         console.log('[EXPORT DEBUG] After warranty type filter:', warrantiesToExport.length);
     }
@@ -2100,205 +2108,17 @@ function processWarrantyData(warranty) {
 // Function to process all warranties in the array
 function processAllWarranties() {
     console.log('Processing all warranties in array...');
-    if (warranties && warranties.length > 0) {
-        warranties = warranties.map(warranty => processWarrantyData(warranty));
+    const __w = (window.store && window.store.getWarranties && window.store.getWarranties()) || [];
+    if (__w && __w.length > 0) {
+        const __processed = __w.map(warranty => processWarrantyData(warranty));
+        if (window.store && window.store.setWarranties) window.store.setWarranties(__processed);
     }
-    console.log('Processed warranties:', warranties);
+    console.log('Processed warranties:', (window.store && window.store.getWarranties && window.store.getWarranties()) || []);
 }
 
-async function loadWarranties(isAuthenticated) { // Added isAuthenticated parameter
-    // +++ REMOVED: Ensure Preferences are loaded FIRST (Now handled by authStateReady) +++
-    // await loadAndApplyUserPreferences(); 
-    // +++ Preferences Loaded +++
-    
-    try {
-        console.log('[DEBUG] Entered loadWarranties, isAuthenticated:', isAuthenticated);
-        
-        // Reset the flag when starting to load warranties
-        warrantiesLoaded = false;
-        
-        showLoading();
-        
-        // Fetch user preferences (including date format) before loading warranties
-        // --- THIS INNER PREFERENCE FETCH IS NOW REDUNDANT, REMOVE/COMMENT OUT --- 
-        /*
-        try {
-            const token = window.auth.getToken(); // Ensure token is retrieved here
-            if (!token) throw new Error("No auth token found"); // Added error handling
-
-            const prefsResponse = await fetch('/api/auth/preferences', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            
-            if (prefsResponse.ok) {
-                const prefsData = await prefsResponse.json();
-                console.log("Preferences fetched in loadWarranties:", prefsData);
-                
-                // Update expiringSoonDays
-                if (prefsData && typeof prefsData.expiring_soon_days !== 'undefined') {
-                    const oldValue = expiringSoonDays;
-                    expiringSoonDays = prefsData.expiring_soon_days;
-                    console.log('Updated expiring soon days from preferences:', expiringSoonDays);
-                    // Reprocess logic moved below warranty fetch
-                }
-
-                // --- ADDED: Update dateFormat in localStorage --- 
-                if (prefsData && typeof prefsData.date_format !== 'undefined') {
-                    const oldDateFormat = localStorage.getItem('dateFormat');
-                    localStorage.setItem('dateFormat', prefsData.date_format);
-                    console.log(`Updated dateFormat in localStorage from API: ${prefsData.date_format}`);
-                    // Trigger re-render if format changed and warranties already exist (though unlikely at this stage)
-                    if (warranties && warranties.length > 0 && oldDateFormat !== prefsData.date_format) {
-                        console.log('Date format changed, triggering re-render via applyFilters');
-                        applyFilters(); // Re-render warranties with new format
-                    }
-                } else {
-                     // If API doesn't return date_format, ensure localStorage has a default
-                     if (!localStorage.getItem('dateFormat')) {
-                         localStorage.setItem('dateFormat', 'MDY');
-                         console.log('API did not return date_format, setting localStorage default to MDY');
-                     }
-                }
-                // --- END ADDED SECTION ---
-
-            } else {
-                 // Handle failed preference fetch
-                 console.warn('Failed to fetch preferences:', prefsResponse.status);
-                 // Ensure a default date format exists if fetch fails
-                 if (!localStorage.getItem('dateFormat')) {
-                     localStorage.setItem('dateFormat', 'MDY');
-                     console.log('Preferences fetch failed, setting localStorage default date format to MDY');
-                 }
-            }
-        } catch (error) {
-            console.error('Error loading preferences:', error);
-            // Ensure a default date format exists on error
-            if (!localStorage.getItem('dateFormat')) {
-                localStorage.setItem('dateFormat', 'MDY');
-                console.log('Error fetching preferences, setting localStorage default date format to MDY');
-            }
-            // Continue loading warranties even if preferences fail
-        }
-        */
-        // --- END REDUNDANT PREFERENCE FETCH ---
-        
-        // Check saved view scope preference to determine which API endpoint to use
-        const savedScope = loadViewScopePreference();
-        const shouldUseGlobalView = savedScope === 'global';
-        
-        // Use the appropriate API endpoint based on saved preference
-        const baseUrl = window.location.origin;
-        // If status is 'archived', use archived endpoint (support global vs personal)
-        const isArchivedView = currentFilters && currentFilters.status === 'archived';
-        const apiUrl = isArchivedView
-            ? (shouldUseGlobalView ? `${baseUrl}/api/warranties/global/archived` : `${baseUrl}/api/warranties/archived`)
-            : (shouldUseGlobalView ? `${baseUrl}/api/warranties/global` : `${baseUrl}/api/warranties`);
-        
-        console.log(`[DEBUG] Using API endpoint based on saved preference '${savedScope}', archivedView=${isArchivedView}: ${apiUrl}`);
-        
-        // Check if auth is available and user is authenticated using the passed parameter
-        if (!isAuthenticated) {
-            console.log('[DEBUG] loadWarranties: Early return - User not authenticated based on passed parameter.');
-            renderEmptyState(window.t('messages.login_to_view_warranties'));
-            hideLoading();
-            return;
-        }
-        // Get the auth token
-        const token = window.auth.getToken();
-        if (!token) {
-            console.log('[DEBUG] Early return: No auth token available');
-            renderEmptyState(window.t('messages.authentication_error_login_again'));
-            hideLoading();
-            return;
-        }
-        
-        // Create request with auth header
-        const options = {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        };
-        
-        console.log('Fetching warranties with auth token');
-        const response = await fetch(apiUrl, options);
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ message: `HTTP error ${response.status}` }));
-            console.error('Error loading warranties:', response.status, errorData);
-            throw new Error(`Error loading warranties: ${errorData.message || response.status}`);
-        }
-        const data = await response.json();
-        console.log('[DEBUG] Received warranties from server:', data);
-        if (!Array.isArray(data)) {
-            console.error('[DEBUG] API did not return an array! Data:', data);
-        }
-        
-        // Update isGlobalView to match the loaded data
-        isGlobalView = shouldUseGlobalView;
-        console.log(`[DEBUG] Set isGlobalView to: ${isGlobalView}`);
-
-        // Optionally merge archived items into the "All" view (only in personal scope)
-        let combinedData = Array.isArray(data) ? data : [];
-        lastLoadedIncludesArchived = false;
-        if (!isArchivedView && currentFilters && currentFilters.status === 'all') {
-            try {
-                const archivedUrl = shouldUseGlobalView ? `${baseUrl}/api/warranties/global/archived` : `${baseUrl}/api/warranties/archived`;
-                const archivedResp = await fetch(archivedUrl, options);
-                if (archivedResp.ok) {
-                    const archivedData = await archivedResp.json();
-                    const archivedMarked = Array.isArray(archivedData)
-                        ? archivedData.map(w => ({ ...w, __isArchived: true }))
-                        : [];
-                    combinedData = combinedData.concat(archivedMarked);
-                    lastLoadedIncludesArchived = true;
-                    console.log(`[DEBUG] Merged ${archivedMarked.length} archived warranties into All view`);
-                } else {
-                    // Log but do not block rendering of non-archived warranties
-                    let errInfo = '';
-                    try {
-                        const errJson = await archivedResp.json();
-                        errInfo = JSON.stringify(errJson);
-                    } catch (_) {}
-                    console.warn('[DEBUG] Failed to load archived warranties for All view:', archivedResp.status, errInfo);
-                }
-            } catch (mergeErr) {
-                console.warn('[DEBUG] Error while merging archived into All:', mergeErr);
-            }
-        }
-
-        // Process each warranty to calculate status and days remaining
-        warranties = Array.isArray(combinedData) ? combinedData.map(warranty => processWarrantyData(warranty)) : [];
-        lastLoadedArchived = isArchivedView;
-        console.log('[DEBUG] Final warranties array:', warranties);
-        console.log('[DEBUG] Total warranties loaded:', warranties.length);
-        console.log('[DEBUG] Warranty IDs loaded:', warranties.map(w => w.id));
-        
-        // Set flag to indicate warranties have been loaded from API
-        warrantiesLoaded = true;
-        
-        if (warranties.length === 0) {
-            console.log('No warranties found, showing empty state');
-            renderEmptyState(window.t('messages.no_warranties_found_add_first'));
-        } else {
-            console.log('Applying filters to display warranties');
-            
-            // Populate tag filter dropdown with tags from warranties
-            populateTagFilter();
-            populateVendorFilter(); // Added call to populate vendor filter
-            populateWarrantyTypeFilter(); // Added call to populate warranty type filter
-            
-            // Ensure the UI reflects the freshly loaded data
-            applyFilters();
-        }
-    } catch (error) {
-        console.error('[DEBUG] Error loading warranties:', error);
-        warrantiesLoaded = false; // Reset flag on error
-        renderEmptyState(window.t('messages.error_loading_warranties_try_again'));
-    } finally {
-        hideLoading();
+async function loadWarranties(isAuthenticated) {
+    if (window.warrantyListController && typeof window.warrantyListController.loadWarranties === 'function') {
+        return window.warrantyListController.loadWarranties(isAuthenticated);
     }
 }
 
@@ -2441,8 +2261,176 @@ function calculateProductAgeInDays(purchaseDate) {
     return diffDays;
 }
 
-async function renderWarranties(warrantiesToRender) {
-    console.log('renderWarranties called with:', warrantiesToRender);
+// Helper: map card root modifier class from status/archived
+function getCardRootModifierClass(statusClass, isArchivedItem) {
+    if (isArchivedItem) return 'archived';
+    if (statusClass === 'expired') return 'expired';
+    if (statusClass === 'expiring') return 'expiring-soon';
+    return 'active';
+}
+
+// Helper: build user info HTML (Global View owner label)
+function buildUserInfoHtml(warranty) {
+    if (isGlobalView && warranty.user_display_name) {
+        const ownerLabel = window.i18next ? window.i18next.t('warranties.owner') : 'Owner';
+        return `<div><strong>${ownerLabel}:</strong> <span>${warranty.user_display_name}</span></div>`;
+    }
+    return '';
+}
+
+// Helper: claims button state
+function getClaimsButtonProps(warranty) {
+    let className = 'action-btn claims-link';
+    let title = 'Claims';
+    if (warranty.claim_status_summary === 'OPEN') {
+        className += ' claims-open';
+        title = 'Claims (Open)';
+    } else if (warranty.claim_status_summary === 'FINISHED') {
+        className += ' claims-finished';
+        title = 'Claims (Finished)';
+    }
+    return { className, title };
+}
+
+// Helper: action buttons HTML
+function buildActionButtonsHtml(warranty, isArchivedView, canEdit) {
+    const { className: claimsButtonClass, title: claimsTitle } = getClaimsButtonProps(warranty);
+    if (canEdit) {
+        return `
+            <button class="${claimsButtonClass}" title="${claimsTitle}" data-id="${warranty.id}">
+                <i class="fas fa-clipboard-list"></i>
+            </button>
+            ${ (isArchivedView || warranty.is_archived) ? `
+                <button class="action-btn unarchive-btn" title="Unarchive" data-id="${warranty.id}">
+                    <i class="fas fa-box-open"></i>
+                </button>
+                <button class="action-btn edit-btn" title="Edit (disabled in archived view)" data-id="${warranty.id}" disabled>
+                    <i class="fas fa-edit"></i>
+                </button>
+            ` : `
+                <button class="action-btn edit-btn" title="Edit" data-id="${warranty.id}">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="action-btn archive-btn" title="Archive" data-id="${warranty.id}">
+                    <i class="fas fa-archive"></i>
+                </button>
+            `}
+            <button class="action-btn delete-btn" title="Delete" data-id="${warranty.id}">
+                <i class="fas fa-trash"></i>
+            </button>
+        `;
+    }
+    return `
+        <button class="${claimsButtonClass}" title="${claimsTitle}" data-id="${warranty.id}">
+            <i class="fas fa-clipboard-list"></i>
+        </button>
+        <span class="action-btn-placeholder" title="View only - not your warranty">
+            <i class="fas fa-eye" style="color: #666;"></i>
+        </span>
+    `;
+}
+
+// Helper: build photo thumbnail HTML by view
+function buildPhotoThumbnailHtml(warranty) {
+    if (!(warranty.product_photo_path && warranty.product_photo_path !== 'null')) return '';
+    if (currentView === 'table') {
+        return `
+            <div class="product-photo-thumbnail">
+                <a href="#" onclick="openSecureFile('${warranty.product_photo_path}'); return false;" title="Click to view full size image">
+                    <img data-secure-src="/api/secure-file/${warranty.product_photo_path.replace('uploads/', '')}" alt="Product Photo" 
+                         style="object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color); cursor: pointer;"
+                         onerror="this.style.display='none'" class="secure-image">
+                </a>
+            </div>
+        `;
+    }
+    if (currentView === 'list') {
+        return `
+            <div class="product-photo-thumbnail">
+                <a href="#" onclick="openSecureFile('${warranty.product_photo_path}'); return false;" title="Click to view full size image">
+                    <img data-secure-src="/api/secure-file/${warranty.product_photo_path.replace('uploads/', '')}" alt="Product Photo" 
+                         style="object-fit: cover; border-radius: 6px; border: 2px solid var(--border-color); cursor: pointer;"
+                         onerror="this.style.display='none'" class="secure-image">
+                </a>
+            </div>
+        `;
+    }
+    // grid
+    return `
+        <div class="product-photo-thumbnail">
+            <a href="#" onclick="openSecureFile('${warranty.product_photo_path}'); return false;" title="Click to view full size image">
+                <img data-secure-src="/api/secure-file/${warranty.product_photo_path.replace('uploads/', '')}" alt="Product Photo" 
+                     style="object-fit: cover; border-radius: 8px; border: 2px solid var(--border-color); cursor: pointer;"
+                     onerror="this.style.display='none'" class="secure-image">
+            </a>
+        </div>
+    `;
+}
+
+// Helper: build warranty info block HTML (inside .warranty-info)
+function buildWarrantyInfoHtml(params) {
+    const {
+        warranty,
+        userInfoHtml,
+        productAge,
+        warrantyDurationText,
+        expirationDateText,
+        validSerialNumbers
+    } = params;
+    return `
+        ${userInfoHtml}
+        <div><i class="fas fa-calendar"></i> ${window.i18next ? window.i18next.t('warranties.age') : 'Age'}: <span>${productAge}</span></div>
+        <div><i class="fas fa-file-alt"></i> ${window.i18next ? window.i18next.t('warranties.warranty') : 'Warranty'}: <span>${warrantyDurationText}</span></div>
+        <div><i class="fas fa-wrench"></i> ${window.i18next ? window.i18next.t('warranties.warranty_ends') : 'Warranty Ends'}: <span>${expirationDateText}</span></div>
+        ${warranty.purchase_price ? `<div><i class="fas fa-coins"></i> ${window.i18next ? window.i18next.t('warranties.price') : 'Price'}: <span>${formatCurrencyHTML(warranty.purchase_price, warranty.currency ? getCurrencySymbolByCode(warranty.currency) : getCurrencySymbol(), getCurrencyPosition())}</span></div>` : ''}
+        ${validSerialNumbers.length > 0 ? `
+            <div><i class="fas fa-barcode"></i> ${window.i18next ? window.i18next.t('warranties.serial_number') : 'Serial Number'}: <span>${validSerialNumbers[0]}</span></div>
+            ${validSerialNumbers.length > 1 ? `
+                <div style="margin-left: 28px;">
+                    <ul style="margin-top: 5px;">
+                        ${validSerialNumbers.slice(1).map(sn => `<li>${sn}</li>`).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+        ` : ''}
+        ${warranty.model_number ? `<div><i class="fas fa-tag"></i> ${window.i18next ? window.i18next.t('warranties.model_number') : 'Model Number'}: <span>${warranty.model_number}</span></div>` : ''}
+        ${warranty.vendor ? `<div><i class="fas fa-store"></i> ${window.i18next ? window.i18next.t('warranties.vendor') : 'Vendor'}: <span>${warranty.vendor}</span></div>` : ''}
+        ${warranty.warranty_type ? `<div><i class="fas fa-shield-alt"></i> ${window.i18next ? window.i18next.t('warranties.type') : 'Type'}: <span>${warranty.warranty_type}</span></div>` : ''}
+    `;
+}
+
+// Helper: build notes link html (included in document links row if has notes)
+function buildNotesLinkHtml(warranty) {
+    const hasNotes = warranty.notes && warranty.notes.trim() !== '';
+    if (!hasNotes) return '';
+    const notesLabel = window.i18next ? window.i18next.t('warranties.notes') : 'Notes';
+    return `<a href="#" class="notes-link" data-id="${warranty.id}" title="View Notes"><i class='fas fa-sticky-note'></i> ${notesLabel}</a>`;
+}
+
+// Helper: build full document links row HTML (wrapper + inner)
+function buildDocumentLinksRowHtml(warranty, notesLinkHtml) {
+    const productLinkHtml = warranty.product_url ? `
+        <a href="${warranty.product_url}" class="product-link" target="_blank">
+            <i class="fas fa-globe"></i> ${window.i18next ? window.i18next.t('warranties.product_website') : 'Product Website'}
+        </a>` : '';
+    const inner = `
+        ${productLinkHtml}
+        ${generateDocumentLink(warranty, 'invoice')}
+        ${generateDocumentLink(warranty, 'manual')}
+        ${generateDocumentLink(warranty, 'other')}
+        ${notesLinkHtml}
+    `;
+    return `
+        <div class="document-links-row">
+            <div class="document-links-inner-container">
+                ${inner}
+            </div>
+        </div>
+    `;
+}
+
+async function renderWarranties() {
+    console.log('renderWarranties called');
 
     // Guard clause: If the main warrantiesList element doesn't exist on the current page, exit.
     // This can happen if saveWarranty -> applyFilters -> renderWarranties is called from a page
@@ -2452,21 +2440,74 @@ async function renderWarranties(warrantiesToRender) {
         return;
     }
 
-    const isArchivedView = currentFilters && currentFilters.status === 'archived';
+    const __filters = (window.store && window.store.getFilters && window.store.getFilters()) || {};
+    const isArchivedView = __filters && __filters.status === 'archived';
+
+    // Pull data from store and filter by current filters (mirror applyFilters logic)
+    const __all = ((window.store && window.store.getWarranties && window.store.getWarranties()) || []);
+    const warrantiesToRender = __all.filter(warranty => {
+        // Exclude archived items from specific status views (only show in 'all' or 'archived')
+        if (warranty.is_archived && __filters.status !== 'all' && __filters.status !== 'archived') {
+            return false;
+        }
+        // Status filter: allow archived items to pass in All view
+        if (__filters.status !== 'all' && __filters.status !== 'archived' && warranty.status !== __filters.status) {
+            return false;
+        }
+        // Tag filter
+        if (__filters.tag !== 'all') {
+            const tagId = parseInt(__filters.tag);
+            const hasTag = warranty.tags && Array.isArray(warranty.tags) &&
+                warranty.tags.some(tag => tag.id === tagId);
+            if (!hasTag) {
+                return false;
+            }
+        }
+        // Vendor filter
+        if (__filters.vendor !== 'all' && (warranty.vendor || '').toLowerCase() !== __filters.vendor.toLowerCase()) {
+            return false;
+        }
+        // Warranty type filter
+        if (__filters.warranty_type !== 'all' && (warranty.warranty_type || '').toLowerCase() !== __filters.warranty_type.toLowerCase()) {
+            return false;
+        }
+        // Search filter
+        if (__filters.search) {
+            const searchTerm = __filters.search.toLowerCase();
+            const productNameMatch = (warranty.product_name || '').toLowerCase().includes(searchTerm);
+            const tagMatch = warranty.tags && Array.isArray(warranty.tags) && 
+                warranty.tags.some(tag => (tag.name || '').toLowerCase().includes(searchTerm));
+            const notesMatch = (warranty.notes || '').toLowerCase().includes(searchTerm);
+            const vendorMatch = (warranty.vendor || '').toLowerCase().includes(searchTerm);
+            const modelNumberMatch = (warranty.model_number || '').toLowerCase().includes(searchTerm);
+            const serialNumberMatch = warranty.serial_numbers && Array.isArray(warranty.serial_numbers) &&
+                warranty.serial_numbers.some(sn => sn && String(sn).toLowerCase().includes(searchTerm));
+            if (!productNameMatch && !tagMatch && !notesMatch && !vendorMatch && !modelNumberMatch && !serialNumberMatch) {
+                return false;
+            }
+        }
+        return true;
+    });
 
     if (!warrantiesToRender || warrantiesToRender.length === 0) {
-        renderEmptyState(isArchivedView ? (window.t ? window.t('messages.no_archived_warranties') : 'No archived warranties.') : undefined); // renderEmptyState should also check for warrantiesList or its specific container
+        if (window.components && window.components.ui && window.components.ui.renderEmptyState) {
+            window.components.ui.renderEmptyState(warrantiesList, isArchivedView ? (window.t ? window.t('messages.no_archived_warranties') : 'No archived warranties.') : undefined);
+        } else {
+            // Fallback to legacy if component not present
+            renderEmptyState(isArchivedView ? (window.t ? window.t('messages.no_archived_warranties') : 'No archived warranties.') : undefined);
+        }
         return;
     }
     
     const today = new Date();
     const globalSymbol = getCurrencySymbol(); // Get the global symbol as fallback
     
-    warrantiesList.innerHTML = '';
+    // Efficiently clear container
+    warrantiesList.textContent = '';
     
     // Apply sorting based on current sort selection
     const sortedWarranties = [...warrantiesToRender].sort((a, b) => {
-        switch (currentFilters.sortBy) {
+        switch (__filters.sortBy) {
             case 'name':
                 return (a.product_name || '').toLowerCase().localeCompare((b.product_name || '').toLowerCase());
             case 'purchase':
@@ -2510,6 +2551,9 @@ async function renderWarranties(warrantiesToRender) {
         tableViewBtn.classList.toggle('active', currentView === 'table');
     }
     
+    // Use DocumentFragment to batch DOM insertions
+    const fragment = document.createDocumentFragment();
+
     sortedWarranties.forEach(warranty => {
         // --- Use processed data ---
         const purchaseDate = warranty.purchaseDate;
@@ -2579,38 +2623,19 @@ async function renderWarranties(warrantiesToRender) {
         
         // Calculate product age
         const productAge = calculateProductAge(warranty.purchase_date);
-        
+
         // Make sure serial numbers array exists and is valid
         const validSerialNumbers = Array.isArray(warranty.serial_numbers) 
             ? warranty.serial_numbers.filter(sn => sn && typeof sn === 'string' && sn.trim() !== '')
             : [];
-        // Prepare user info HTML for global view
-        let userInfoHtml = '';
-        if (isGlobalView && warranty.user_display_name) {
-            const ownerLabel = window.i18next ? window.i18next.t('warranties.owner') : 'Owner';
-            userInfoHtml = `<div><strong>${ownerLabel}:</strong> <span>${warranty.user_display_name}</span></div>`;
-        }
-        
-        // Prepare tags HTML
-        const tagsHtml = warranty.tags && warranty.tags.length > 0 
-            ? `<div class="tags-row">
-                ${warranty.tags.map(tag => 
-                    `<span class="tag" style="background-color: ${tag.color}; color: ${getContrastColor(tag.color)}">
-                        ${tag.name}
-                    </span>`
-                ).join('')}
-              </div>`
-            : '';
-        // Add notes display button if present
-        let notesHtml = '';
-        const hasNotes = warranty.notes && warranty.notes.trim() !== '';
-        // Remove the button, and instead prepare a notes link for document-links-row
-        let notesLinkHtml = '';
-        if (hasNotes) {
-            const notesLabel = window.i18next ? window.i18next.t('warranties.notes') : 'Notes';
-            notesLinkHtml = `<a href="#" class="notes-link" data-id="${warranty.id}" title="View Notes"><i class='fas fa-sticky-note'></i> ${notesLabel}</a>`;
-        }
-        
+
+        // Build user info HTML
+        const userInfoHtml = buildUserInfoHtml(warranty);
+
+        // Notes link
+        const notesLinkHtml = buildNotesLinkHtml(warranty);
+
+        // Has documents?
         const hasDocuments = Boolean(
             warranty.product_url ||
             warranty.invoice_path || warranty.invoice_url ||
@@ -2618,10 +2643,9 @@ async function renderWarranties(warrantiesToRender) {
             warranty.other_document_path || warranty.other_document_url ||
             warranty.paperless_invoice_id || warranty.paperless_manual_id ||
             warranty.paperless_photo_id || warranty.paperless_other_id ||
-            hasNotes
+            notesLinkHtml
         );
-        
-        
+
         // Get current user ID to check warranty ownership
         const currentUserId = (() => {
             try {
@@ -2636,307 +2660,103 @@ async function renderWarranties(warrantiesToRender) {
         // Allow if: not in global view, user owns the warranty, or user is admin
         const isAdmin = getUserType() === 'admin';
         const canEdit = !isGlobalView || (warranty.user_id === currentUserId) || isAdmin;
-        
-        // Determine claims button class and title based on claim status
-        let claimsButtonClass = 'action-btn claims-link';
-        let claimsTitle = 'Claims';
-        
-        if (warranty.claim_status_summary === 'OPEN') {
-            claimsButtonClass += ' claims-open';
-            claimsTitle = 'Claims (Open)';
-        } else if (warranty.claim_status_summary === 'FINISHED') {
-            claimsButtonClass += ' claims-finished';
-            claimsTitle = 'Claims (Finished)';
-        }
 
-        // Generate action buttons HTML based on permissions
-        const actionButtonsHtml = canEdit ? `
-            <button class="${claimsButtonClass}" title="${claimsTitle}" data-id="${warranty.id}">
-                <i class="fas fa-clipboard-list"></i>
-            </button>
-            ${ (isArchivedView || warranty.is_archived) ? `
-                <button class="action-btn unarchive-btn" title="Unarchive" data-id="${warranty.id}">
-                    <i class="fas fa-box-open"></i>
-                </button>
-                <button class="action-btn edit-btn" title="Edit (disabled in archived view)" data-id="${warranty.id}" disabled>
-                    <i class="fas fa-edit"></i>
-                </button>
-            ` : `
-                <button class="action-btn edit-btn" title="Edit" data-id="${warranty.id}">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="action-btn archive-btn" title="Archive" data-id="${warranty.id}">
-                    <i class="fas fa-archive"></i>
-                </button>
-            `}
-            <button class="action-btn delete-btn" title="Delete" data-id="${warranty.id}">
-                <i class="fas fa-trash"></i>
-            </button>
-        ` : `
-            <button class="${claimsButtonClass}" title="${claimsTitle}" data-id="${warranty.id}">
-                <i class="fas fa-clipboard-list"></i>
-            </button>
-            <span class="action-btn-placeholder" title="View only - not your warranty">
-                <i class="fas fa-eye" style="color: #666;"></i>
-            </span>
-        `;
-
-        const cardElement = document.createElement('div');
+        // Build actions/content/status for the component
+        const actionButtonsHtml = buildActionButtonsHtml(warranty, isArchivedView, canEdit);
+        const contentHtml = buildWarrantyInfoHtml({
+            warranty,
+            userInfoHtml,
+            productAge,
+            warrantyDurationText,
+            expirationDateText,
+            validSerialNumbers
+        });
         const isArchivedItem = isArchivedView || warranty.is_archived;
-        cardElement.className = `warranty-card ${isArchivedItem ? 'archived' : (statusClass === 'expired' ? 'expired' : statusClass === 'expiring' ? 'expiring-soon' : 'active')}`;
-        
-        // Claims button styling will be handled in the action buttons HTML generation
-        
-        if (currentView === 'grid') {
-            // Grid view HTML structure
-            const photoThumbnailHtml = warranty.product_photo_path && warranty.product_photo_path !== 'null' ? `
-                <div class="product-photo-thumbnail">
-                    <a href="#" onclick="openSecureFile('${warranty.product_photo_path}'); return false;" title="Click to view full size image">
-                        <img data-secure-src="/api/secure-file/${warranty.product_photo_path.replace('uploads/', '')}" alt="Product Photo" 
-                             style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 2px solid var(--border-color); cursor: pointer;"
-                             onerror="this.style.display='none'" class="secure-image">
-                    </a>
-                </div>
-            ` : '';
-            
-            cardElement.innerHTML = `
-                <div class="product-name-header">
-                    <h3 class="warranty-title" title="${warranty.product_name || 'Unnamed Product'}">${warranty.product_name || 'Unnamed Product'}</h3>
-                    <div class="warranty-actions">
-                        ${actionButtonsHtml}
-                    </div>
-                </div>
-                <div class="warranty-content">
-                    ${photoThumbnailHtml}
-                    <div class="warranty-info">
-                        ${userInfoHtml}
-                        <div><i class="fas fa-calendar"></i> ${window.i18next ? window.i18next.t('warranties.age') : 'Age'}: <span>${productAge}</span></div>
-                        <div><i class="fas fa-file-alt"></i> ${window.i18next ? window.i18next.t('warranties.warranty') : 'Warranty'}: <span>${warrantyDurationText}</span></div>
-                        <div><i class="fas fa-wrench"></i> ${window.i18next ? window.i18next.t('warranties.warranty_ends') : 'Warranty Ends'}: <span>${expirationDateText}</span></div>
-                        ${warranty.purchase_price ? `<div><i class="fas fa-coins"></i> ${window.i18next ? window.i18next.t('warranties.price') : 'Price'}: <span>${formatCurrencyHTML(warranty.purchase_price, warranty.currency ? getCurrencySymbolByCode(warranty.currency) : getCurrencySymbol(), getCurrencyPosition())}</span></div>` : ''}
-                        ${validSerialNumbers.length > 0 ? `
-                            <div><i class="fas fa-barcode"></i> ${window.i18next ? window.i18next.t('warranties.serial_number') : 'Serial Number'}: <span>${validSerialNumbers[0]}</span></div>
-                            ${validSerialNumbers.length > 1 ? `
-                                <div style="margin-left: 28px;">
-                                    <ul style="margin-top: 5px;">
-                                        ${validSerialNumbers.slice(1).map(sn => `<li>${sn}</li>`).join('')}
-                                    </ul>
-                                </div>
-                            ` : ''}
-                        ` : ''}
-                        ${warranty.model_number ? `<div><i class="fas fa-tag"></i> ${window.i18next ? window.i18next.t('warranties.model_number') : 'Model Number'}: <span>${warranty.model_number}</span></div>` : ''}
-                        ${warranty.vendor ? `<div><i class="fas fa-store"></i> ${window.i18next ? window.i18next.t('warranties.vendor') : 'Vendor'}: <span>${warranty.vendor}</span></div>` : ''}
-                        ${warranty.warranty_type ? `<div><i class="fas fa-shield-alt"></i> ${window.i18next ? window.i18next.t('warranties.type') : 'Type'}: <span>${warranty.warranty_type}</span></div>` : ''}
-                    </div>
-                </div>
-                ${hasDocuments ? `
-                <div class="document-links-row">
-                    <div class="document-links-inner-container">
-                        ${warranty.product_url ? `
-                            <a href="${warranty.product_url}" class="product-link" target="_blank">
-                                <i class="fas fa-globe"></i> ${window.i18next ? window.i18next.t('warranties.product_website') : 'Product Website'}
-                            </a>
-                        ` : ''}
-                        ${generateDocumentLink(warranty, 'invoice')}
-                        ${generateDocumentLink(warranty, 'manual')}
-                        ${generateDocumentLink(warranty, 'other')}
-                        ${notesLinkHtml}
+        const rootModifierClass = getCardRootModifierClass(statusClass, isArchivedItem);
 
-                    </div>
-                </div>
-                ` : ''}
-                ${tagsHtml}
-                <div class="warranty-status-row status-${statusClass}">
-                    <span>${statusText}</span>
-                </div>
-            `;
-        } else if (currentView === 'list') {
-            // List view HTML structure
-            const photoThumbnailHtml = warranty.product_photo_path && warranty.product_photo_path !== 'null' ? `
-                <div class="product-photo-thumbnail">
-                    <a href="#" onclick="openSecureFile('${warranty.product_photo_path}'); return false;" title="Click to view full size image">
-                        <img data-secure-src="/api/secure-file/${warranty.product_photo_path.replace('uploads/', '')}" alt="Product Photo" 
-                             style="width: 180px; height: 180px; object-fit: cover; border-radius: 6px; border: 2px solid var(--border-color); cursor: pointer;"
-                             onerror="this.style.display='none'" class="secure-image">
-                    </a>
-                </div>
-            ` : '';
-            
-            cardElement.innerHTML = `
-                <div class="product-name-header">
-                    <h3 class="warranty-title" title="${warranty.product_name || 'Unnamed Product'}">${warranty.product_name || 'Unnamed Product'}</h3>
-                    <div class="warranty-actions">
-                        ${actionButtonsHtml}
-                    </div>
-                </div>
-                <div class="warranty-content">
-                    ${photoThumbnailHtml}
-                    <div class="warranty-info">
-                        ${userInfoHtml}
-                        <div><i class="fas fa-calendar"></i> ${window.i18next ? window.i18next.t('warranties.age') : 'Age'}: <span>${productAge}</span></div>
-                        <div><i class="fas fa-file-alt"></i> ${window.i18next ? window.i18next.t('warranties.warranty') : 'Warranty'}: <span>${warrantyDurationText}</span></div>
-                        <div><i class="fas fa-wrench"></i> ${window.i18next ? window.i18next.t('warranties.warranty_ends') : 'Warranty Ends'}: <span>${expirationDateText}</span></div>
-                        ${warranty.purchase_price ? `<div><i class="fas fa-coins"></i> ${window.i18next ? window.i18next.t('warranties.price') : 'Price'}: <span>${formatCurrencyHTML(warranty.purchase_price, warranty.currency ? getCurrencySymbolByCode(warranty.currency) : getCurrencySymbol(), getCurrencyPosition())}</span></div>` : ''}
-                        ${validSerialNumbers.length > 0 ? `
-                            <div><i class="fas fa-barcode"></i> ${window.i18next ? window.i18next.t('warranties.serial_number') : 'Serial Number'}: <span>${validSerialNumbers[0]}</span></div>
-                            ${validSerialNumbers.length > 1 ? `
-                                <div style="margin-left: 28px;">
-                                    <ul style="margin-top: 5px;">
-                                        ${validSerialNumbers.slice(1).map(sn => `<li>${sn}</li>`).join('')}
-                                    </ul>
-                                </div>
-                            ` : ''}
-                        ` : ''}
-                        ${warranty.model_number ? `<div><i class=\"fas fa-tag\"></i> ${window.i18next ? window.i18next.t('warranties.model_number') : 'Model Number'}: <span>${warranty.model_number}</span></div>` : ''}
-                        ${warranty.vendor ? `<div><i class="fas fa-store"></i> ${window.i18next ? window.i18next.t('warranties.vendor') : 'Vendor'}: <span>${warranty.vendor}</span></div>` : ''}
-                        ${warranty.warranty_type ? `<div><i class="fas fa-shield-alt"></i> ${window.i18next ? window.i18next.t('warranties.type') : 'Type'}: <span>${warranty.warranty_type}</span></div>` : ''}
-                    </div>
-                </div>
-                ${hasDocuments ? `
-                <div class="document-links-row">
-                    <div class="document-links-inner-container">
-                        ${warranty.product_url ? `
-                            <a href="${warranty.product_url}" class="product-link" target="_blank">
-                                <i class="fas fa-globe"></i> ${window.i18next ? window.i18next.t('warranties.product_website') : 'Product Website'}
-                            </a>
-                        ` : ''}
-                        ${generateDocumentLink(warranty, 'invoice')}
-                        ${generateDocumentLink(warranty, 'manual')}
-                        ${generateDocumentLink(warranty, 'other')}
-                        ${notesLinkHtml}
+        const cardElement = (window.components && window.components.createWarrantyCard)
+            ? window.components.createWarrantyCard(warranty, {
+                actionsHtml: actionButtonsHtml,
+                contentHtml: contentHtml,
+                statusText: statusText,
+                statusClass: statusClass,
+                rootModifierClass: rootModifierClass
+            })
+            : (() => {
+                // Fallback: minimal element if component missing
+                const fallback = document.createElement('div');
+                fallback.className = `warranty-card ${rootModifierClass}`;
+                fallback.innerHTML = `<div class="product-name-header"><h3 class="warranty-title">${warranty.product_name || 'Unnamed Product'}</h3></div>`;
+                return fallback;
+            })();
 
-                    </div>
-                </div>
-                ` : ''}
-                ${tagsHtml}
-                <div class="warranty-status-row status-${statusClass}">
-                    <span>${statusText}</span>
-                </div>
-            `;
-        } else if (currentView === 'table') {
-            // Table view HTML structure
-            const photoThumbnailHtml = warranty.product_photo_path && warranty.product_photo_path !== 'null' ? `
-                <div class="product-photo-thumbnail">
-                    <a href="#" onclick="openSecureFile('${warranty.product_photo_path}'); return false;" title="Click to view full size image">
-                        <img data-secure-src="/api/secure-file/${warranty.product_photo_path.replace('uploads/', '')}" alt="Product Photo" 
-                             style="width: 55px; height: 55px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color); cursor: pointer;"
-                             onerror="this.style.display='none'" class="secure-image">
-                    </a>
-                </div>
-            ` : '';
-            
-            cardElement.innerHTML = `
-                <div class="product-name-header">
-                    <h3 class="warranty-title" title="${warranty.product_name || 'Unnamed Product'}">${warranty.product_name || 'Unnamed Product'}</h3>
-                    <div class="warranty-actions">
-                        ${actionButtonsHtml}
-                    </div>
-                </div>
-                <div class="warranty-content">
-                    ${photoThumbnailHtml}
-                    <div class="warranty-info">
-                        ${userInfoHtml}
-                        <div><i class="fas fa-calendar"></i> ${window.i18next ? window.i18next.t('warranties.age') : 'Age'}: <span>${productAge}</span></div>
-                        <div><i class="fas fa-file-alt"></i> ${window.i18next ? window.i18next.t('warranties.warranty') : 'Warranty'}: <span>${warrantyDurationText}</span></div>
-                        <div><i class="fas fa-wrench"></i> ${window.i18next ? window.i18next.t('warranties.warranty_ends') : 'Warranty Ends'}: <span>${expirationDateText}</span></div>
-                        ${warranty.purchase_price ? `<div><i class="fas fa-coins"></i> ${window.i18next ? window.i18next.t('warranties.price') : 'Price'}: <span>${formatCurrencyHTML(warranty.purchase_price, warranty.currency ? getCurrencySymbolByCode(warranty.currency) : getCurrencySymbol(), getCurrencyPosition())}</span></div>` : ''}
-                        ${validSerialNumbers.length > 0 ? `
-                            <div><i class="fas fa-barcode"></i> ${window.i18next ? window.i18next.t('warranties.serial_number') : 'Serial Number'}: <span>${validSerialNumbers[0]}</span></div>
-                            ${validSerialNumbers.length > 1 ? `
-                                <div style="margin-left: 28px;">
-                                    <ul style="margin-top: 5px;">
-                                        ${validSerialNumbers.slice(1).map(sn => `<li>${sn}</li>`).join('')}
-                                    </ul>
-                                </div>
-                            ` : ''}
-                        ` : ''}
-                        ${warranty.model_number ? `<div><i class=\"fas fa-tag\"></i> ${window.i18next ? window.i18next.t('warranties.model_number') : 'Model Number'}: <span>${warranty.model_number}</span></div>` : ''}
-                        ${warranty.vendor ? `<div><i class="fas fa-store"></i> ${window.i18next ? window.i18next.t('warranties.vendor') : 'Vendor'}: <span>${warranty.vendor}</span></div>` : ''}
-                        ${warranty.warranty_type ? `<div><i class="fas fa-shield-alt"></i> ${window.i18next ? window.i18next.t('warranties.type') : 'Type'}: <span>${warranty.warranty_type}</span></div>` : ''}
-                    </div>
-                </div>
-                <div class="warranty-status-row status-${statusClass}">
-                    <span>${statusText}</span>
-                </div>
-                ${hasDocuments ? `
-                <div class="document-links-row">
-                    <div class="document-links-inner-container">
-                        ${warranty.product_url ? `
-                            <a href="${warranty.product_url}" class="product-link" target="_blank">
-                                <i class="fas fa-globe"></i> ${window.i18next ? window.i18next.t('warranties.product_website') : 'Product Website'}
-                            </a>
-                        ` : ''}
-                        ${generateDocumentLink(warranty, 'invoice')}
-                        ${generateDocumentLink(warranty, 'manual')}
-                        ${generateDocumentLink(warranty, 'other')}
-                        ${notesLinkHtml}
-
-                    </div>
-                </div>
-                ` : ''}
-                ${tagsHtml}
-            `;
-        }
-        
-        // Add event listeners
-        warrantiesList.appendChild(cardElement);
-        
-        // Add event listeners only if user can edit (buttons exist)
-        if (canEdit) {
-            // Edit button event listener
-            const editBtn = cardElement.querySelector('.edit-btn');
-            if (editBtn && !editBtn.disabled) {
-                editBtn.addEventListener('click', async () => {
-                    console.log('[DEBUG] Edit button clicked for warranty ID:', warranty.id);
-                    // Find the current warranty data instead of using the potentially stale warranty object
-                    const currentWarranty = warranties.find(w => w.id === warranty.id);
-                    console.log('[DEBUG] Found current warranty:', currentWarranty ? 'Yes' : 'No', currentWarranty?.notes);
-                    if (currentWarranty) {
-                        await openEditModal(currentWarranty);
-                    } else {
-                        showToast(window.t('messages.warranty_not_found_refresh'), 'error');
-                    }
-                });
-            }
-            
-            // Delete button event listener
-            const deleteBtn = cardElement.querySelector('.delete-btn');
-            if (deleteBtn) {
-                deleteBtn.addEventListener('click', () => {
-                    openDeleteModal(warranty.id, warranty.product_name);
-                });
-            }
-
-            // Archive/Unarchive button event listeners
-            const archiveBtn = cardElement.querySelector('.archive-btn');
-            if (archiveBtn) {
-                archiveBtn.addEventListener('click', () => {
-                    openArchiveModal(warranty.id, warranty.product_name);
-                });
-            }
-            const unarchiveBtn = cardElement.querySelector('.unarchive-btn');
-            if (unarchiveBtn) {
-                unarchiveBtn.addEventListener('click', async () => {
-                    await toggleArchiveStatus(warranty.id, false);
-                });
+        // Insert photo thumbnail (before .warranty-info inside .warranty-content)
+        const photoThumbnailHtml = buildPhotoThumbnailHtml(warranty);
+        if (photoThumbnailHtml) {
+            const contentWrap = cardElement.querySelector('.warranty-content');
+            const infoEl = cardElement.querySelector('.warranty-info');
+            if (contentWrap && infoEl) {
+                const photoHolder = document.createElement('div');
+                photoHolder.innerHTML = photoThumbnailHtml;
+                contentWrap.insertBefore(photoHolder.firstElementChild, infoEl);
             }
         }
-        // View notes button event listener
-        const notesLink = cardElement.querySelector('.notes-link');
-        if (notesLink) {
-            notesLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                // Find the current warranty data instead of using the potentially stale warranty object
-                const currentWarranty = warranties.find(w => w.id === warranty.id);
-                if (currentWarranty) {
-                    showNotesModal(currentWarranty.notes, currentWarranty);
+
+        // Insert document links row (around status row according to view)
+        if (hasDocuments) {
+            const docRowHtml = buildDocumentLinksRowHtml(warranty, notesLinkHtml);
+            const statusRow = cardElement.querySelector('.warranty-status-row');
+            if (statusRow) {
+                if (currentView === 'table') {
+                    statusRow.insertAdjacentHTML('afterend', docRowHtml);
                 } else {
-                    showToast(window.t('messages.warranty_not_found_refresh'), 'error');
+                    statusRow.insertAdjacentHTML('beforebegin', docRowHtml);
                 }
-            });
+            } else {
+                // Fallback append
+                cardElement.insertAdjacentHTML('beforeend', docRowHtml);
+            }
         }
+
+        // Append tags using component util if available, otherwise build manually
+        if (Array.isArray(warranty.tags) && warranty.tags.length > 0) {
+            if (window.components && window.components.appendTags) {
+                window.components.appendTags(cardElement, warranty.tags);
+            } else {
+                const tagsRow = document.createElement('div');
+                tagsRow.className = 'tags-row';
+                warranty.tags.forEach(tag => {
+                    const tagEl = (window.components && window.components.createTag)
+                        ? window.components.createTag(tag?.name, tag?.color)
+                        : (() => {
+                            const el = document.createElement('span');
+                            el.className = 'tag';
+                            if (tag?.color) {
+                                el.style.backgroundColor = tag.color;
+                                try {
+                                    const contrast = (window.getContrastColor ? window.getContrastColor(tag.color) : null);
+                                    if (contrast) el.style.color = contrast;
+                                } catch (e) {}
+                            }
+                            el.textContent = tag?.name || '';
+                            return el;
+                        })();
+                    tagsRow.appendChild(tagEl);
+                });
+                const docRow = cardElement.querySelector('.document-links-row');
+                if (docRow) {
+                    docRow.insertAdjacentElement('afterend', tagsRow);
+                } else {
+                    cardElement.appendChild(tagsRow);
+                }
+            }
+        }
+
+        fragment.appendChild(cardElement);
     });
     
+    warrantiesList.appendChild(fragment);
+
     // Load secure images with authentication after rendering
     loadSecureImages();
 
@@ -2999,12 +2819,12 @@ function filterWarranties() {
     }
 
     if (!searchTerm) {
-        return warranties; // Return the full list if no search term
+        return ((window.store && window.store.getWarranties && window.store.getWarranties()) || []); // Return the full list if no search term
         // REMOVED: renderWarranties(); 
         // REMOVED: return;
     }
 
-    const filtered = warranties.filter(warranty => {
+    const filtered = (((window.store && window.store.getWarranties && window.store.getWarranties()) || [])).filter(warranty => {
         // Check product name
         if (warranty.product_name && warranty.product_name.toLowerCase().includes(searchTerm)) { // Add null check
             return true;
@@ -3053,100 +2873,23 @@ function filterWarranties() {
 }
 
 function applyFilters() {
-    console.log('[FILTER DEBUG] Applying filters with:', currentFilters);
-    console.log('[FILTER DEBUG] Total warranties before filtering:', warranties.length);
-    
-    // If user selected archived status, reload data from archived endpoint and return
-    if (currentFilters.status === 'archived') {
-        if (!lastLoadedArchived) {
-            loadWarranties(true);
-            return;
-        }
-    } else if (lastLoadedArchived) {
-        // If leaving archived view, reload normal source
-        loadWarranties(true);
-        return;
-    } else if (currentFilters.status === 'all' && !lastLoadedIncludesArchived) {
-        // Ensure All view re-merges archived items after switching away and back
-        loadWarranties(true);
-        return;
+    if (window.warrantyListController && typeof window.warrantyListController.applyFilters === 'function') {
+        return window.warrantyListController.applyFilters();
     }
-
-    // Filter warranties based on currentFilters
-    const filtered = warranties.filter(warranty => {
-        // Exclude archived items from specific status views (only show in 'all' or 'archived')
-        if (warranty.is_archived && currentFilters.status !== 'all' && currentFilters.status !== 'archived') {
-            return false;
-        }
-        // Status filter: allow archived items to pass in All view
-        if (currentFilters.status !== 'all' && currentFilters.status !== 'archived' && warranty.status !== currentFilters.status) {
-            return false;
-        }
-        
-        // Tag filter
-        if (currentFilters.tag !== 'all') {
-            const tagId = parseInt(currentFilters.tag);
-            const hasTag = warranty.tags && Array.isArray(warranty.tags) &&
-                warranty.tags.some(tag => tag.id === tagId);
-            if (!hasTag) {
-                return false;
-            }
-        }
-
-        // Vendor filter
-        if (currentFilters.vendor !== 'all' && (warranty.vendor || '').toLowerCase() !== currentFilters.vendor.toLowerCase()) {
-            return false;
-        }
-        
-        // Warranty type filter
-        if (currentFilters.warranty_type !== 'all' && (warranty.warranty_type || '').toLowerCase() !== currentFilters.warranty_type.toLowerCase()) {
-            return false;
-        }
-        
-        // Search filter
-        if (currentFilters.search) {
-            const searchTerm = currentFilters.search.toLowerCase();
-            // Check if product name contains search term
-            const productNameMatch = warranty.product_name.toLowerCase().includes(searchTerm);
-            // Check if any tag name contains search term
-            const tagMatch = warranty.tags && Array.isArray(warranty.tags) && 
-                warranty.tags.some(tag => tag.name.toLowerCase().includes(searchTerm));
-            // Check if notes contains search term
-            const notesMatch = warranty.notes && warranty.notes.toLowerCase().includes(searchTerm);
-            // Check if vendor contains search term
-            const vendorMatch = warranty.vendor && warranty.vendor.toLowerCase().includes(searchTerm);
-            // Check if model number contains search term
-            const modelNumberMatch = warranty.model_number && warranty.model_number.toLowerCase().includes(searchTerm);
-            // Check if any serial number contains search term
-            const serialNumberMatch = warranty.serial_numbers && Array.isArray(warranty.serial_numbers) &&
-                warranty.serial_numbers.some(sn => sn && sn.toLowerCase().includes(searchTerm));
-            // Return true if any match
-            if (!productNameMatch && !tagMatch && !notesMatch && !vendorMatch && !modelNumberMatch && !serialNumberMatch) {
-                return false;
-            }
-        }
-        
-        return true;
-    });
-    
-    console.log('[FILTER DEBUG] Filtered warranties:', filtered.length);
-    console.log('[FILTER DEBUG] Filtered warranty IDs:', filtered.map(w => w.id));
-    
-    // Render the filtered warranties
-    renderWarranties(filtered);
 }
 
 // --- Persist and restore filters/sort ---
 async function saveFilterPreferences(saveToApi = true) {
     try {
         const prefix = getPreferenceKeyPrefix();
+        const __filters = (window.store && window.store.getFilters && window.store.getFilters()) || {};
         const filtersToSave = {
-            status: currentFilters.status || 'all',
-            tag: currentFilters.tag || 'all',
-            vendor: currentFilters.vendor || 'all',
-            warranty_type: currentFilters.warranty_type || 'all',
-            search: currentFilters.search || '',
-            sortBy: currentFilters.sortBy || 'expiration'
+            status: __filters.status || 'all',
+            tag: __filters.tag || 'all',
+            vendor: __filters.vendor || 'all',
+            warranty_type: __filters.warranty_type || 'all',
+            search: __filters.search || '',
+            sortBy: __filters.sortBy || 'expiration'
         };
         localStorage.setItem(`${prefix}warrantyFilters`, JSON.stringify(filtersToSave));
         
@@ -3190,12 +2933,15 @@ function loadFilterAndSortPreferences() {
             const savedFilters = JSON.parse(savedFiltersRaw);
             if (savedFilters && typeof savedFilters === 'object') {
                 console.log('[Filters] Loading saved filters from localStorage:', savedFilters);
-                currentFilters.status = savedFilters.status || currentFilters.status;
-                currentFilters.tag = savedFilters.tag || currentFilters.tag;
-                currentFilters.vendor = savedFilters.vendor || currentFilters.vendor;
-                currentFilters.warranty_type = savedFilters.warranty_type || currentFilters.warranty_type;
-                currentFilters.search = savedFilters.search || '';
-                currentFilters.sortBy = savedFilters.sortBy || currentFilters.sortBy;
+                const __existing = (window.store && window.store.getFilters && window.store.getFilters()) || {};
+                if (window.store && window.store.updateFilter) {
+                    if (savedFilters.status !== undefined) window.store.updateFilter('status', savedFilters.status || __existing.status);
+                    if (savedFilters.tag !== undefined) window.store.updateFilter('tag', savedFilters.tag || __existing.tag);
+                    if (savedFilters.vendor !== undefined) window.store.updateFilter('vendor', savedFilters.vendor || __existing.vendor);
+                    if (savedFilters.warranty_type !== undefined) window.store.updateFilter('warranty_type', savedFilters.warranty_type || __existing.warranty_type);
+                    if (savedFilters.search !== undefined) window.store.updateFilter('search', savedFilters.search || '');
+                    if (savedFilters.sortBy !== undefined) window.store.updateFilter('sortBy', savedFilters.sortBy || __existing.sortBy);
+                }
                 
                 // Restore search input UI state
                 const searchInput = document.getElementById('searchWarranties');
@@ -3775,29 +3521,27 @@ async function openEditModal(warranty) {
 
 function openDeleteModal(warrantyId, productName) {
     currentWarrantyId = warrantyId;
-    
+    if (window.components && window.components.modals && typeof window.components.modals.openDeleteModal === 'function') {
+        window.components.modals.openDeleteModal(productName);
+        return;
+    }
     const deleteProductNameElement = document.getElementById('deleteProductName');
-    if (deleteProductNameElement) {
-        deleteProductNameElement.textContent = productName || '';
-    }
-    
+    if (deleteProductNameElement) deleteProductNameElement.textContent = productName || '';
     const deleteModal = document.getElementById('deleteModal');
-    if (deleteModal) {
-        deleteModal.classList.add('active');
-    }
+    if (deleteModal) deleteModal.classList.add('active');
 }
 
 // Open Archive confirmation modal
 function openArchiveModal(warrantyId, productName) {
     currentWarrantyId = warrantyId;
+    if (window.components && window.components.modals && typeof window.components.modals.openArchiveModal === 'function') {
+        window.components.modals.openArchiveModal(productName);
+        return;
+    }
     const archiveProductNameElement = document.getElementById('archiveProductName');
-    if (archiveProductNameElement) {
-        archiveProductNameElement.textContent = productName || '';
-    }
+    if (archiveProductNameElement) archiveProductNameElement.textContent = productName || '';
     const archiveModal = document.getElementById('archiveModal');
-    if (archiveModal) {
-        archiveModal.classList.add('active');
-    }
+    if (archiveModal) archiveModal.classList.add('active');
 }
 
 // Confirm archive handler
@@ -4169,7 +3913,9 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeTheme();
     
     // Set up event listeners for other UI controls (should contain checks)
-    setupUIEventListeners();
+    if (window.warrantyListController && typeof window.warrantyListController.initEventListeners === 'function') {
+        window.warrantyListController.initEventListeners();
+    }
     setupModalTriggers(); // Add the new modal listeners
     
     // Check if user is logged in and update UI
@@ -4233,35 +3979,7 @@ let currentClaimsCanEdit = false; // Track if current user can edit the warranty
  * Initialize claims event listeners
  */
 function initClaimsEventListeners() {
-    // Event delegation for claims links
-    if (warrantiesList) {
-        warrantiesList.addEventListener('click', (e) => {
-            if (e.target.closest('.claims-link')) {
-                e.preventDefault();
-                const warrantyId = parseInt(e.target.closest('.claims-link').dataset.id);
-                openClaimsModal(warrantyId);
-                return;
-            }
-            // Archive button
-            if (e.target.closest('.archive-btn')) {
-                e.preventDefault();
-                const el = e.target.closest('.archive-btn');
-                const warrantyId = parseInt(el.dataset.id);
-                const card = el.closest('.warranty-card');
-                const titleEl = card ? card.querySelector('.product-name-header .warranty-title') : null;
-                const productName = titleEl ? titleEl.textContent.trim() : '';
-                openArchiveModal(warrantyId, productName);
-                return;
-            }
-            // Unarchive button
-            if (e.target.closest('.unarchive-btn')) {
-                e.preventDefault();
-                const warrantyId = parseInt(e.target.closest('.unarchive-btn').dataset.id);
-                toggleArchiveStatus(warrantyId, false);
-                return;
-            }
-        });
-    }
+    // Card action delegation is now handled by warrantyListController.initEventListeners()
     
     // Add claim button
     if (addClaimBtn) {
@@ -4305,7 +4023,7 @@ async function openClaimsModal(warrantyId) {
         currentClaimsWarrantyId = warrantyId;
         
         // Find warranty info
-        const warranty = warranties.find(w => w.id === warrantyId);
+        const warranty = (((window.store && window.store.getWarranties && window.store.getWarranties()) || []).find(w => w.id === warrantyId));
         if (!warranty) {
             showToast(window.i18next ? window.i18next.t('claims.warranty_not_found') : 'Warranty not found', 'error');
             return;
@@ -4994,12 +4712,13 @@ function initTagFunctionality() {
     console.log('Initializing main form tag UI functionality (search, selection, manage button).');
 
     // Load allTags if not already loaded (needed for search suggestions in the main form)
-    if (allTags.length === 0) {
+    const __tagsInit = (window.store && window.store.getAllTags && window.store.getAllTags()) || [];
+    if (__tagsInit.length === 0) {
         loadTags(); // loadTags is async
     }
 
     mainFormTagSearch.addEventListener('focus', () => {
-        renderTagsList(); // Renders suggestions into mainFormTagsList based on allTags
+        renderTagsList(); // Renders suggestions into mainFormTagsList based on store tags
         mainFormTagsList.classList.add('show');
     });
 
@@ -5032,10 +4751,11 @@ async function loadTags(force = false) {
     console.log('[script.js] loadTags() called. Current page:', window.location.pathname);
     
     // Check if tags are already loaded and reasonably populated
-    if (!force && allTags && allTags.length > 0) {
-        console.log('[script.js] Tags already loaded in allTags global. Skipping fetch. Count:', allTags.length);
+    const __existingTags = (window.store && window.store.getAllTags && window.store.getAllTags()) || [];
+    if (!force && __existingTags && __existingTags.length > 0) {
+        console.log('[script.js] Tags already loaded in store. Skipping fetch. Count:', __existingTags.length);
         // Optionally, re-dispatch the event if other components might need it on subsequent (though now less likely) calls
-        // document.dispatchEvent(new CustomEvent('allTagsLoaded', { detail: allTags }));
+        // document.dispatchEvent(new CustomEvent('allTagsLoaded', { detail: __existingTags }));
         return;
     }
 
@@ -5043,7 +4763,7 @@ async function loadTags(force = false) {
         const token = auth.getToken();
         if (!token) {
             console.warn('[script.js] No token available for loadTags. User might not be authenticated yet.');
-            allTags = []; // Ensure allTags is empty if we can't load
+            if (window.store && window.store.setAllTags) window.store.setAllTags([]); // Ensure tags are empty if we can't load
             return;
         }
         const response = await fetch('/api/tags', {
@@ -5052,19 +4772,20 @@ async function loadTags(force = false) {
         if (!response.ok) {
             const errorText = await response.text();
             console.error('[script.js] Failed to load tags:', response.status, errorText);
-            allTags = []; // Default to empty on error
+            if (window.store && window.store.setAllTags) window.store.setAllTags([]); // Default to empty on error
             return;
         }
         const fetchedTags = await response.json();
         // Assuming fetchedTags is an array of {id, name, color, ...} as expected by other functions
-        allTags = fetchedTags;
-        console.log('[script.js] All tags loaded into global allTags variable:', allTags.length, 'tags. Sample:', allTags.slice(0,2));
+        if (window.store && window.store.setAllTags) window.store.setAllTags(fetchedTags);
+        const __tagsAfterSet = (window.store && window.store.getAllTags && window.store.getAllTags()) || [];
+        console.log('[script.js] All tags loaded into store:', __tagsAfterSet.length, 'tags. Sample:', __tagsAfterSet.slice(0,2));
         // Dispatch event for any components that might be waiting for tags (e.g., Tagify instances)
-        document.dispatchEvent(new CustomEvent('allTagsLoaded', { detail: allTags }));
+        document.dispatchEvent(new CustomEvent('allTagsLoaded', { detail: __tagsAfterSet }));
 
     } catch (error) {
         console.error('[script.js] Error in loadTags():', error);
-        allTags = []; // Default to empty on critical error
+        if (window.store && window.store.setAllTags) window.store.setAllTags([]); // Default to empty on critical error
     }
 }
 
@@ -5075,7 +4796,8 @@ function renderTagsList(searchTerm = '') {
     tagsList.innerHTML = '';
     
     // Filter tags based on search term
-    const filteredTags = allTags.filter(tag => 
+    const __allTagsForRender = (window.store && window.store.getAllTags && window.store.getAllTags()) || [];
+    const filteredTags = __allTagsForRender.filter(tag => 
         !searchTerm || tag.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
     
@@ -5140,7 +4862,8 @@ function renderEditTagsList(searchTerm = '') {
     if (!editTagsList) return;
     editTagsList.innerHTML = '';
     // Filter tags based on search term
-    const filteredTags = allTags.filter(tag => 
+    const __allTagsForEdit = (window.store && window.store.getAllTags && window.store.getAllTags()) || [];
+    const filteredTags = __allTagsForEdit.filter(tag => 
         !searchTerm || tag.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
     // Add option to create new tag if search term is provided and not in list
@@ -5366,7 +5089,8 @@ function createTag(name) {
                 name: data.name,
                 color: data.color
             };
-            allTags.push(newTag);
+        const __existing = (window.store && window.store.getAllTags && window.store.getAllTags()) || [];
+        if (window.store && window.store.setAllTags) window.store.setAllTags([...__existing, newTag]);
             renderExistingTags();
             populateTagFilter();
             showToast(window.t('messages.tag_created_successfully'), 'success');
@@ -5430,12 +5154,13 @@ function renderExistingTags() {
 
     const tbody = document.createElement('tbody');
 
-    if (!allTags || allTags.length === 0) {
+    const __storeTags = (window.store && window.store.getAllTags && window.store.getAllTags()) || [];
+    if (!__storeTags || __storeTags.length === 0) {
         const emptyRow = document.createElement('tr');
         emptyRow.innerHTML = `<td colspan="3"><div class="no-tags">${window.t ? window.t('messages.no_tags_created_yet') : 'No tags created yet'}</div></td>`;
         tbody.appendChild(emptyRow);
     } else {
-        allTags.forEach(tag => {
+        __storeTags.forEach(tag => {
             const row = document.createElement('tr');
             row.className = 'existing-tag-row';
             row.dataset.id = String(tag.id);
@@ -5534,18 +5259,17 @@ function updateTag(id, name, color) {
                         editSelectedTags = editSelectedTags.map(t => t.id === data.id ? { id: data.id, name: data.name, color: data.color } : t);
                     }
                     // Update tags inside existing warranties so cards reflect changes
-                    if (Array.isArray(warranties) && warranties.length > 0) {
-                        warranties.forEach(w => {
-                            if (Array.isArray(w.tags)) {
-                                w.tags.forEach(tag => {
-                                    if (tag.id === data.id) {
-                                        tag.name = data.name;
-                                        tag.color = data.color;
-                                    }
-                                });
-                            }
-                        });
-                    }
+                        const __w = (window.store && window.store.getWarranties && window.store.getWarranties()) || [];
+                        if (Array.isArray(__w) && __w.length > 0) {
+                            const __updated = __w.map(w => {
+                                if (Array.isArray(w.tags)) {
+                                    const newTags = w.tags.map(tag => tag.id === data.id ? { ...tag, name: data.name, color: data.color } : tag);
+                                    return { ...w, tags: newTags };
+                                }
+                                return w;
+                            });
+                            if (window.store && window.store.setWarranties) window.store.setWarranties(__updated);
+                        }
                 }
             } catch (e) {
                 console.warn('[script.js] Non-fatal error while updating local tag state after update:', e);
@@ -5555,7 +5279,7 @@ function updateTag(id, name, color) {
             renderSelectedTags();
             renderEditSelectedTags();
             populateTagFilter();
-            renderWarranties(warranties);
+                renderWarranties();
             if (document.getElementById('summary-tags')) {
                 updateSummary();
             }
@@ -5688,25 +5412,30 @@ function deleteTag(id) {
     })
     .then(data => {
         // Remove tag from allTags array
-        allTags = allTags.filter(tag => tag.id !== id);
+        const __tagsNow = (window.store && window.store.getAllTags && window.store.getAllTags()) || [];
+        const __updatedTags = __tagsNow.filter(tag => tag.id !== id);
+        if (window.store && window.store.setAllTags) window.store.setAllTags(__updatedTags);
         
         // Remove tag from selectedTags if present (in both add and edit modes)
         selectedTags = selectedTags.filter(tag => tag.id !== id);
         editSelectedTags = editSelectedTags.filter(tag => tag.id !== id);
         
         // Remove tag from warranties array
-        warranties.forEach(warranty => {
+        const __warrantiesNow = (window.store && window.store.getWarranties && window.store.getWarranties()) || [];
+        const __updatedWarranties = __warrantiesNow.map(warranty => {
             if (warranty.tags && Array.isArray(warranty.tags)) {
-                warranty.tags = warranty.tags.filter(tag => tag.id !== id);
+                return { ...warranty, tags: warranty.tags.filter(tag => tag.id !== id) };
             }
+            return warranty;
         });
+        if (window.store && window.store.setWarranties) window.store.setWarranties(__updatedWarranties);
         
         // --- FIX: Re-render UI elements ---
         renderExistingTags(); // Update the list in the modal
         renderSelectedTags(); // Update selected tags in the add form
         renderEditSelectedTags(); // Update selected tags in the edit form
         populateTagFilter(); // Update the filter dropdown on the main page
-        renderWarranties(warranties); // Update warranty cards to remove deleted tag
+        renderWarranties(); // Update warranty cards to remove deleted tag
         // --- END FIX ---
         
         showToast(window.t('messages.tag_deleted_successfully'), 'success');
@@ -5720,270 +5449,37 @@ function deleteTag(id) {
     });
 }
 
-// Set up event listeners for UI controls
-function setupUIEventListeners() {
-    // --- Global Manage Tags Button ---
-    const globalManageTagsBtn = document.getElementById('globalManageTagsBtn');
-    if (globalManageTagsBtn) {
-        globalManageTagsBtn.addEventListener('click', async () => {
-            // Ensure allTags are loaded before opening the modal
-            if (!allTags || allTags.length === 0) {
-                showLoadingSpinner();
-                try {
-                    await loadTags();
-                } catch (error) {
-                    console.error("Failed to load tags before opening modal:", error);
-                    showToast(window.t('messages.could_not_load_tags'), "error");
-                    hideLoadingSpinner();
-                    return;
-                }
-                hideLoadingSpinner();
-            }
-            openTagManagementModal();
-        });
-    }
-    // Initialize edit tabs
-    initEditTabs();
-    
-    // Close modals when clicking outside or on close button
-    document.querySelectorAll('.modal-backdrop, [data-dismiss="modal"]').forEach(element => {
-        element.addEventListener('click', (e) => {
-            // Check if the click is on the backdrop itself OR a dismiss button
-            if (e.target === element || e.target.matches('[data-dismiss="modal"]')) {
-                // Find the closest modal backdrop to the element clicked
-                const modalToClose = e.target.closest('.modal-backdrop');
+// Set up event listeners for UI controls (delegated to controller in index.js)
 
-                if (modalToClose) {
-                    // *** MODIFIED CHECK ***
-                    // If the click target is the backdrop itself (not a dismiss button)
-                    // AND the modal is one of the protected modals, then DO NOTHING.
-                    if ((modalToClose.id === 'addWarrantyModal' || modalToClose.id === 'editModal' || 
-                         modalToClose.id === 'claimsModal' || modalToClose.id === 'claimFormModal') && e.target === modalToClose) {
-                        return; // Ignore backdrop click for protected modals
-                    }
-                    // *** END MODIFIED CHECK ***
+// Delegate extracted filter/persist functions to controller (backward-compatible)
+function saveFilterPreferences(saveToApi = true) {
+    if (window.warrantyListController && typeof window.warrantyListController.saveFilterPreferences === 'function') {
+        return window.warrantyListController.saveFilterPreferences(saveToApi);
+    }
+}
 
-                    // Otherwise, close the modal (handles other modals' backdrop clicks and all dismiss buttons)
-                    modalToClose.classList.remove('active');
+function loadFilterAndSortPreferences() {
+    if (window.warrantyListController && typeof window.warrantyListController.loadFilterAndSortPreferences === 'function') {
+        return window.warrantyListController.loadFilterAndSortPreferences();
+    }
+}
 
-                    // Reset forms only when closing the respective modal
-                    if (modalToClose.id === 'editModal') {
-                        // Optional: Add any edit form reset logic here if needed
-                        console.log('Edit modal closed, reset logic (if any) can go here.');
-                    } else if (modalToClose.id === 'addWarrantyModal') {
-                        // This reset will now only trigger if closed via dismiss button
-                        resetAddWarrantyWizard();
-                    }
-                    // Add similar reset logic for other modals like deleteModal if needed
-                    // else if (modalToClose.id === 'deleteModal') { ... }
-                }
-            }
-        });
-    });
+function populateTagFilter() {
+    if (window.warrantyListController && typeof window.warrantyListController.populateTagFilter === 'function') {
+        return window.warrantyListController.populateTagFilter();
+    }
+}
 
-    // Prevent modal content clicks from closing the modal
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-    });
-    
-    // Filter event listeners
-    const searchInput = document.getElementById('searchWarranties');
-    const clearSearchBtn = document.getElementById('clearSearch');
-    const statusFilter = document.getElementById('statusFilter');
-    const tagFilter = document.getElementById('tagFilter');
-    const sortBySelect = document.getElementById('sortBy');
-    const vendorFilter = document.getElementById('vendorFilter'); // Added vendor filter select
-    const warrantyTypeFilter = document.getElementById('warrantyTypeFilter'); // Added warranty type filter select
-    
-    if (searchInput) {
-        // Debounce logic: only apply filters after user stops typing for 300ms
-        let searchDebounceTimeout;
-        searchInput.addEventListener('input', () => {
-            currentFilters.search = searchInput.value.toLowerCase();
-            // Show/hide clear button based on search input
-            if (clearSearchBtn) {
-                clearSearchBtn.style.display = searchInput.value ? 'flex' : 'none';
-            }
-            // Add visual feedback class to search box when active
-            if (searchInput.value) {
-                searchInput.parentElement.classList.add('active-search');
-            } else {
-                searchInput.parentElement.classList.remove('active-search');
-            }
-            // Debounce applyFilters
-            if (searchDebounceTimeout) clearTimeout(searchDebounceTimeout);
-            searchDebounceTimeout = setTimeout(() => {
-                applyFilters();
-                saveFilterPreferences();
-            }, 300);
-        });
+function populateVendorFilter() {
+    if (window.warrantyListController && typeof window.warrantyListController.populateVendorFilter === 'function') {
+        return window.warrantyListController.populateVendorFilter();
     }
-    
-    if (clearSearchBtn) {
-        clearSearchBtn.addEventListener('click', () => {
-            if (searchInput) {
-                searchInput.value = '';
-                currentFilters.search = '';
-                clearSearchBtn.style.display = 'none';
-                searchInput.parentElement.classList.remove('active-search');
-                searchInput.focus();
-                applyFilters();
-                saveFilterPreferences();
-            }
-        });
-    }
-    
-    if (statusFilter) {
-        statusFilter.addEventListener('change', () => {
-            currentFilters.status = statusFilter.value;
-            applyFilters();
-            saveFilterPreferences();
-        });
-    }
-    
-    if (tagFilter) {
-        tagFilter.addEventListener('change', () => {
-            currentFilters.tag = tagFilter.value;
-            applyFilters();
-            saveFilterPreferences();
-        });
-    }
-    
-    if (vendorFilter) { // Added event listener for vendor filter
-        vendorFilter.addEventListener('change', () => {
-            currentFilters.vendor = vendorFilter.value;
-            applyFilters();
-            saveFilterPreferences();
-        });
-    }
-    
-    if (warrantyTypeFilter) { // Added event listener for warranty type filter
-        warrantyTypeFilter.addEventListener('change', () => {
-            currentFilters.warranty_type = warrantyTypeFilter.value;
-            applyFilters();
-            saveFilterPreferences();
-        });
-    }
-    
-    if (sortBySelect) {
-        sortBySelect.addEventListener('change', () => {
-            currentFilters.sortBy = sortBySelect.value;
-            applyFilters();
-            saveFilterPreferences();
-        });
-    }
-    
-    // Note: Clear Filters button handler is in index.html inline script to close popover
-    
-    // View switcher event listeners
-    const gridViewBtn = document.getElementById('gridViewBtn');
-    const listViewBtn = document.getElementById('listViewBtn');
-    const tableViewBtn = document.getElementById('tableViewBtn');
-    
-    if (gridViewBtn) gridViewBtn.addEventListener('click', () => switchView('grid'));
-    if (listViewBtn) listViewBtn.addEventListener('click', () => switchView('list'));
-    if (tableViewBtn) tableViewBtn.addEventListener('click', () => switchView('table'));
-    
-    // Export button event listener
-    const exportBtn = document.getElementById('exportBtn');
-    if (exportBtn) exportBtn.addEventListener('click', exportWarranties);
-    
-    // Import button event listener
-    if (importBtn && csvFileInput) {
-        importBtn.addEventListener('click', () => {
-            csvFileInput.click(); // Trigger hidden file input
-        });
-        csvFileInput.addEventListener('change', (event) => {
-            if (event.target.files && event.target.files.length > 0) {
-                handleImport(event.target.files[0]);
-            }
-        });
-    }
-    
-    // Refresh button
-    const refreshBtn = document.getElementById('refreshBtn');
-    if (refreshBtn) refreshBtn.addEventListener('click', loadWarranties);
-    
-    // Warranty Type dropdown handlers for custom option
-    if (warrantyTypeInput && warrantyTypeCustomInput) {
-        warrantyTypeInput.addEventListener('change', () => {
-            if (warrantyTypeInput.value === 'other') {
-                warrantyTypeCustomInput.style.display = 'block';
-                warrantyTypeCustomInput.focus();
-            } else {
-                warrantyTypeCustomInput.style.display = 'none';
-                warrantyTypeCustomInput.value = '';
-            }
-            updateSummary(); // Update summary when warranty type changes
-        });
-        
-        // Also update summary when custom warranty type changes
-        warrantyTypeCustomInput.addEventListener('input', updateSummary);
-    }
-    
-    if (editWarrantyTypeInput && editWarrantyTypeCustomInput) {
-        editWarrantyTypeInput.addEventListener('change', () => {
-            if (editWarrantyTypeInput.value === 'other') {
-                editWarrantyTypeCustomInput.style.display = 'block';
-                editWarrantyTypeCustomInput.focus();
-            } else {
-                editWarrantyTypeCustomInput.style.display = 'none';
-                editWarrantyTypeCustomInput.value = '';
-            }
-        });
-    }
-    
-    // Save warranty changes
-    const saveWarrantyBtn = document.getElementById('saveWarrantyBtn');
-    if (saveWarrantyBtn) {
-        let functionToAttachOnClick = saveWarranty; // Default to the original saveWarranty from script.js
+}
 
-        // Check if the observer setup function from status.js is available
-        if (typeof window.setupSaveWarrantyObserver === 'function') {
-            console.log('[script.js] window.setupSaveWarrantyObserver (from status.js) was FOUND. Attempting to wrap local saveWarranty function.');
-            try {
-                // Call the observer setup function, passing it the original saveWarranty from this script.
-                // The observer setup function is expected to return a new function that wraps the original.
-                functionToAttachOnClick = window.setupSaveWarrantyObserver(saveWarranty);
-                
-                // Optional: A flag to let status.js know that script.js has handled the wrapping.
-                // This can be useful if status.js has any fallback/polling logic to prevent double-wrapping.
-                window.saveWarrantyObserverAttachedByScriptJS = true; 
-                console.log('[script.js] Local saveWarranty function has been successfully WRAPPED by the observer from status.js.');
-            } catch (e) {
-                console.error('[script.js] An error occurred while trying to wrap saveWarranty with the observer from status.js:', e);
-                // If an error occurs during wrapping, functionToAttachOnClick will remain the original saveWarranty.
-            }
-        } else {
-            console.log('[script.js] window.setupSaveWarrantyObserver (from status.js) was NOT FOUND. Using the original saveWarranty function for the button.');
-        }
-
-        // Add the event listener using the (potentially) wrapped function.
-        saveWarrantyBtn.addEventListener('click', () => {
-            console.log('[script.js] Save button (saveWarrantyBtn) clicked. Invoking the determined save function (functionToAttachOnClick).');
-            if (typeof functionToAttachOnClick === 'function') {
-                functionToAttachOnClick(); // Execute the determined save function
-            } else {
-                console.error('[script.js] CRITICAL: functionToAttachOnClick is not a function when save button was clicked!');
-            }
-        });
-
-    } else {
-        console.warn('[script.js] saveWarrantyBtn DOM element not found. Cannot attach click listener.');
+function populateWarrantyTypeFilter() {
+    if (window.warrantyListController && typeof window.warrantyListController.populateWarrantyTypeFilter === 'function') {
+        return window.warrantyListController.populateWarrantyTypeFilter();
     }
-    
-    // Confirm delete button
-    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-    if (confirmDeleteBtn) confirmDeleteBtn.addEventListener('click', deleteWarranty);
-
-    // Confirm archive button
-    const confirmArchiveBtn = document.getElementById('confirmArchiveBtn');
-    if (confirmArchiveBtn) confirmArchiveBtn.addEventListener('click', confirmArchive);
-    
-    // Load saved view preference
-    // loadViewPreference(); // Disabled: now called after authStateReady
 }
 
 // Function to show loading spinner
@@ -6191,7 +5687,9 @@ function deleteWarranty() {
         // --- BEGIN FIX: Update UI immediately ---
         // Remove the deleted warranty from the global array
         const deletedId = currentWarrantyId; // Store ID before resetting
-        warranties = warranties.filter(warranty => warranty.id !== deletedId);
+        const __w = (window.store && window.store.getWarranties && window.store.getWarranties()) || [];
+        const __updated = __w.filter(warranty => warranty.id !== deletedId);
+        if (window.store && window.store.setWarranties) window.store.setWarranties(__updated);
         currentWarrantyId = null; // Reset current ID
 
         // Re-render the list using the updated local array
@@ -6205,333 +5703,7 @@ function deleteWarranty() {
     });
 }
 
-// Save warranty updates
-function saveWarranty() {
-    console.log("[script.js] CORE saveWarranty (original from script.js) EXECUTING.");
-    if (!currentWarrantyId) {
-        showToast(window.t('messages.no_warranty_selected_for_update'), 'error');
-        return;
-    }
-    
-    // --- Get form values ---
-    const productName = document.getElementById('editProductName').value.trim();
-    const purchaseDate = document.getElementById('editPurchaseDate').value;
-    const isLifetime = document.getElementById('editIsLifetime').checked;
-    const isDurationMethod = editDurationMethodRadio && editDurationMethodRadio.checked;
-    // Get new duration values
-    const years = parseInt(document.getElementById('editWarrantyDurationYears').value || 0);
-    const months = parseInt(document.getElementById('editWarrantyDurationMonths').value || 0);
-    const days = parseInt(document.getElementById('editWarrantyDurationDays').value || 0);
-    const exactDate = editExactExpirationDateInput ? editExactExpirationDateInput.value : '';
-    
-    // Basic validation
-    if (!productName) {
-        showToast(window.t('messages.product_name_required'), 'error');
-        return;
-    }
-    
-    if (!purchaseDate) {
-        showToast(window.t('messages.purchase_date_required'), 'error');
-        return;
-    }
-    
-    // --- Updated Validation ---
-    if (!isLifetime) {
-        if (isDurationMethod) {
-            // Validate duration fields
-            if (years === 0 && months === 0 && days === 0) {
-                showToast(window.t('messages.warranty_duration_required'), 'error');
-                // Optional: focus the years input again
-                const yearsInput = document.getElementById('editWarrantyDurationYears');
-                if (yearsInput) { // Check if element exists
-                    yearsInput.focus();
-                    // Add invalid class to container or inputs
-                    if (editWarrantyDurationFields) editWarrantyDurationFields.classList.add('invalid-duration');
-                }
-                return;
-            }
-        } else {
-            // Validate exact expiration date
-            if (!exactDate) {
-                showToast(window.t('messages.exact_expiration_date_required'), 'error');
-                if (editExactExpirationDateInput) editExactExpirationDateInput.focus();
-                return;
-            }
-            
-            // Validate that expiration date is in the future relative to purchase date
-            if (purchaseDate && exactDate <= purchaseDate) {
-                showToast(window.t('messages.expiration_date_after_purchase_date'), 'error');
-                if (editExactExpirationDateInput) editExactExpirationDateInput.focus();
-                return;
-            }
-        }
-    }
-    
-    // Remove invalid duration class if validation passes
-    if (editWarrantyDurationFields) editWarrantyDurationFields.classList.remove('invalid-duration');
-    // --- End Updated Validation ---
-    
-    // Create form data
-    const formData = new FormData();
-    formData.append('product_name', productName);
-    formData.append('purchase_date', purchaseDate);
-    
-    // Optional fields
-    let productUrl = document.getElementById('editProductUrl').value.trim();
-    if (productUrl) {
-        if (!productUrl.startsWith('http://') && !productUrl.startsWith('https://')) {
-            productUrl = 'https://' + productUrl;
-        }
-        formData.append('product_url', productUrl);
-    }
-    
-    const purchasePrice = document.getElementById('editPurchasePrice').value;
-    const currency = document.getElementById('editCurrency').value;
-    if (purchasePrice) {
-        formData.append('purchase_price', purchasePrice);
-    }
-    if (currency) {
-        formData.append('currency', currency);
-    }
-    
-    // Serial numbers (use correct name 'serial_numbers[]')
-    const serialInputs = document.querySelectorAll('#editSerialNumbersContainer input[name="serial_numbers[]"]');
-    // Clear existing before appending
-    formData.delete('serial_numbers[]'); 
-    serialInputs.forEach(input => {
-        if (input.value.trim()) {
-            formData.append('serial_numbers[]', input.value.trim()); // Use []
-        }
-    });
-    
-    // Tags - add tag IDs as JSON string
-    if (editSelectedTags && editSelectedTags.length > 0) {
-        const tagIds = editSelectedTags.map(tag => tag.id);
-        formData.append('tag_ids', JSON.stringify(tagIds));
-    } else {
-        // Send empty array to clear tags
-        formData.append('tag_ids', JSON.stringify([]));
-    }
-    
-    // Add URL fields for documents (with null checks)
-    const editInvoiceUrlField = document.getElementById('editInvoiceUrl');
-    formData.append('invoice_url', editInvoiceUrlField ? editInvoiceUrlField.value || '' : '');
-    
-    const editManualUrlField = document.getElementById('editManualUrl');
-    formData.append('manual_url', editManualUrlField ? editManualUrlField.value || '' : '');
-    
-    const editOtherDocumentUrlField = document.getElementById('editOtherDocumentUrl');
-    formData.append('other_document_url', editOtherDocumentUrlField ? editOtherDocumentUrlField.value || '' : '');
-    
-    // Files
-    const invoiceFile = document.getElementById('editInvoice').files[0];
-    if (invoiceFile) {
-        formData.append('invoice', invoiceFile);
-    }
-    
-    const manualFile = document.getElementById('editManual').files[0];
-    if (manualFile) {
-        formData.append('manual', manualFile);
-    }
-
-    const otherDocumentFile = document.getElementById('editOtherDocument').files[0]; 
-    if (otherDocumentFile) { 
-        formData.append('other_document', otherDocumentFile); 
-    } 
-    
-    // Product photo
-    const productPhotoFile = document.getElementById('editProductPhoto').files[0];
-    if (productPhotoFile) {
-        formData.append('product_photo', productPhotoFile);
-    }
-    
-    // Document deletion flags
-    const deleteInvoiceBtn = document.getElementById('deleteInvoiceBtn');
-    if (deleteInvoiceBtn && deleteInvoiceBtn.dataset.delete === 'true') {
-        formData.append('delete_invoice', 'true');
-    }
-    const deleteManualBtn = document.getElementById('deleteManualBtn');
-    if (deleteManualBtn && deleteManualBtn.dataset.delete === 'true') {
-        formData.append('delete_manual', 'true');
-    }
-    const deleteOtherDocumentBtn = document.getElementById('deleteOtherDocumentBtn'); 
-    if (deleteOtherDocumentBtn && deleteOtherDocumentBtn.dataset.delete === 'true') { 
-        formData.append('delete_other_document', 'true'); 
-    }
-    const deleteProductPhotoBtn = document.getElementById('deleteProductPhotoBtn');
-    if (deleteProductPhotoBtn && deleteProductPhotoBtn.dataset.delete === 'true') {
-        formData.append('delete_product_photo', 'true');
-    } 
-    
-    // --- Append is_lifetime and duration components ---
-    formData.append('is_lifetime', isLifetime.toString());
-    if (!isLifetime) {
-        if (isDurationMethod) {
-            formData.append('warranty_duration_years', years);
-            formData.append('warranty_duration_months', months);
-            formData.append('warranty_duration_days', days);
-        } else {
-            // Using exact date method
-            formData.append('exact_expiration_date', exactDate);
-            // Ensure duration fields are 0 when using exact date
-            formData.append('warranty_duration_years', 0);
-            formData.append('warranty_duration_months', 0);
-            formData.append('warranty_duration_days', 0);
-        }
-    } else {
-        // Ensure duration is 0 if lifetime
-        formData.append('warranty_duration_years', 0);
-        formData.append('warranty_duration_months', 0);
-        formData.append('warranty_duration_days', 0);
-    }
-    // Add notes
-    const notes = document.getElementById('editNotes').value;
-    if (notes && notes.trim() !== '') {
-        formData.append('notes', notes);
-    } else {
-        // Explicitly clear notes if empty
-        formData.append('notes', '');
-    }
-    
-    // Add model number to form data (optional)
-    const editModelNumber = document.getElementById('editModelNumber');
-    if (editModelNumber && editModelNumber.value.trim() !== '') {
-        formData.append('model_number', editModelNumber.value.trim());
-    } else {
-        // Explicitly clear if empty
-        formData.append('model_number', '');
-    }
-
-    // Add vendor/retailer to form data
-    const editVendorInput = document.getElementById('editVendor'); // Use the correct ID
-    formData.append('vendor', editVendorInput ? editVendorInput.value.trim() : ''); // Use the correct variable
-    
-    // Add warranty type to form data - handle custom type
-    const editWarrantyTypeInput = document.getElementById('editWarrantyType');
-    const editWarrantyTypeCustomInput = document.getElementById('editWarrantyTypeCustom');
-    let warrantyTypeValue = '';
-    if (editWarrantyTypeInput) {
-        if (editWarrantyTypeInput.value === 'other' && editWarrantyTypeCustomInput && editWarrantyTypeCustomInput.value.trim()) {
-            warrantyTypeValue = editWarrantyTypeCustomInput.value.trim();
-        } else {
-            warrantyTypeValue = editWarrantyTypeInput.value.trim();
-        }
-    }
-    formData.append('warranty_type', warrantyTypeValue);
-    
-    // Add selected Paperless documents for edit form
-    const selectedEditPaperlessProductPhoto = document.getElementById('selectedEditPaperlessProductPhoto');
-    const selectedEditPaperlessInvoice = document.getElementById('selectedEditPaperlessInvoice');
-    const selectedEditPaperlessManual = document.getElementById('selectedEditPaperlessManual');
-    const selectedEditPaperlessOtherDocument = document.getElementById('selectedEditPaperlessOtherDocument');
-    
-    if (selectedEditPaperlessProductPhoto && selectedEditPaperlessProductPhoto.value) {
-        formData.append('paperless_photo_id', selectedEditPaperlessProductPhoto.value);
-    }
-    if (selectedEditPaperlessInvoice && selectedEditPaperlessInvoice.value) {
-        formData.append('paperless_invoice_id', selectedEditPaperlessInvoice.value);
-    }
-    if (selectedEditPaperlessManual && selectedEditPaperlessManual.value) {
-        formData.append('paperless_manual_id', selectedEditPaperlessManual.value);
-    }
-    if (selectedEditPaperlessOtherDocument && selectedEditPaperlessOtherDocument.value) {
-        formData.append('paperless_other_id', selectedEditPaperlessOtherDocument.value);
-    }
-    
-    // DEBUG: Log what we're sending to the backend
-    console.log('[DEBUG saveWarranty] Form data being sent:');
-    console.log('[DEBUG saveWarranty] isLifetime:', isLifetime);
-    console.log('[DEBUG saveWarranty] isDurationMethod:', isDurationMethod);
-    console.log('[DEBUG saveWarranty] exactDate:', exactDate);
-    console.log('[DEBUG saveWarranty] years/months/days:', years, months, days);
-    
-    // Log all form data entries
-    for (let [key, value] of formData.entries()) {
-        console.log(`[DEBUG saveWarranty] FormData: ${key} = ${value}`);
-    }
-    
-    // Get auth token
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
-        showToast('Authentication required', 'error');
-        return;
-    }
-    
-    showLoadingSpinner();
-    
-    // Process Paperless-ngx uploads if enabled
-    processEditPaperlessNgxUploads(formData)
-        .then(paperlessUploads => {
-            // Add Paperless-ngx document IDs to form data
-            Object.keys(paperlessUploads).forEach(key => {
-                formData.append(key, paperlessUploads[key]);
-            });
-            
-            // Send request
-            return fetch(`/api/warranties/${currentWarrantyId}`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': 'Bearer ' + token
-                },
-                body: formData
-            });
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(data => {
-                    throw new Error(data.error || 'Failed to update warranty');
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            hideLoadingSpinner();
-            showToast('Warranty updated successfully', 'success');
-            closeModals();
-        
-        // Always reload from server to ensure we get the latest data including product photo paths
-        console.log('Reloading warranties after edit to ensure latest data including product photos');
-        loadWarranties(true).then(() => {
-            console.log('Warranties reloaded after editing warranty');
-            applyFilters();
-            // Load secure images for the updated cards - additional call to ensure they load
-            setTimeout(() => {
-                console.log('Loading secure images for updated warranty cards');
-                loadSecureImages();
-            }, 200); // Slightly longer delay to ensure everything is rendered
-            
-            // Always close the notes modal if open, to ensure UI is in sync
-            const notesModal = document.getElementById('notesModal');
-            if (notesModal && notesModal.style.display === 'block') {
-                notesModal.style.display = 'none';
-            }
-            
-            console.log('Warranty updated and reloaded from server');
-            
-            // Auto-link any documents that were uploaded to Paperless-ngx
-            if ((invoiceFile || manualFile || otherDocumentFile) && currentWarrantyId) {
-                console.log('[Auto-Link] Starting automatic document linking after warranty update');
-                
-                // Collect filename information for intelligent searching
-                const fileInfo = {};
-                if (invoiceFile) fileInfo.invoice = invoiceFile.name;
-                if (manualFile) fileInfo.manual = manualFile.name;
-                if (otherDocumentFile) fileInfo.other = otherDocumentFile.name;
-                
-                setTimeout(() => {
-                    autoLinkRecentDocuments(currentWarrantyId, ['invoice', 'manual', 'other'], 10, 10000, fileInfo);
-                }, 3000); // Wait 3 seconds for Paperless-ngx to process the documents
-            }
-        }).catch(error => {
-            console.error('Error reloading warranties after edit:', error);
-        });
-    })
-    .catch(error => {
-        hideLoadingSpinner();
-        console.error('Error updating warranty:', error);
-        showToast(error.message || 'Failed to update warranty', 'error');
-    });
-}
+// Save warranty logic moved to window.components.editModal.saveWarranty
 
 // Function to populate tag filter dropdown
 function populateTagFilter() {
@@ -6547,7 +5719,8 @@ function populateTagFilter() {
     const uniqueTags = new Set();
     
     // Collect all unique tags from warranties
-    warranties.forEach(warranty => {
+    const __w = (window.store && window.store.getWarranties && window.store.getWarranties()) || [];
+    __w.forEach(warranty => {
         if (warranty.tags && Array.isArray(warranty.tags)) {
             warranty.tags.forEach(tag => {
                 uniqueTags.add(JSON.stringify({id: tag.id, name: tag.name, color: tag.color}));
@@ -6586,7 +5759,8 @@ function populateVendorFilter() {
     const uniqueVendors = new Set();
 
     // Collect all unique, non-empty vendors from warranties
-    warranties.forEach(warranty => {
+    const __w = (window.store && window.store.getWarranties && window.store.getWarranties()) || [];
+    __w.forEach(warranty => {
         if (warranty.vendor && warranty.vendor.trim() !== '') {
             uniqueVendors.add(warranty.vendor.trim().toLowerCase());
         }
@@ -6621,7 +5795,8 @@ function populateWarrantyTypeFilter() {
     const uniqueWarrantyTypes = new Set();
 
     // Collect all unique, non-empty warranty types from warranties
-    warranties.forEach(warranty => {
+    const __w = (window.store && window.store.getWarranties && window.store.getWarranties()) || [];
+    __w.forEach(warranty => {
         if (warranty.warranty_type && warranty.warranty_type.trim() !== '') {
             uniqueWarrantyTypes.add(warranty.warranty_type.trim().toLowerCase());
         }
@@ -7053,7 +6228,7 @@ if (!document.getElementById('notesModal')) {
     // Add event listener for Edit Warranty button
     document.getElementById('editWarrantyBtn').addEventListener('click', async () => {
         // Find the current warranty data from the global array
-        const currentWarranty = warranties.find(w => w.id === notesModalWarrantyId);
+        const currentWarranty = (((window.store && window.store.getWarranties && window.store.getWarranties()) || []).find(w => w.id === notesModalWarrantyId));
         if (currentWarranty) {
             console.log('[DEBUG] Edit Warranty button clicked, opening edit modal with warranty:', currentWarranty.id, 'notes:', currentWarranty.notes);
             // Close the notes modal first
@@ -7085,7 +6260,7 @@ function showNotesModal(notes, warrantyOrId = null) {
     } else {
         notesModalWarrantyId = warrantyOrId;
         // Try to find the warranty object from global warranties array
-        notesModalWarrantyObj = warranties.find(w => w.id === notesModalWarrantyId) || null;
+        notesModalWarrantyObj = ((((window.store && window.store.getWarranties && window.store.getWarranties()) || []).find(w => w.id === notesModalWarrantyId)) || null);
     }
 
     // Show note content, hide textarea and edit controls

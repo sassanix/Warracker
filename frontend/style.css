@@ -4827,18 +4827,18 @@ html.dark-mode .warracker-footer a:hover {
     }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 360px) {
     .grid-view .product-photo-thumbnail img {
-        width: 30px;
-        height: 30px;
+		width: 30px;
+		height: 30px;
     }
     .list-view .product-photo-thumbnail img {
-        width: 25px;
-        height: 25px;
+		width: 60px;
+		height: 60px;
     }
     .table-view .product-photo-thumbnail img {
-        width: 20px;
-        height: 20px;
+		width: 20px;
+		height: 20px;
     }
     .product-photo-thumbnail {
         margin-right: 5px;

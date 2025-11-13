@@ -1,4 +1,4 @@
-import authService from '/js/services/authService.js';
+import authService from './authService.js';
 
 async function baseRequest(path, options = {}) {
   const headers = new Headers(options.headers || {});
@@ -48,6 +48,60 @@ export async function getStatistics() {
   return res.json();
 }
 
+// --- Settings & Admin endpoints ---
+export async function getUser() {
+  const res = await baseRequest('/api/auth/user');
+  return res.json();
+}
+
+export async function getSiteSettings() {
+  const res = await baseRequest('/api/admin/settings');
+  return res.json();
+}
+
+export async function saveSiteSettings(settings) {
+  const res = await baseRequest('/api/admin/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  });
+  return res.json();
+}
+
+export async function getUsers() {
+  const res = await baseRequest('/api/admin/users');
+  return res.json();
+}
+
+export async function updateUser(userId, data) {
+  const res = await baseRequest(`/api/admin/users/${userId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function deleteUser(userId) {
+  await baseRequest(`/api/admin/users/${userId}`, { method: 'DELETE' });
+  return true;
+}
+
+export async function getAuditTrail() {
+  const res = await baseRequest('/api/admin/audit-trail');
+  return res.json();
+}
+
+export async function triggerNotifications() {
+  const res = await baseRequest('/api/admin/send-notifications', { method: 'POST' });
+  return res.json();
+}
+
+// Generic request helper for arbitrary endpoints
+export async function request(path, options = {}) {
+  return baseRequest(path, options);
+}
+
 export async function savePreferences(prefs) {
   const res = await baseRequest('/api/auth/preferences', {
     method: 'POST',
@@ -81,7 +135,17 @@ if (typeof window !== 'undefined') {
     updateWarranty,
     deleteWarranty,
     getStatistics,
+    request,
     savePreferences,
+    // settings & admin
+    getUser,
+    getSiteSettings,
+    saveSiteSettings,
+    getUsers,
+    updateUser,
+    deleteUser,
+    getAuditTrail,
+    triggerNotifications,
   };
 }
 
@@ -90,7 +154,17 @@ export default {
   updateWarranty,
   deleteWarranty,
   getStatistics,
+  request,
   savePreferences,
+  // settings & admin
+  getUser,
+  getSiteSettings,
+  saveSiteSettings,
+  getUsers,
+  updateUser,
+  deleteUser,
+  getAuditTrail,
+  triggerNotifications,
 };
 
 
