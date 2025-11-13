@@ -2967,6 +2967,7 @@ async function openEditModal(warranty) {
     closeModals();
     
     currentWarrantyId = warranty.id;
+    window.currentWarrantyId = warranty.id; // Also set on window for editModal.js module
     
     // Load currencies for the dropdown and wait for it to complete
     await loadCurrencies();
@@ -3557,6 +3558,7 @@ async function confirmArchive() {
         const guidance = 'You can find archived warranties by selecting "Archived" in Filters.';
         showToast(guidance, 'info');
         currentWarrantyId = null;
+        window.currentWarrantyId = null; // Also clear window property
     } catch (e) {
         // toggleArchiveStatus already toasts on failure
         console.error('Archive failed', e);
@@ -5691,6 +5693,7 @@ function deleteWarranty() {
         const __updated = __w.filter(warranty => warranty.id !== deletedId);
         if (window.store && window.store.setWarranties) window.store.setWarranties(__updated);
         currentWarrantyId = null; // Reset current ID
+        window.currentWarrantyId = null; // Also clear window property
 
         // Re-render the list using the updated local array
         applyFilters();

@@ -420,6 +420,7 @@ export async function saveWarranty() {
 
     if (window && window.hideLoadingSpinner) window.hideLoadingSpinner();
     if (window && window.showToast) window.showToast('Warranty updated successfully', 'success');
+    if (window) window.currentWarrantyId = null; // Clear the warranty ID after successful save
     if (window && typeof window.closeModals === 'function') window.closeModals();
 
     // Reload warranties to pick up processed assets/paths
