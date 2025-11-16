@@ -5,9 +5,9 @@ ARG BUILD_ESSENTIAL_VERSION=12.12
 # renovate: datasource=deb depName=libpq-dev
 ARG LIBPQ_DEV_VERSION=17.6-0+deb13u1
 # renovate: datasource=deb depName=libcurl4-openssl-dev
-ARG LIBCURL4_OPENSSL_DEV_VERSION=8.14.1-2
+ARG LIBCURL4_OPENSSL_DEV_VERSION=8.14.1-2+deb13u2
 # renovate: datasource=deb depName=libssl-dev
-ARG LIBSSL_DEV_VERSION=3.5.1-1+deb13u1
+ARG LIBSSL_DEV_VERSION=3.5.4-1~deb13u1
 # renovate: datasource=deb depName=pkg-config
 ARG PKG_CONFIG_VERSION=1.8.1-4
 # renovate: datasource=deb depName=nginx
@@ -19,13 +19,13 @@ ARG POSTGRESQL_CLIENT_VERSION=17+278
 # renovate: datasource=deb depName=gettext-base
 ARG GETTEXT_BASE_VERSION=0.23.1-2
 # renovate: datasource=deb depName=curl
-ARG CURL_VERSION=8.14.1-2
+ARG CURL_VERSION=8.14.1-2+deb13u2
 # renovate: datasource=deb depName=ca-certificates
 ARG CA_CERTIFICATES_VERSION=20250419
 # renovate: datasource=deb depName=libpq5
 ARG LIBPQ5_VERSION=17.6-0+deb13u1
 # renovate: datasource=deb depName=libssl3t64
-ARG LIBSSL3T64_VERSION=3.5.1-1+deb13u1
+ARG LIBSSL3T64_VERSION=3.5.4-1~deb13u1
 
 FROM python:3.13-slim-trixie@sha256:079601253d5d25ae095110937ea8cfd7403917b53b077870bccd8b026dc7c42f AS builder
 
