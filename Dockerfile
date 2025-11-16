@@ -27,7 +27,7 @@ ARG LIBPQ5_VERSION=17.6-0+deb13u1
 # renovate: datasource=deb depName=libssl3t64
 ARG LIBSSL3T64_VERSION=3.5.1-1+deb13u1
 
-FROM python:3.13-slim-trixie@sha256:079601253d5d25ae095110937ea8cfd7403917b53b077870bccd8b026dc7c42f AS builder
+FROM python:3.14-slim-trixie@sha256:9813eecff3a08a6ac88aea5b43663c82a931fd9557f6aceaa847f0d8ce738978 AS builder
 
 ARG BUILD_ESSENTIAL_VERSION
 ARG LIBPQ_DEV_VERSION
@@ -54,7 +54,7 @@ COPY backend/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 
-FROM python:3.13-slim-trixie@sha256:079601253d5d25ae095110937ea8cfd7403917b53b077870bccd8b026dc7c42f AS runtime
+FROM python:3.14-slim-trixie@sha256:9813eecff3a08a6ac88aea5b43663c82a931fd9557f6aceaa847f0d8ce738978 AS runtime
 
 ARG NGINX_VERSION
 ARG SUPERVISOR_VERSION
