@@ -2,47 +2,48 @@
 <html>
 <head>
     <!-- Authentication redirect script -->
-    <script src="./auth-redirect.js?v=20250119001" data-protected="true"></script>
+    <script src="auth-redirect.js?v=20250119001" data-protected="true"></script>
     
     <!-- Include authentication script first to handle login state immediately -->
-    
+    <script src="include-auth-new.js?v=20250119001"></script>
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings - Warracker</title>
     <!-- Favicons -->
-    <link rel="shortcut icon" href="./favicon.ico" type="image/x-icon">
-    <link rel="icon" type="image/png" sizes="16x16" href="./img/favicon-16x16.png?v=2">
-    <link rel="icon" type="image/png" sizes="32x32" href="./img/favicon-32x32.png?v=2">
-    <link rel="apple-touch-icon" sizes="180x180" href="./img/favicon-512x512.png">
-    <link rel="manifest" href="./manifest.json">
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png?v=2">
+    <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png?v=2">
+    <link rel="apple-touch-icon" sizes="180x180" href="img/favicon-512x512.png">
+    <link rel="manifest" href="manifest.json">
     <!-- Load the main site styles first -->
-    <link rel="stylesheet" href="./style.css?v=20250119004">
+    <link rel="stylesheet" href="style.css?v=20250119004">
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
     <!-- Then load settings-specific styles -->
-    <link rel="stylesheet" href="./settings-styles.css?v=20250119001">
+    <link rel="stylesheet" href="settings-styles.css?v=20250119001">
     <!-- Apply theme immediately -->
-    <script src="./theme-loader.js?v=20250119001"></script> 
-    <script type="module" src="./js/services/authService.js"></script>
-    <script type="module" src="./js/services/apiService.js"></script>
+    <script src="theme-loader.js?v=20250119001"></script> 
     <!-- Load header fix styles last to override any conflicting styles -->
-    <link rel="stylesheet" href="./header-fix.css?v=20250119001">
+    <link rel="stylesheet" href="header-fix.css?v=20250119001">
     <!-- Mobile Header specific styles -->
-    <link rel="stylesheet" href="./mobile-header.css?v=20250119002">
+    <link rel="stylesheet" href="mobile-header.css?v=20250119002">
     <!-- Load fix for auth buttons -->
-    
+    <script src="fix-auth-buttons-loader.js?v=20250119001"></script>
     
     <!-- i18next Local Scripts -->
-    <script src="./js/lib/i18next.min.js?v=20250119001"></script>
-    <script src="./js/lib/i18nextHttpBackend.min.js?v=20250119001"></script>
-    <script src="./js/lib/i18nextBrowserLanguageDetector.min.js?v=20250119001"></script>
+    <script src="js/lib/i18next.min.js?v=20250119001"></script>
+    <script src="js/lib/i18nextHttpBackend.min.js?v=20250119001"></script>
+    <script src="js/lib/i18nextBrowserLanguageDetector.min.js?v=20250119001"></script>
     
     <!-- i18n Configuration -->
-    <script src="./js/i18n.js?v=20250119001"></script>
+    <script src="js/i18n.js?v=20250119001"></script>
+    
+    <!-- Temporary debug script -->
+    <script src="js/i18n-debug.js?v=20250119001"></script>
 
     <!-- Mobile menu logic isolated to avoid collisions on settings -->
-    <script src="./mobile-menu.js?v=20250119002" defer></script>
+    <script src="mobile-menu.js?v=20250119002" defer></script>
     
     <!-- Immediate authentication check script -->
     <script>
@@ -1076,17 +1077,52 @@
                     <p style="font-size: 0.8em; color: #666;">User ID: <span id="displayUserId"></span></p>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary close-modal">Cancel</button>
-                        <button type="button" id="confirmDeleteUserBtn" class="btn btn-danger">Delete</button>
+                        <button type="button" id="confirmDeleteUserBtn" class="btn btn-danger" onclick="deleteUser()">Delete</button>
                     </div>
                     <div style="margin-top: 20px; border-top: 1px solid #ddd; padding-top: 10px;">
                         <p><small>If the delete button doesn't work, try these alternatives:</small></p>
                         <ul style="font-size: 0.8em;">
-                            <li><a href="#" id="directDeleteLink" style="color: #dc3545;">Alternative 1: Direct function call</a></li>
-                            <li><a href="#" id="directAPILink" style="color: #dc3545;">Alternative 2: Direct API call</a></li>
+                            <li><a href="#" id="directDeleteLink" style="color: #dc3545;" onclick="deleteUser(); return false;">Alternative 1: Direct function call</a></li>
+                            <li><a href="#" id="directAPILink" style="color: #dc3545;" onclick="directDeleteUserAPI(document.getElementById('deleteUserId').value); return false;">Alternative 2: Direct API call</a></li>
                             <li><button type="submit" class="btn btn-sm btn-danger">Alternative 3: Form Submit</button></li>
                         </ul>
                         <div style="margin-top: 10px;">
-                            <button type="button" id="emergencyDeleteBtn" class="btn btn-sm btn-danger">Emergency Delete</button>
+                            <button type="button" id="emergencyDeleteBtn" class="btn btn-sm btn-danger" 
+                                    onclick="(function() {
+                                        const userId = document.getElementById('deleteUserId').value || document.getElementById('displayUserId').textContent;
+                                        if (!userId) {
+                                            alert('Error: User ID is missing');
+                                            return;
+                                        }
+                                        const token = localStorage.getItem('auth_token');
+                                        if (!token) {
+                                            alert('Error: Authentication token is missing');
+                                            return;
+                                        }
+                                        alert('Emergency delete for user ID: ' + userId);
+                                        fetch('/api/admin/users/' + userId, {
+                                            method: 'DELETE',
+                                            headers: {
+                                                'Authorization': 'Bearer ' + token,
+                                                'Content-Type': 'application/json'
+                                            }
+                                        })
+                                        .then(response => {
+                                            alert('Response status: ' + response.status);
+                                            if (response.status >= 200 && response.status < 300) {
+                                                alert('User deleted successfully');
+                                                document.querySelectorAll('.modal-backdrop').forEach(m => m.style.display = 'none');
+                                                location.reload();
+                                            } else {
+                                                alert('Failed to delete user: ' + response.status);
+                                            }
+                                        })
+                                        .catch(error => {
+                                            alert('Error: ' + error.message);
+                                        });
+                                    })(); return false;">
+                                Emergency Delete (Inline JS)
+                            </button>
                         </div>
                     </div>
                 </form>
@@ -1136,14 +1172,14 @@
     <div id="toastContainer" class="toast-container"></div>
     
     <!-- Scripts -->
-    
-    <script type="module" src="./settings-new.js"></script>
+    <script src="auth.js?v=20250119001"></script>
+    <script src="settings-new.js?v=20250119001"></script>
     
     <!-- Footer Width Fix -->
-    <script src="./footer-fix.js?v=20251024001"></script>
+    <script src="footer-fix.js?v=20251024001"></script>
     
     <!-- Footer Content Manager -->
-    <script src="./footer-content.js?v=20250119001"></script>
+    <script src="footer-content.js?v=20250119001"></script>
 
 <!-- Powered by Warracker Footer -->
 <footer class="warracker-footer" id="warrackerFooter">

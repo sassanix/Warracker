@@ -1,6 +1,6 @@
 // Version checker for Warracker
 document.addEventListener('DOMContentLoaded', () => {
-    const currentVersion = '1.0.3'; // Current version of the application
+    const currentVersion = '1.0.2'; // Current version of the application
     const updateStatus = document.getElementById('updateStatus');
     const updateLink = document.getElementById('updateLink');
     const versionDisplay = document.getElementById('versionDisplay');

@@ -1,5 +1,3 @@
-import apiService from './js/services/apiService.js';
-import authService from './js/services/authService.js';
 (function() {
     // DOM Elements
     const loadingIndicator = document.getElementById('loadingIndicator');
@@ -103,13 +101,17 @@ import authService from './js/services/authService.js';
     async function fetchStatistics() {
         try {
             console.log('Checking authentication status... (status.js IIFE)');
-            if (!authService || !authService.isAuthenticated()) {
+            if (!window.auth || !window.auth.isAuthenticated()) {
                  throw new Error('Authentication required.');
             }
-            const token = authService.getToken();
+            const token = window.auth.getToken();
             if (!token) {
                 throw new Error('Authentication token not available.');
             }
+            const options = {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'}
+            };
             
             // Check saved view scope preference to determine which API endpoint to use
             const savedScope = loadViewScopePreference();
@@ -119,15 +121,17 @@ import authService from './js/services/authService.js';
             const apiUrl = shouldUseGlobalView ? GLOBAL_STATISTICS_API_URL : STATISTICS_API_URL;
             console.log('Fetching statistics from:', apiUrl, '(Global view preference:', savedScope, ')');
             
-            const response = shouldUseGlobalView
-                ? await apiService.request('/api/statistics/global')
-                : await apiService.request('/api/statistics');
-            const json = await response.json();
+            const response = await fetch(apiUrl, options);
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to fetch statistics: ${response.status} ${errorText}`);
+            }
+            
             // Update isGlobalView to match the loaded data
             isGlobalView = shouldUseGlobalView;
             console.log(`[DEBUG] Set isGlobalView to: ${isGlobalView}`);
             
-            return json;
+            return await response.json();
         } catch (error) {
             console.error('Error fetching statistics (status.js IIFE):', error);
             throw error;
@@ -154,10 +158,13 @@ import authService from './js/services/authService.js';
         
         try {
             // Check if global view is enabled for this user
-            const token = authService.getToken();
+            const token = window.auth.getToken();
             if (!token) return;
             
-            const response = await apiService.request('/api/settings/global-view-status', { method: 'GET' });
+            const response = await fetch('/api/settings/global-view-status', {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             
             if (response.ok) {
                 const result = await response.json();
@@ -336,8 +343,11 @@ import authService from './js/services/authService.js';
         
         try {
             // Check if global view is still available
-            const token = authService.getToken();
-            const response = await apiService.request('/api/settings/global-view-status', { method: 'GET' });
+            const token = window.auth.getToken();
+            const response = await fetch('/api/settings/global-view-status', {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             
             if (response.ok) {
                 const result = await response.json();
@@ -934,9 +944,14 @@ import authService from './js/services/authService.js';
                 let allWarrantiesForTimeline = [];
                 try {
                     // Try to fetch all warranties for a complete timeline
-                    const token = authService && authService.getToken ? authService.getToken() : null;
+                    const token = window.auth && window.auth.getToken ? window.auth.getToken() : null;
                     if (token) {
-                        const allWarrantiesResponse = await apiService.request('/api/warranties', { method: 'GET' });
+                        const allWarrantiesResponse = await fetch('/api/warranties', {
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
                         if (allWarrantiesResponse.ok) {
                             allWarrantiesForTimeline = await allWarrantiesResponse.json();
                         } else {
@@ -1017,8 +1032,9 @@ import authService from './js/services/authService.js';
 
     async function loadUserPreferences() {
         try {
-            if (!authService || !authService.getToken()) { console.warn('Auth or token not available for prefs in status.js'); return; }
-            const response = await apiService.request('/api/auth/preferences', { method: 'GET' });
+            if (!window.auth || !window.auth.getToken()) { console.warn('Auth or token not available for prefs in status.js'); return; }
+            const token = window.auth.getToken();
+            const response = await fetch('/api/auth/preferences', { headers: { 'Authorization': `Bearer ${token}` } });
             if (response.ok) {
                 const prefs = await response.json();
                 if (prefs && prefs.expiring_soon_days !== undefined) { // Check for undefined specifically
@@ -1072,10 +1088,13 @@ import authService from './js/services/authService.js';
                 // ALWAYS fetch fresh details when editing from the status page to ensure modal has latest data.
                 console.log(`[DEBUG status.js] Edit from status page for warranty ${warrantyId}. ALWAYS fetching fresh details from /api/debug/warranty/:id.`);
                 showLoadingSpinner(); // Show spinner for this specific fetch
-                const token = authService.getToken();
+                const token = localStorage.getItem('auth_token') || (window.auth && window.auth.getToken());
                 if (!token) throw new Error('Authentication token not available for fetching fresh details.');
                 
-                const response = await apiService.request(`/api/debug/warranty/${warrantyId}`, { method: 'GET' });
+                const response = await fetch(`/api/debug/warranty/${warrantyId}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                });
 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
