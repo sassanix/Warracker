@@ -7,7 +7,7 @@ Flask-Login==0.6.3
 Flask-Bcrypt==1.0.1
 PyJWT==2.10.1
 email-validator==2.3.0
-APScheduler==3.11.0
+APScheduler==3.11.1
 python-dateutil==2.9.0.post0
 Authlib==1.6.5
 requests==2.32.5
