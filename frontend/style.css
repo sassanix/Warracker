@@ -259,7 +259,7 @@ header .container {
 
 @media (max-width: 768px) {
   .main-content {
-    grid-template-columns: 1fr;
+    grid-template-columns: 0fr 1fr;
   }
 }
 
@@ -1351,7 +1351,7 @@ input.invalid {
   /* End Header Responsive Styles */
 
   .main-content {
-    grid-template-columns: 1fr;
+    grid-template-columns: 0fr 1fr;
   }
   
   .form-panel, .warranties-panel {
@@ -4251,7 +4251,7 @@ input.invalid {
 
   /* Adjust existing rules within the media query */
   .main-content {
-    grid-template-columns: 1fr;
+    grid-template-columns: 0fr 1fr;
   }
 }
 
