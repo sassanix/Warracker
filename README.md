@@ -158,7 +158,7 @@ volumes:
   warracker_uploads:
 ```
 
-To get the docker compose file with environemts and .env example for warracker and the warrackerdb please go [here](https://github.com/sassanix/Warracker/tree/main/Docker)
+To get the docker compose file with environments and .env example for warracker and the warrackerdb please go [here](https://github.com/sassanix/Warracker/tree/main/Docker)
 
 ## 📝 Usage
 
