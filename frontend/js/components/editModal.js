@@ -1,5 +1,11 @@
 // Edit modal helper components (DOM-based, no innerHTML templates)
 import { updateWarranty } from '../services/apiService.js';
+import { showToast, showLoadingSpinner, hideLoadingSpinner } from './ui.js';
+import { autoLinkRecentDocuments, processEditPaperlessUploads, loadSecureImages, clearPaperlessSelection } from './paperless.js';
+import { loadWarranties, applyFilters } from '../controllers/warrantyListController.js';
+import { getCurrentWarrantyId, setCurrentWarrantyId, getEditSelectedTags, setEditSelectedTags } from '../store.js';
+import { renderEditTagsList, renderEditSelectedTags, loadTags, openTagManagementModal } from './tagManager.js';
+import { loadCurrencies } from '../lib/currency.js';
 
 function createElement(tag, className, text) {
   const el = document.createElement(tag);
@@ -237,25 +243,314 @@ export function renderCurrentOther(element, deleteBtn, warranty, i18n = window.i
   }
 }
 
-// Expose globally
-if (typeof window !== 'undefined') {
-  window.components = window.components || {};
-  window.components.editModal = {
-    renderSerialNumbers,
-    renderCurrentInvoice,
-    renderCurrentManual,
-    renderCurrentPhoto,
-    renderCurrentOther,
-    saveWarranty,
-  };
+const editState = {
+  initialized: false,
+  modal: null,
+  form: null,
+  tabs: [],
+  contents: [],
+  tagSearch: null,
+  tagList: null,
+};
+
+function ensureInitialized() {
+  if (editState.initialized) return;
+  editState.modal = document.getElementById('editModal');
+  editState.form = document.getElementById('editWarrantyForm');
+  if (!editState.modal || !editState.form) return;
+  editState.tabs = Array.from(editState.modal.querySelectorAll('.edit-tab-btn'));
+  editState.contents = Array.from(editState.modal.querySelectorAll('.edit-tab-content'));
+  editState.tabs.forEach((btn) => {
+    if (btn._editBound) return;
+    btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+    btn._editBound = true;
+  });
+  editState.tagSearch = document.getElementById('editTagSearch');
+  editState.tagList = document.getElementById('editTagsList');
+  if (editState.tagSearch && !editState.tagSearch._editBound) {
+    editState.tagSearch.addEventListener('focus', () => renderEditTagsList(editState.tagSearch.value));
+    editState.tagSearch.addEventListener('input', () => renderEditTagsList(editState.tagSearch.value));
+    document.addEventListener('click', (event) => {
+      if (!editState.tagSearch.contains(event.target) && !editState.tagList?.contains(event.target)) {
+        if (editState.tagList) editState.tagList.classList.remove('show');
+      }
+    });
+    editState.tagSearch._editBound = true;
+  }
+  const manageBtn = document.getElementById('editManageTagsBtn');
+  if (manageBtn && !manageBtn._editBound) {
+    manageBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      openTagManagementModal();
+    });
+    manageBtn._editBound = true;
+  }
+  bindFileInput('editProductPhoto', 'editProductPhotoFileName', 'editProductPhotoPreview', 'editProductPhotoImg');
+  bindFileInput('editInvoice', 'editFileName');
+  bindFileInput('editManual', 'editManualFileName');
+  bindFileInput('editOtherDocument', 'editOtherDocumentFileName');
+  const lifetimeToggle = document.getElementById('editIsLifetime');
+  if (lifetimeToggle && !lifetimeToggle._editBound) {
+    lifetimeToggle.addEventListener('change', applyLifetimeState);
+    lifetimeToggle._editBound = true;
+  }
+  ['editDurationMethod', 'editExactDateMethod'].forEach((id) => {
+    const radio = document.getElementById(id);
+    if (radio && !radio._editBound) {
+      radio.addEventListener('change', applyWarrantyMethodState);
+      radio._editBound = true;
+    }
+  });
+  const closeButtons = editState.modal.querySelectorAll('[data-dismiss="modal"], .close-btn');
+  closeButtons.forEach((btn) => {
+    if (btn._editBound) return;
+    btn.addEventListener('click', (event) => {
+      event.preventDefault();
+      closeEditModal();
+    });
+    btn._editBound = true;
+  });
+  editState.initialized = true;
 }
 
+function activateTab(tabId) {
+  if (!tabId) return;
+  editState.tabs.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tabId));
+  editState.contents.forEach((content) => content.classList.toggle('active', content.id === tabId));
+}
 
-// Submit handler for the Edit Warranty modal
+function bindFileInput(inputId, labelId, previewWrapperId, previewImgId) {
+  const input = document.getElementById(inputId);
+  if (!input || input._editBound) return;
+  const label = labelId ? document.getElementById(labelId) : null;
+  const previewWrapper = previewWrapperId ? document.getElementById(previewWrapperId) : null;
+  const previewImg = previewImgId ? document.getElementById(previewImgId) : null;
+  input.addEventListener('change', () => {
+    const file = input.files?.[0];
+    if (label) label.textContent = file ? file.name : '';
+    if (previewWrapper && previewImg) {
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          previewImg.src = e.target.result;
+          previewWrapper.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        previewWrapper.style.display = 'none';
+      }
+    }
+  });
+  input._editBound = true;
+}
+
+function applyLifetimeState() {
+  const checkbox = document.getElementById('editIsLifetime');
+  const methodWrapper = document.getElementById('editWarrantyEntryMethod');
+  const durationFields = document.getElementById('editWarrantyDurationFields');
+  const exactField = document.getElementById('editExactExpirationField');
+  if (!checkbox) return;
+  if (checkbox.checked) {
+    if (methodWrapper) methodWrapper.style.display = 'none';
+    if (durationFields) durationFields.style.display = 'none';
+    if (exactField) exactField.style.display = 'none';
+  } else {
+    if (methodWrapper) methodWrapper.style.display = 'block';
+    applyWarrantyMethodState();
+  }
+}
+
+function applyWarrantyMethodState() {
+  const durationFields = document.getElementById('editWarrantyDurationFields');
+  const exactField = document.getElementById('editExactExpirationField');
+  const useDuration = document.getElementById('editDurationMethod')?.checked;
+  if (useDuration) {
+    if (durationFields) durationFields.style.display = 'block';
+    if (exactField) exactField.style.display = 'none';
+  } else {
+    if (durationFields) durationFields.style.display = 'none';
+    if (exactField) exactField.style.display = 'block';
+  }
+}
+
+function setDeleteHandler(buttonId, targetElement, message) {
+  const button = document.getElementById(buttonId);
+  if (!button || button._editBound) return;
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    button.dataset.delete = 'true';
+    if (targetElement) {
+      targetElement.innerHTML = `<span class="text-danger">${message}</span>`;
+    }
+    button.style.display = 'none';
+  });
+  button._editBound = true;
+}
+
+function resetFileInputs(ids) {
+  ids.forEach((id) => {
+    const input = document.getElementById(id);
+    if (input) input.value = '';
+  });
+  const labels = ['editProductPhotoFileName', 'editFileName', 'editManualFileName', 'editOtherDocumentFileName'];
+  labels.forEach((labelId) => {
+    const label = document.getElementById(labelId);
+    if (label) label.textContent = '';
+  });
+  const preview = document.getElementById('editProductPhotoPreview');
+  if (preview) preview.style.display = 'none';
+}
+
+function setStorageSelection(name, isPaperless) {
+  const radios = document.getElementsByName(name);
+  if (!radios || !radios.length) return;
+  radios.forEach((radio) => {
+    radio.checked = isPaperless ? radio.value === 'paperless' : radio.value === 'local';
+  });
+}
+
+function normalizeSerials(serials) {
+  if (!Array.isArray(serials)) return [];
+  return serials
+    .map((sn) => {
+      if (!sn) return '';
+      if (typeof sn === 'object' && sn.serial_number) return sn.serial_number;
+      return String(sn);
+    })
+    .filter((value) => value && value.trim());
+}
+
+function formatDateInput(value) {
+  if (!value) return '';
+  if (value.includes('T')) return value.split('T')[0];
+  return value;
+}
+
+function isExactMethodByDuration(warranty) {
+  const years = warranty.warranty_duration_years || 0;
+  const months = warranty.warranty_duration_months || 0;
+  const days = warranty.warranty_duration_days || 0;
+  return years === 0 && months === 0 && days === 0 && warranty.expiration_date;
+}
+
+function setValue(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.value = value ?? '';
+}
+
+export async function openEditModal(warranty) {
+  if (!warranty) return;
+  ensureInitialized();
+  await Promise.all([loadTags().catch(() => {}), loadCurrencies().catch(() => {})]);
+  setCurrentWarrantyId(warranty.id);
+  if (typeof window !== 'undefined') {
+    window.currentWarrantyId = warranty.id;
+  }
+  fillWarrantyFields(warranty);
+  populateDocuments(warranty);
+  activateTab('edit-product-info');
+  if (editState.modal) editState.modal.classList.add('active');
+  setTimeout(() => loadSecureImages(), 100);
+}
+
+function fillWarrantyFields(warranty) {
+  const serialContainer = document.getElementById('editSerialNumbersContainer');
+  renderSerialNumbers(serialContainer, normalizeSerials(warranty.serial_numbers), window.i18next);
+  setValue('editProductName', warranty.product_name || '');
+  setValue('editProductUrl', warranty.product_url || '');
+  setValue('editModelNumber', warranty.model_number || '');
+  setValue('editVendor', warranty.vendor || '');
+  setValue('editPurchasePrice', warranty.purchase_price || '');
+  setValue('editCurrency', warranty.currency || '');
+  setValue('editPurchaseDate', formatDateInput(warranty.purchase_date));
+  const expirationDate = formatDateInput(warranty.expiration_date);
+  const lifetimeCheckbox = document.getElementById('editIsLifetime');
+  if (lifetimeCheckbox) lifetimeCheckbox.checked = Boolean(warranty.is_lifetime);
+  const useExact = !warranty.is_lifetime && (warranty.original_input_method === 'exact_date' || isExactMethodByDuration(warranty));
+  const durationRadio = document.getElementById('editDurationMethod');
+  const exactRadio = document.getElementById('editExactDateMethod');
+  if (durationRadio) durationRadio.checked = !useExact;
+  if (exactRadio) exactRadio.checked = useExact;
+  setValue('editExactExpirationDate', useExact ? expirationDate : '');
+  if (!useExact) {
+    setValue('editWarrantyDurationYears', warranty.warranty_duration_years || 0);
+    setValue('editWarrantyDurationMonths', warranty.warranty_duration_months || 0);
+    setValue('editWarrantyDurationDays', warranty.warranty_duration_days || 0);
+  } else {
+    setValue('editWarrantyDurationYears', '');
+    setValue('editWarrantyDurationMonths', '');
+    setValue('editWarrantyDurationDays', '');
+  }
+  applyLifetimeState();
+  applyWarrantyMethodState();
+  const typeSelect = document.getElementById('editWarrantyType');
+  const customInput = document.getElementById('editWarrantyTypeCustom');
+  if (typeSelect) {
+    const optionExists = Array.from(typeSelect.options).some((option) => option.value === (warranty.warranty_type || ''));
+    if (optionExists) {
+      typeSelect.value = warranty.warranty_type || '';
+      if (customInput) {
+        customInput.style.display = 'none';
+        customInput.value = '';
+      }
+    } else {
+      typeSelect.value = 'other';
+      if (customInput) {
+        customInput.style.display = 'block';
+        customInput.value = warranty.warranty_type || '';
+      }
+    }
+  }
+  setValue('editNotes', warranty.notes || '');
+  const tags = Array.isArray(warranty.tags)
+    ? warranty.tags.map((tag) => ({ id: tag.id, name: tag.name, color: tag.color }))
+    : [];
+  setEditSelectedTags(tags);
+  if (typeof window !== 'undefined') {
+    window.editSelectedTags = tags;
+  }
+  renderEditSelectedTags();
+  renderEditTagsList();
+}
+
+function populateDocuments(warranty) {
+  setStorageSelection('editInvoiceStorage', Boolean(warranty.paperless_invoice_id));
+  setStorageSelection('editManualStorage', Boolean(warranty.paperless_manual_id));
+  const invoiceContainer = document.getElementById('currentInvoice');
+  const manualContainer = document.getElementById('currentManual');
+  const photoContainer = document.getElementById('currentProductPhoto');
+  const otherContainer = document.getElementById('currentOtherDocument');
+  const deleteInvoiceBtn = document.getElementById('deleteInvoiceBtn');
+  const deleteManualBtn = document.getElementById('deleteManualBtn');
+  const deletePhotoBtn = document.getElementById('deleteProductPhotoBtn');
+  const deleteOtherBtn = document.getElementById('deleteOtherDocumentBtn');
+  if (deleteInvoiceBtn) deleteInvoiceBtn.dataset.delete = 'false';
+  if (deleteManualBtn) deleteManualBtn.dataset.delete = 'false';
+  if (deletePhotoBtn) deletePhotoBtn.dataset.delete = 'false';
+  if (deleteOtherBtn) deleteOtherBtn.dataset.delete = 'false';
+  renderCurrentInvoice(invoiceContainer, deleteInvoiceBtn, warranty, window.i18next);
+  renderCurrentManual(manualContainer, deleteManualBtn, warranty, window.i18next);
+  renderCurrentPhoto(photoContainer, deletePhotoBtn, warranty, window.i18next);
+  renderCurrentOther(otherContainer, deleteOtherBtn, warranty, window.i18next);
+  setDeleteHandler('deleteInvoiceBtn', invoiceContainer, window.i18next ? window.i18next.t('warranties.invoice_will_be_deleted') : 'Invoice will be deleted');
+  setDeleteHandler('deleteManualBtn', manualContainer, window.i18next ? window.i18next.t('warranties.manual_will_be_deleted') : 'Manual will be deleted');
+  setDeleteHandler('deleteProductPhotoBtn', photoContainer, window.i18next ? window.i18next.t('warranties.photo_will_be_deleted') : 'Photo will be deleted');
+  setDeleteHandler('deleteOtherDocumentBtn', otherContainer, window.i18next ? window.i18next.t('warranties.other_document_will_be_deleted') : 'Files will be deleted');
+  clearPaperlessSelection('edit_invoice');
+  clearPaperlessSelection('edit_manual');
+  clearPaperlessSelection('edit_productPhoto');
+  clearPaperlessSelection('edit_otherDocument');
+  resetFileInputs(['editProductPhoto', 'editInvoice', 'editManual', 'editOtherDocument']);
+}
+
 export async function saveWarranty() {
-  const currentId = typeof window !== 'undefined' ? window.currentWarrantyId : null;
+  let currentId = getCurrentWarrantyId();
+  if (!currentId && typeof window !== 'undefined' && window.currentWarrantyId) {
+    currentId = window.currentWarrantyId;
+    setCurrentWarrantyId(currentId);
+  }
   if (!currentId) {
-    if (window && window.showToast) window.showToast(window.t ? window.t('messages.no_warranty_selected_for_update') : 'No warranty selected', 'error');
+    showToast(window.i18next ? window.i18next.t('messages.no_warranty_selected_for_update') : 'No warranty selected', 'error');
     return;
   }
 
@@ -334,8 +629,8 @@ export async function saveWarranty() {
   });
 
   // Tags
-  const editSelectedTags = (typeof window !== 'undefined' && window.editSelectedTags) ? window.editSelectedTags : [];
-  formData.append('tag_ids', JSON.stringify(Array.isArray(editSelectedTags) ? editSelectedTags.map(t => t.id) : []));
+  const tags = getEditSelectedTags() || [];
+  formData.append('tag_ids', JSON.stringify(tags.map((t) => t.id)));
 
   // Document URLs
   formData.append('invoice_url', (document.getElementById('editInvoiceUrl') || {}).value || '');
@@ -407,53 +702,73 @@ export async function saveWarranty() {
     console.log(`[DEBUG saveWarranty] FormData: ${key} = ${value}`);
   }
 
-  if (window && window.showLoadingSpinner) window.showLoadingSpinner();
+  showLoadingSpinner();
   try {
     // Paperless uploads pipeline (delegated to legacy/global)
-    const uploads = (window && typeof window.processEditPaperlessNgxUploads === 'function')
-      ? await window.processEditPaperlessNgxUploads(formData)
-      : {};
+    const uploads = await processEditPaperlessUploads(formData);
     Object.keys(uploads || {}).forEach(k => formData.append(k, uploads[k]));
 
     // Submit update via API service (auto-injects Authorization header)
     await updateWarranty(currentId, formData);
 
-    if (window && window.hideLoadingSpinner) window.hideLoadingSpinner();
-    if (window && window.showToast) window.showToast('Warranty updated successfully', 'success');
-    if (window) window.currentWarrantyId = null; // Clear the warranty ID after successful save
-    if (window && typeof window.closeModals === 'function') window.closeModals();
+    hideLoadingSpinner();
+    showToast(window.i18next ? window.i18next.t('messages.warranty_updated_successfully') : 'Warranty updated successfully', 'success');
+    setCurrentWarrantyId(null);
+    if (typeof window !== 'undefined') {
+      window.currentWarrantyId = null;
+    }
+    closeEditModal();
 
     // Reload warranties to pick up processed assets/paths
-    if (window && window.warrantyListController && typeof window.warrantyListController.loadWarranties === 'function') {
-      try {
-        await window.warrantyListController.loadWarranties(true);
-        if (window && typeof window.applyFilters === 'function') window.applyFilters();
+    try {
+      await loadWarranties(true);
+      applyFilters();
+      setTimeout(() => loadSecureImages(), 200);
+      const notesModal = document.getElementById('notesModal');
+      if (notesModal && notesModal.style.display === 'block') notesModal.style.display = 'none';
+      if ((invoiceFile || manualFile || otherDocumentFile) && currentId) {
         setTimeout(() => {
-          if (window && typeof window.loadSecureImages === 'function') {
-            window.loadSecureImages();
-          }
-        }, 200);
-        const notesModal = document.getElementById('notesModal');
-        if (notesModal && notesModal.style.display === 'block') notesModal.style.display = 'none';
-        // Auto-link paperless docs post-update
-        if ((invoiceFile || manualFile || otherDocumentFile) && currentId) {
-          setTimeout(() => {
-            if (typeof window.autoLinkRecentDocuments === 'function') {
-              const fileInfo = {};
-              if (invoiceFile) fileInfo.invoice = invoiceFile.name;
-              if (manualFile) fileInfo.manual = manualFile.name;
-              if (otherDocumentFile) fileInfo.other = otherDocumentFile.name;
-              window.autoLinkRecentDocuments(currentId, ['invoice', 'manual', 'other'], 10, 10000, fileInfo);
-            }
-          }, 3000);
-        }
-      } catch (e) {
-        console.error('Error reloading warranties after edit:', e);
+          const fileInfo = {};
+          if (invoiceFile) fileInfo.invoice = invoiceFile.name;
+          if (manualFile) fileInfo.manual = manualFile.name;
+          if (otherDocumentFile) fileInfo.other = otherDocumentFile.name;
+          autoLinkRecentDocuments(currentId, ['invoice', 'manual', 'other'], 10, 10000, fileInfo);
+        }, 3000);
       }
+    } catch (e) {
+      console.error('Error reloading warranties after edit:', e);
     }
   } catch (error) {
-    if (window && window.hideLoadingSpinner) window.hideLoadingSpinner();
+    hideLoadingSpinner();
     console.error('Error updating warranty:', error);
-    if (window && window.showToast) window.showToast(error?.message || 'Failed to update warranty', 'error');
+    showToast(error?.message || (window.i18next ? window.i18next.t('messages.failed_to_update_warranty') : 'Failed to update warranty'), 'error');
   }
+}
+
+export function closeEditModal() {
+  const modal = document.getElementById('editModal');
+  if (modal) modal.classList.remove('active');
+}
+
+export function init() {
+  ensureInitialized();
+}
+
+if (typeof window !== 'undefined') {
+  window.components = window.components || {};
+  window.components.editModal = {
+    renderSerialNumbers,
+    renderCurrentInvoice,
+    renderCurrentManual,
+    renderCurrentPhoto,
+    renderCurrentOther,
+    openEditModal,
+    saveWarranty,
+    closeEditModal,
+    init,
+  };
+  window.openEditModal = openEditModal;
+  window.saveWarranty = saveWarranty;
+  window.closeEditModal = closeEditModal;
+  window.editSelectedTags = window.editSelectedTags || [];
 }

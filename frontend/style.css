@@ -4744,6 +4744,20 @@ html.dark-mode .warracker-footer a:hover {
     background-color: #f5f5f5;
 }
 
+/* Secure image - hidden until loaded to prevent flicker */
+.product-photo-thumbnail img.secure-image {
+    opacity: 0;
+    transition: opacity 0.15s ease-in;
+}
+
+.product-photo-thumbnail img.secure-image.loaded {
+    opacity: 1;
+}
+
+:root[data-theme="dark"] .product-photo-thumbnail img {
+    background-color: #3a3a3a;
+}
+
 .product-photo-thumbnail img:hover {
     transform: scale(1.05);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);

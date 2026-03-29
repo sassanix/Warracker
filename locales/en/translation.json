@@ -214,7 +214,11 @@
     "add_any_notes_placeholder": "Add any notes about this warranty...",
     "add_serial_number": "Add another serial number",
     "model_number_optional": "Model Number (Optional)",
-    "model_number_placeholder": "e.g. SM-G991U1"
+    "model_number_placeholder": "e.g. SM-G991U1",
+    "archived": "Archived",
+    "or_link_to_invoice_url": "Or link to invoice URL",
+    "or_link_to_manual_url": "Or link to manual URL",
+    "or_link_to_files_url": "Or link to files URL"
   },
   "settings": {
     "title": "Warracker - Settings",
@@ -312,6 +316,8 @@
     "issuer_url_desc": "The base URL of your OIDC provider.",
     "scope_desc": "Space-separated OIDC scopes.",
     "oidc_restart_message": "Application restart is required for OIDC settings to take full effect.",
+    "oidc_admin_group": "OIDC Admin Group",
+    "oidc_admin_desc": "Group that is given admin privileges. Leave blank to disable.",
     "api_token": "API Token",
     "view_documents": "View Documents in Warracker",
     "connection_testing": "Connection Testing",
@@ -398,7 +404,8 @@
     "download": "Download",
     "manage_tags": "Manage Tags",
     "close": "Close",
-    "save_changes": "Save Changes"
+    "save_changes": "Save Changes",
+    "data": "Data"
   },
   "filters": {
     "all_status": "All Status",
@@ -417,7 +424,12 @@
     "vendor": "Vendor",
     "warranty_type": "Warranty Type",
     "view": "View",
-    "scope": "Scope"
+    "scope": "Scope",
+    "filter": "Filter",
+    "filter_by": "Filter By",
+    "clear": "Clear",
+    "apply": "Apply",
+    "sort": "Sort"
   },
   "messages": {
     "success": "Success",

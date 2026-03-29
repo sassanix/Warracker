@@ -1,4 +1,4 @@
-// Lightweight modal utilities and wrappers
+import { setCurrentWarrantyId } from '../store.js';
 
 export function showModalById(modalId) {
   const modal = document.getElementById(modalId);
@@ -19,17 +19,26 @@ export function setText(selector, text) {
   if (el) el.textContent = text || '';
 }
 
-export function openDeleteModal(productName) {
+export function openDeleteModal(warrantyId, productName) {
+  if (Number.isFinite(warrantyId)) {
+    setCurrentWarrantyId(warrantyId);
+  }
   setText('#deleteProductName', productName || '');
   showModalById('deleteModal');
 }
 
-export function openArchiveModal(productName) {
+export function openArchiveModal(warrantyId, productName) {
+  if (Number.isFinite(warrantyId)) {
+    setCurrentWarrantyId(warrantyId);
+  }
   setText('#archiveProductName', productName || '');
   showModalById('archiveModal');
 }
 
-// Non-module exposure
+export function closeModals() {
+  document.querySelectorAll('.modal-backdrop').forEach((modal) => modal.classList.remove('active'));
+}
+
 if (typeof window !== 'undefined') {
   window.components = window.components || {};
   window.components.modals = {
@@ -38,7 +47,9 @@ if (typeof window !== 'undefined') {
     setText,
     openDeleteModal,
     openArchiveModal,
+    closeModals,
   };
+  window.openDeleteModal = openDeleteModal;
+  window.openArchiveModal = openArchiveModal;
+  window.closeModals = closeModals;
 }
-
-

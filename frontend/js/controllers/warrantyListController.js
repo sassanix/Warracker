@@ -1,3 +1,37 @@
+import authService from '../services/authService.js';
+import { listWarranties, saveUserPreferences, getGlobalViewStatus } from '../services/apiService.js';
+import {
+	getFilters,
+	updateFilter,
+	getWarranties as storeGetWarranties,
+	setWarranties,
+	getIsGlobalView,
+	setIsGlobalView,
+	getCurrentView,
+	setCurrentView,
+	getUserPreferencePrefix,
+	setUserPreferencePrefix,
+	getAllTags,
+	wasLastLoadedArchived,
+	didLastLoadIncludeArchived,
+	StoreEvents,
+} from '../store.js';
+import {
+	showLoading,
+	hideLoading,
+	showLoadingSpinner,
+	hideLoadingSpinner,
+	showToast,
+	renderEmptyState,
+} from '../components/ui.js';
+import { loadTags as loadTagsModule, openTagManagementModal } from '../components/tagManager.js';
+import { renderWarrantiesList } from '../components/warrantyRenderer.js';
+import { processWarrantyData } from '../lib/warrantyProcessing.js';
+import { exportWarranties, handleImport as importCsv } from '../components/importExport.js';
+import { deleteWarranty as deleteWarrantyAction, toggleArchiveStatus as toggleArchive, confirmArchive as confirmArchiveAction } from '../components/warrantyActions.js';
+import { openEditModal, saveWarranty as saveEditedWarranty } from '../components/editModal.js';
+import { preloadWarrantyImages } from '../components/paperless.js';
+
 // Warranty List Controller
 // Incremental extraction of main list responsibilities with strict backward compatibility.
 
@@ -5,162 +39,217 @@ function callIfExists(fn, ...args) {
 	if (typeof fn === 'function') return fn(...args);
 }
 
+const DEFAULT_SCOPE = 'personal';
+const VIEW_SCOPE_KEY = 'viewScope';
+
+function getPreferenceKeyPrefix() {
+	let prefix = getUserPreferencePrefix();
+	if (prefix) return prefix;
+	const user = authService.getCurrentUser();
+	prefix = user && user.is_admin ? 'admin_' : 'user_';
+	setUserPreferencePrefix(prefix);
+	return prefix;
+}
+
+function saveViewScopePreference(scope) {
+	localStorage.setItem(`${getPreferenceKeyPrefix()}${VIEW_SCOPE_KEY}`, scope);
+}
+
+function loadViewScopePreference() {
+	return localStorage.getItem(`${getPreferenceKeyPrefix()}${VIEW_SCOPE_KEY}`) || DEFAULT_SCOPE;
+}
+
+function queryViewElements() {
+	return {
+		warrantiesList: document.getElementById('warrantiesList'),
+		gridViewBtn: document.getElementById('gridViewBtn'),
+		listViewBtn: document.getElementById('listViewBtn'),
+		tableViewBtn: document.getElementById('tableViewBtn'),
+		tableViewHeader: document.querySelector('.table-view-header'),
+		currentViewIcon: document.getElementById('currentViewIcon'),
+	};
+}
+
+function updateViewButtons(viewType, { gridViewBtn, listViewBtn, tableViewBtn }) {
+	const buttons = [gridViewBtn, listViewBtn, tableViewBtn];
+	if (!buttons.every(Boolean)) return;
+	buttons.forEach((btn) => btn.classList.remove('active'));
+	if (viewType === 'grid' && gridViewBtn) gridViewBtn.classList.add('active');
+	if (viewType === 'list' && listViewBtn) listViewBtn.classList.add('active');
+	if (viewType === 'table' && tableViewBtn) tableViewBtn.classList.add('active');
+}
+
+function updateViewIcon(viewType, icon) {
+	if (!icon) return;
+	icon.className = 'fas';
+	if (viewType === 'list') {
+		icon.classList.add('fa-list');
+		icon.setAttribute('aria-label', 'List');
+	} else if (viewType === 'table') {
+		icon.classList.add('fa-table');
+		icon.setAttribute('aria-label', 'Table');
+	} else {
+		icon.classList.add('fa-th-large');
+		icon.setAttribute('aria-label', 'Grid');
+	}
+}
+
+function updateWarrantiesPanelTitle(isGlobal = false) {
+	const title = document.getElementById('warrantiesPanelTitle');
+	if (!title) return;
+	if (window.i18next && window.i18next.t) {
+		title.textContent = isGlobal ? window.i18next.t('warranties.title_global') : window.i18next.t('warranties.title');
+	} else {
+		title.textContent = isGlobal ? "All Users' Warranties" : 'Your Warranties';
+	}
+}
+
+function updateScopeIcon(scope) {
+	const icon = document.getElementById('currentScopeIcon');
+	if (!icon) return;
+	icon.className = 'fas';
+	if (scope === 'global') {
+		icon.classList.add('fa-globe');
+		icon.setAttribute('aria-label', 'Global');
+	} else {
+		icon.classList.add('fa-user');
+		icon.setAttribute('aria-label', 'Personal');
+	}
+}
+
+function updateScopeButtons(scope) {
+	const personalViewBtn = document.getElementById('personalViewBtn');
+	const globalViewBtn = document.getElementById('globalViewBtn');
+	if (personalViewBtn) personalViewBtn.classList.toggle('active', scope === 'personal');
+	if (globalViewBtn) globalViewBtn.classList.toggle('active', scope === 'global');
+	const scopePersonalOption = document.getElementById('scopePersonalOption');
+	const scopeGlobalOption = document.getElementById('scopeGlobalOption');
+	if (scopePersonalOption) scopePersonalOption.classList.toggle('active', scope === 'personal');
+	if (scopeGlobalOption) scopeGlobalOption.classList.toggle('active', scope === 'global');
+}
+
+function getWarrantiesListElement() {
+	return document.getElementById('warrantiesList');
+}
+
+function processWarranty(warranty) {
+	return processWarrantyData(warranty);
+}
+
 // Public API (delegations kept for now until full extraction of implementations)
-export async function loadWarranties(isAuthenticated) {
-	// Show loading (tolerant to whichever loader exists)
-	callIfExists(window.showLoading) || callIfExists(window.showLoadingSpinner);
+export async function loadWarranties(isAuthenticatedOverride) {
+	const isAuthenticated =
+		typeof isAuthenticatedOverride === 'boolean' ? isAuthenticatedOverride : authService.isAuthenticated();
 
+	showLoading();
 	try {
-		// Ensure view preference is applied BEFORE first render so thumbnails use correct sizes
-		callIfExists(window.loadViewPreference);
+		loadViewPreference();
 
-		const __filters = (window.store && window.store.getFilters && window.store.getFilters()) || {};
+		const filters = getFilters();
 
-		// Check auth state (match legacy behavior)
 		if (!isAuthenticated) {
-			if (typeof window.i18next !== 'undefined') {
-				callIfExists(window.renderEmptyState, window.i18next.t('messages.login_to_view_warranties'));
-			} else {
-				callIfExists(window.renderEmptyState, 'Please log in to view warranties.');
-			}
+			renderEmptyState(
+				getWarrantiesListElement(),
+				window.i18next ? window.i18next.t('messages.login_to_view_warranties') : 'Please log in to view warranties.',
+			);
+			setWarranties([], { warrantiesLoaded: false, lastLoadedArchived: false, lastLoadedIncludesArchived: false });
 			return;
 		}
 
-		const token = window.auth && window.auth.getToken ? window.auth.getToken() : null;
-		if (!token) {
-			if (typeof window.i18next !== 'undefined') {
-				callIfExists(window.renderEmptyState, window.i18next.t('messages.authentication_error_login_again'));
-			} else {
-				callIfExists(window.renderEmptyState, 'Authentication error. Please log in again.');
-			}
-			return;
+		const scope = loadViewScopePreference();
+		setIsGlobalView(scope === 'global');
+		updateScopeButtons(scope);
+		updateScopeIcon(scope);
+		updateWarrantiesPanelTitle(scope === 'global');
+
+		const primary = await listWarranties({ scope, archived: filters.status === 'archived' });
+		let combined = Array.isArray(primary) ? primary : [];
+
+		let lastLoadedArchived = filters.status === 'archived';
+		let lastLoadedIncludesArchived = false;
+
+		if (filters.status === 'all') {
+			const archived = await listWarranties({ scope, archived: true });
+			const archivedMarked = Array.isArray(archived) ? archived.map((warranty) => ({ ...warranty, __isArchived: true })) : [];
+			combined = combined.concat(archivedMarked);
+			lastLoadedIncludesArchived = true;
 		}
 
-		// Determine scope and endpoint (mirrors legacy logic)
-		const savedScope = callIfExists(window.loadViewScopePreference) || 'personal';
-		const shouldUseGlobalView = savedScope === 'global';
-		const baseUrl = window.location.origin;
-		const isArchivedView = __filters && __filters.status === 'archived';
-		const apiUrl = isArchivedView
-			? (shouldUseGlobalView ? `${baseUrl}/api/warranties/global/archived` : `${baseUrl}/api/warranties/archived`)
-			: (shouldUseGlobalView ? `${baseUrl}/api/warranties/global` : `${baseUrl}/api/warranties`);
-
-		// Fetch warranties
-		const response = await fetch(apiUrl, {
-			method: 'GET',
-			headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+		const processed = combined.map(processWarranty);
+		setWarranties(processed, {
+			warrantiesLoaded: true,
+			lastLoadedArchived,
+			lastLoadedIncludesArchived,
 		});
-		if (!response.ok) {
-			let msg = `HTTP ${response.status}`;
-			try {
-				const j = await response.json();
-				if (j && j.message) msg = j.message;
-			} catch {}
-			throw new Error(msg);
-		}
-		let data = await response.json();
-		if (!Array.isArray(data)) data = [];
 
-		// Keep isGlobalView in sync with loaded scope
-		try { if (typeof window.isGlobalView !== 'undefined') window.isGlobalView = shouldUseGlobalView; } catch {}
+		// Preload images immediately so they're ready when cards render
+		preloadWarrantyImages(processed).catch(() => {});
 
-		// Merge archived when Status=All (mirrors legacy behavior for both scopes)
-		let combinedData = Array.isArray(data) ? data : [];
-		try {
-			// Reset includesArchived flag
-			try { if (typeof window.lastLoadedIncludesArchived !== 'undefined') window.lastLoadedIncludesArchived = false; } catch {}
-			if (!isArchivedView && __filters && __filters.status === 'all') {
-				const archivedUrl = shouldUseGlobalView ? `${baseUrl}/api/warranties/global/archived` : `${baseUrl}/api/warranties/archived`;
-				const archivedResp = await fetch(archivedUrl, { headers: { 'Authorization': `Bearer ${token}` } });
-				if (archivedResp.ok) {
-					const archivedData = await archivedResp.json();
-					const archivedMarked = Array.isArray(archivedData) ? archivedData.map(w => ({ ...w, __isArchived: true })) : [];
-					combinedData = combinedData.concat(archivedMarked);
-					try { if (typeof window.lastLoadedIncludesArchived !== 'undefined') window.lastLoadedIncludesArchived = true; } catch {}
-				}
-			}
-		} catch {}
-
-		// Process warranties using legacy processor if available
-		const processed = Array.isArray(combinedData)
-			? combinedData.map(w => {
-				const p = callIfExists(window.processWarrantyData, w);
-				return p !== undefined ? p : w;
-			})
-			: [];
-
-		if (window.store && window.store.setWarranties) window.store.setWarranties(processed);
-
-		// Update archived-load flag
-		try { if (typeof window.lastLoadedArchived !== 'undefined') window.lastLoadedArchived = !!isArchivedView; } catch {}
-
-		const loaded = (window.store && window.store.getWarranties && window.store.getWarranties()) || [];
-		if (loaded.length === 0) {
-			if (typeof window.i18next !== 'undefined') {
-				callIfExists(window.renderEmptyState, window.i18next.t('messages.no_warranties_found_add_first'));
-			} else {
-				callIfExists(window.renderEmptyState, 'No warranties yet. Add your first warranty to get started.');
-			}
+		if (!processed.length) {
+			renderEmptyState(
+				getWarrantiesListElement(),
+				window.i18next
+					? window.i18next.t('messages.no_warranties_found_add_first')
+					: 'No warranties yet. Add your first warranty to get started.',
+			);
 			return;
 		}
 
-		// Populate filters and render
-		try { populateTagFilter(); } catch {}
-		try { populateVendorFilter(); } catch {}
-		try { populateWarrantyTypeFilter(); } catch {}
-
-		callIfExists(window.applyFilters) || applyFilters();
+		populateTagFilter();
+		populateVendorFilter();
+		populateWarrantyTypeFilter();
+		applyFilters();
 	} catch (error) {
 		console.error('[controller.loadWarranties] Error:', error);
-		if (typeof window.i18next !== 'undefined') {
-			callIfExists(window.renderEmptyState, window.i18next.t('messages.error_loading_warranties_try_again'));
-		} else {
-			callIfExists(window.renderEmptyState, 'Error loading warranties. Please try again.');
-		}
+		renderEmptyState(
+			getWarrantiesListElement(),
+			window.i18next
+				? window.i18next.t('messages.error_loading_warranties_try_again')
+				: 'Error loading warranties. Please try again.',
+		);
+		showToast(
+			error?.message ||
+				(window.i18next ? window.i18next.t('messages.error_loading_warranties_try_again') : 'Failed to load warranties'),
+			'error',
+		);
 	} finally {
-		callIfExists(window.hideLoading) || callIfExists(window.hideLoadingSpinner);
+		hideLoading();
 	}
 }
 export function applyFilters() {
-	// Mirrors legacy script.js logic to preserve identical behavior
-	const __filters = (window.store && window.store.getFilters && window.store.getFilters()) || {};
-	const __warranties = (window.store && window.store.getWarranties && window.store.getWarranties()) || [];
+	const filters = getFilters();
+	const warranties = storeGetWarranties();
 
-	// Ensure data source correctness around archived/all toggles
-	const wasArchivedLoaded = !!(window.lastLoadedArchived);
-	const includesArchivedLoaded = !!(window.lastLoadedIncludesArchived);
-	if (__filters.status === 'archived') {
-		if (!wasArchivedLoaded) {
-			loadWarranties(true);
-			return;
-		}
-	} else if (wasArchivedLoaded) {
-		loadWarranties(true);
-		return;
-	} else if (__filters.status === 'all' && !includesArchivedLoaded) {
-		loadWarranties(true);
+	const wasArchivedLoaded = wasLastLoadedArchived();
+	const includesArchivedLoaded = didLastLoadIncludeArchived();
+
+	if (
+		(filters.status === 'archived' && !wasArchivedLoaded) ||
+		(filters.status !== 'archived' && wasArchivedLoaded) ||
+		(filters.status === 'all' && !includesArchivedLoaded)
+	) {
+		loadWarranties();
 		return;
 	}
 
-	// Filter warranties based on current filters
-	const filtered = __warranties.filter(warranty => {
+	const filtered = warranties.filter((warranty) => {
 		// Exclude archived in specific status views (only show in 'all' or 'archived')
-		if (warranty.is_archived && __filters.status !== 'all' && __filters.status !== 'archived') return false;
+		if (warranty.is_archived && filters.status !== 'all' && filters.status !== 'archived') return false;
 		// Status filter: allow archived items to pass in All view
-		if (__filters.status !== 'all' && __filters.status !== 'archived' && warranty.status !== __filters.status) return false;
+		if (filters.status !== 'all' && filters.status !== 'archived' && warranty.status !== filters.status) return false;
 		// Tag filter
-		if (__filters.tag !== 'all') {
-			const tagId = parseInt(__filters.tag);
+		if (filters.tag !== 'all') {
+			const tagId = parseInt(filters.tag, 10);
 			const hasTag = warranty.tags && Array.isArray(warranty.tags) && warranty.tags.some(tag => tag.id === tagId);
 			if (!hasTag) return false;
 		}
 		// Vendor filter
-		if (__filters.vendor !== 'all' && (warranty.vendor || '').toLowerCase() !== (__filters.vendor || '').toLowerCase()) return false;
+		if (filters.vendor !== 'all' && (warranty.vendor || '').toLowerCase() !== (filters.vendor || '').toLowerCase()) return false;
 		// Warranty type filter
-		if (__filters.warranty_type !== 'all' && (warranty.warranty_type || '').toLowerCase() !== (__filters.warranty_type || '').toLowerCase()) return false;
+		if (filters.warranty_type !== 'all' && (warranty.warranty_type || '').toLowerCase() !== (filters.warranty_type || '').toLowerCase()) return false;
 		// Search filter
-		if (__filters.search) {
-			const searchTerm = (__filters.search || '').toLowerCase();
+		if (filters.search) {
+			const searchTerm = (filters.search || '').toLowerCase();
 			const productNameMatch = (warranty.product_name || '').toLowerCase().includes(searchTerm);
 			const tagMatch = warranty.tags && Array.isArray(warranty.tags) && warranty.tags.some(tag => (tag.name || '').toLowerCase().includes(searchTerm));
 			const notesMatch = (warranty.notes || '').toLowerCase().includes(searchTerm);
@@ -172,8 +261,7 @@ export function applyFilters() {
 		return true;
 	});
 
-	// Preserve legacy behavior: just render (renderWarranties re-applies filters during render)
-	renderWarranties();
+	renderWarrantiesList(filtered);
 }
 export function renderWarranties() { return callIfExists(window.renderWarranties); }
 export function filterWarranties() { return callIfExists(window.filterWarranties); }
@@ -184,7 +272,7 @@ export function populateTagFilter() {
 	if (!tagFilter) return;
 	while (tagFilter.options.length > 1) tagFilter.remove(1);
 	const uniqueTags = new Set();
-	const all = ((window.store && window.store.getWarranties && window.store.getWarranties()) || []);
+	const all = storeGetWarranties();
 	all.forEach(warranty => {
 		if (warranty.tags && Array.isArray(warranty.tags)) {
 			warranty.tags.forEach(tag => uniqueTags.add(JSON.stringify({ id: tag.id, name: tag.name, color: tag.color })));
@@ -204,7 +292,7 @@ export function populateVendorFilter() {
 	if (!vendorFilterElement) return;
 	while (vendorFilterElement.options.length > 1) vendorFilterElement.remove(1);
 	const uniqueVendors = new Set();
-	const all = ((window.store && window.store.getWarranties && window.store.getWarranties()) || []);
+	const all = storeGetWarranties();
 	all.forEach(warranty => {
 		if (warranty.vendor && warranty.vendor.trim() !== '') uniqueVendors.add(warranty.vendor.trim().toLowerCase());
 	});
@@ -222,7 +310,7 @@ export function populateWarrantyTypeFilter() {
 	if (!warrantyTypeFilterElement) return;
 	while (warrantyTypeFilterElement.options.length > 1) warrantyTypeFilterElement.remove(1);
 	const uniqueTypes = new Set();
-	const all = ((window.store && window.store.getWarranties && window.store.getWarranties()) || []);
+	const all = storeGetWarranties();
 	all.forEach(warranty => {
 		if (warranty.warranty_type && warranty.warranty_type.trim() !== '') uniqueTypes.add(warranty.warranty_type.trim().toLowerCase());
 	});
@@ -238,8 +326,8 @@ export function populateWarrantyTypeFilter() {
 // Extracted implementations: persist and restore filters/sort
 export async function saveFilterPreferences(saveToApi = true) {
 	try {
-		const prefix = (typeof window.getPreferenceKeyPrefix === 'function') ? window.getPreferenceKeyPrefix() : '';
-		const filters = (window.store && window.store.getFilters && window.store.getFilters()) || {};
+		const prefix = getPreferenceKeyPrefix();
+		const filters = getFilters();
 		const filtersToSave = {
 			status: filters.status || 'all',
 			tag: filters.tag || 'all',
@@ -250,21 +338,11 @@ export async function saveFilterPreferences(saveToApi = true) {
 		};
 		localStorage.setItem(`${prefix}warrantyFilters`, JSON.stringify(filtersToSave));
 
-		if (saveToApi && window.auth && window.auth.isAuthenticated && window.auth.isAuthenticated()) {
-			const token = window.auth.getToken && window.auth.getToken();
-			if (token) {
-				try {
-					await fetch('/api/auth/preferences', {
-						method: 'PUT',
-						headers: {
-							'Authorization': `Bearer ${token}`,
-							'Content-Type': 'application/json'
-						},
-						body: JSON.stringify({ saved_filters: filtersToSave })
-					});
-				} catch (e) {
-					console.error('[Filters] Error saving filter preferences to API:', e);
-				}
+		if (saveToApi && authService.isAuthenticated()) {
+			try {
+				await saveUserPreferences({ saved_filters: filtersToSave });
+			} catch (e) {
+				console.error('[Filters] Error saving filter preferences to API:', e);
 			}
 		}
 	} catch (e) {
@@ -272,23 +350,142 @@ export async function saveFilterPreferences(saveToApi = true) {
 	}
 }
 
+export async function switchView(viewType, saveToApi = true, reapplyFilters = true) {
+	if (!viewType || viewType === getCurrentView()) {
+		setCurrentView(viewType || getCurrentView() || 'grid');
+	}
+	setCurrentView(viewType);
+
+	const prefix = getPreferenceKeyPrefix();
+	const viewKey = `${prefix}defaultView`;
+	const legacyKey = `${prefix}warrantyView`;
+	if (localStorage.getItem(viewKey) !== viewType) {
+		localStorage.setItem(viewKey, viewType);
+		localStorage.setItem(legacyKey, viewType);
+		localStorage.setItem('viewPreference', viewType);
+	}
+
+	if (saveToApi && authService.isAuthenticated()) {
+		try {
+			await saveUserPreferences({ default_view: viewType });
+		} catch (error) {
+			console.error('[switchView] Failed to save preference to API', error);
+		}
+	}
+
+	const { warrantiesList, gridViewBtn, listViewBtn, tableViewBtn, tableViewHeader, currentViewIcon } = queryViewElements();
+	if (warrantiesList) {
+		warrantiesList.classList.remove('grid-view', 'list-view', 'table-view');
+		warrantiesList.classList.add(`${viewType}-view`);
+	}
+	updateViewButtons(viewType, { gridViewBtn, listViewBtn, tableViewBtn });
+	if (tableViewHeader) {
+		tableViewHeader.classList.toggle('visible', viewType === 'table');
+	}
+	updateViewIcon(viewType, currentViewIcon);
+
+	try {
+		await saveFilterPreferences(false);
+	} catch (error) {
+		console.error('[switchView] Failed to persist filters locally', error);
+	}
+
+	if (reapplyFilters && storeGetWarranties().length > 0) {
+		applyFilters();
+	}
+}
+
+export function loadViewPreference() {
+	const prefix = getPreferenceKeyPrefix();
+	const savedView =
+		localStorage.getItem(`${prefix}defaultView`) ||
+		localStorage.getItem('viewPreference') ||
+		localStorage.getItem(`${prefix}warrantyView`) ||
+		'grid';
+	switchView(savedView, false, false);
+}
+
+async function ensureGlobalScopeEnabled() {
+	try {
+		const result = await getGlobalViewStatus();
+		return !!result?.enabled;
+	} catch (error) {
+		console.error('[warrantyListController] Failed to check global view status', error);
+		return true;
+	}
+}
+
+async function switchScope(scope) {
+	const isGlobal = scope === 'global';
+	setIsGlobalView(isGlobal);
+	saveViewScopePreference(scope);
+	updateScopeButtons(scope);
+	updateScopeIcon(scope);
+	updateWarrantiesPanelTitle(isGlobal);
+	try {
+		await loadWarranties(authService.isAuthenticated());
+		applyFilters();
+	} catch (error) {
+		console.error('[warrantyListController] Error switching scope', error);
+		showToast(
+			window.t
+				? window.t(isGlobal ? 'messages.error_loading_global_warranties' : 'messages.error_loading_personal_warranties')
+				: 'Failed to load warranties',
+			'error',
+		);
+	}
+}
+
+export const switchToPersonalView = () => switchScope('personal');
+
+export async function switchToGlobalView() {
+	const enabled = await ensureGlobalScopeEnabled();
+	if (!enabled) {
+		showToast(window.t ? window.t('messages.global_view_disabled') : 'Global view is disabled', 'error');
+		return;
+	}
+	switchScope('global');
+}
+
+export async function initViewControls() {
+	const scopeDropdown = document.getElementById('scopeDropdown');
+	const adminViewSwitcher = document.getElementById('adminViewSwitcher');
+	try {
+		const status = await getGlobalViewStatus();
+		if (adminViewSwitcher) adminViewSwitcher.style.display = 'none';
+		const enabled = !!status?.enabled;
+		if (scopeDropdown) scopeDropdown.style.display = enabled ? 'block' : 'none';
+		if (!enabled) {
+			if (getIsGlobalView()) {
+				await switchScope('personal');
+			}
+		} else {
+			const savedScope = loadViewScopePreference();
+			updateScopeButtons(savedScope);
+			updateScopeIcon(savedScope);
+			updateWarrantiesPanelTitle(savedScope === 'global');
+		}
+	} catch (error) {
+		console.error('[warrantyListController] initViewControls failed', error);
+		if (scopeDropdown) scopeDropdown.style.display = 'block';
+	}
+}
+
 export function loadFilterAndSortPreferences() {
 	try {
-		const prefix = (typeof window.getPreferenceKeyPrefix === 'function') ? window.getPreferenceKeyPrefix() : '';
+		const prefix = getPreferenceKeyPrefix();
 		const savedFiltersRaw = localStorage.getItem(`${prefix}warrantyFilters`);
 		if (!savedFiltersRaw) return;
 		const savedFilters = JSON.parse(savedFiltersRaw);
 		if (!savedFilters || typeof savedFilters !== 'object') return;
 
-		const existing = (window.store && window.store.getFilters && window.store.getFilters()) || {};
-		if (window.store && window.store.updateFilter) {
-			if (savedFilters.status !== undefined) window.store.updateFilter('status', savedFilters.status || existing.status);
-			if (savedFilters.tag !== undefined) window.store.updateFilter('tag', savedFilters.tag || existing.tag);
-			if (savedFilters.vendor !== undefined) window.store.updateFilter('vendor', savedFilters.vendor || existing.vendor);
-			if (savedFilters.warranty_type !== undefined) window.store.updateFilter('warranty_type', savedFilters.warranty_type || existing.warranty_type);
-			if (savedFilters.search !== undefined) window.store.updateFilter('search', savedFilters.search || '');
-			if (savedFilters.sortBy !== undefined) window.store.updateFilter('sortBy', savedFilters.sortBy || existing.sortBy);
-		}
+		const existing = getFilters();
+		if (savedFilters.status !== undefined) updateFilter('status', savedFilters.status || existing.status);
+		if (savedFilters.tag !== undefined) updateFilter('tag', savedFilters.tag || existing.tag);
+		if (savedFilters.vendor !== undefined) updateFilter('vendor', savedFilters.vendor || existing.vendor);
+		if (savedFilters.warranty_type !== undefined) updateFilter('warranty_type', savedFilters.warranty_type || existing.warranty_type);
+		if (savedFilters.search !== undefined) updateFilter('search', savedFilters.search || '');
+		if (savedFilters.sortBy !== undefined) updateFilter('sortBy', savedFilters.sortBy || existing.sortBy);
 
 		const searchInput = document.getElementById('searchWarranties');
 		const clearSearchBtn = document.getElementById('clearSearch');
@@ -308,20 +505,20 @@ export function initEventListeners() {
 	const globalManageTagsBtn = document.getElementById('globalManageTagsBtn');
 	if (globalManageTagsBtn && !globalManageTagsBtn._wlcBound) {
 		globalManageTagsBtn.addEventListener('click', async () => {
-			const __tags = (window.store && window.store.getAllTags && window.store.getAllTags()) || [];
-			if (!__tags || __tags.length === 0) {
-				callIfExists(window.showLoadingSpinner);
+			const tags = getAllTags();
+			if (!tags || tags.length === 0) {
+				showLoadingSpinner();
 				try {
-					await callIfExists(window.loadTags);
+					await loadTagsModule();
 				} catch (error) {
 					console.error('Failed to load tags before opening modal:', error);
-					callIfExists(window.showToast, window.t ? window.t('messages.could_not_load_tags') : 'Could not load tags', 'error');
-					callIfExists(window.hideLoadingSpinner);
+					showToast(window.t ? window.t('messages.could_not_load_tags') : 'Could not load tags', 'error');
+					hideLoadingSpinner();
 					return;
 				}
-				callIfExists(window.hideLoadingSpinner);
+				hideLoadingSpinner();
 			}
-			callIfExists(window.openTagManagementModal);
+			openTagManagementModal();
 		});
 		globalManageTagsBtn._wlcBound = true;
 	}
@@ -370,7 +567,7 @@ export function initEventListeners() {
 	if (searchInput && !searchInput._wlcBound) {
 		let searchDebounceTimeout;
 		searchInput.addEventListener('input', () => {
-			if (window.store && window.store.updateFilter) window.store.updateFilter('search', searchInput.value.toLowerCase());
+			updateFilter('search', searchInput.value.toLowerCase());
 			if (clearSearchBtn) clearSearchBtn.style.display = searchInput.value ? 'flex' : 'none';
 			if (searchInput.value) {
 				searchInput.parentElement.classList.add('active-search');
@@ -379,8 +576,8 @@ export function initEventListeners() {
 			}
 			if (searchDebounceTimeout) clearTimeout(searchDebounceTimeout);
 			searchDebounceTimeout = setTimeout(() => {
-				callIfExists(window.applyFilters);
-				callIfExists(window.saveFilterPreferences);
+				applyFilters();
+				saveFilterPreferences();
 			}, 300);
 		});
 		searchInput._wlcBound = true;
@@ -390,12 +587,12 @@ export function initEventListeners() {
 		clearSearchBtn.addEventListener('click', () => {
 			if (searchInput) {
 				searchInput.value = '';
-				if (window.store && window.store.updateFilter) window.store.updateFilter('search', '');
+				updateFilter('search', '');
 				clearSearchBtn.style.display = 'none';
 				searchInput.parentElement.classList.remove('active-search');
 				searchInput.focus();
-				callIfExists(window.applyFilters);
-				callIfExists(window.saveFilterPreferences);
+				applyFilters();
+				saveFilterPreferences();
 			}
 		});
 		clearSearchBtn._wlcBound = true;
@@ -403,45 +600,45 @@ export function initEventListeners() {
 
 	if (statusFilter && !statusFilter._wlcBound) {
 		statusFilter.addEventListener('change', () => {
-			if (window.store && window.store.updateFilter) window.store.updateFilter('status', statusFilter.value);
-			callIfExists(window.applyFilters);
-			callIfExists(window.saveFilterPreferences);
+			updateFilter('status', statusFilter.value);
+			applyFilters();
+			saveFilterPreferences();
 		});
 		statusFilter._wlcBound = true;
 	}
 
 	if (tagFilter && !tagFilter._wlcBound) {
 		tagFilter.addEventListener('change', () => {
-			if (window.store && window.store.updateFilter) window.store.updateFilter('tag', tagFilter.value);
-			callIfExists(window.applyFilters);
-			callIfExists(window.saveFilterPreferences);
+			updateFilter('tag', tagFilter.value);
+			applyFilters();
+			saveFilterPreferences();
 		});
 		tagFilter._wlcBound = true;
 	}
 
 	if (vendorFilter && !vendorFilter._wlcBound) {
 		vendorFilter.addEventListener('change', () => {
-			if (window.store && window.store.updateFilter) window.store.updateFilter('vendor', vendorFilter.value);
-			callIfExists(window.applyFilters);
-			callIfExists(window.saveFilterPreferences);
+			updateFilter('vendor', vendorFilter.value);
+			applyFilters();
+			saveFilterPreferences();
 		});
 		vendorFilter._wlcBound = true;
 	}
 
 	if (warrantyTypeFilter && !warrantyTypeFilter._wlcBound) {
 		warrantyTypeFilter.addEventListener('change', () => {
-			if (window.store && window.store.updateFilter) window.store.updateFilter('warranty_type', warrantyTypeFilter.value);
-			callIfExists(window.applyFilters);
-			callIfExists(window.saveFilterPreferences);
+			updateFilter('warranty_type', warrantyTypeFilter.value);
+			applyFilters();
+			saveFilterPreferences();
 		});
 		warrantyTypeFilter._wlcBound = true;
 	}
 
 	if (sortBySelect && !sortBySelect._wlcBound) {
 		sortBySelect.addEventListener('change', () => {
-			if (window.store && window.store.updateFilter) window.store.updateFilter('sortBy', sortBySelect.value);
-			callIfExists(window.applyFilters);
-			callIfExists(window.saveFilterPreferences);
+			updateFilter('sortBy', sortBySelect.value);
+			applyFilters();
+			saveFilterPreferences();
 		});
 		sortBySelect._wlcBound = true;
 	}
@@ -450,20 +647,62 @@ export function initEventListeners() {
 	const gridViewBtn = document.getElementById('gridViewBtn');
 	const listViewBtn = document.getElementById('listViewBtn');
 	const tableViewBtn = document.getElementById('tableViewBtn');
-	if (gridViewBtn && !gridViewBtn._wlcBound) { gridViewBtn.addEventListener('click', () => callIfExists(window.switchView, 'grid')); gridViewBtn._wlcBound = true; }
-	if (listViewBtn && !listViewBtn._wlcBound) { listViewBtn.addEventListener('click', () => callIfExists(window.switchView, 'list')); listViewBtn._wlcBound = true; }
-	if (tableViewBtn && !tableViewBtn._wlcBound) { tableViewBtn.addEventListener('click', () => callIfExists(window.switchView, 'table')); tableViewBtn._wlcBound = true; }
+	if (gridViewBtn && !gridViewBtn._wlcBound) { gridViewBtn.addEventListener('click', () => switchView('grid')); gridViewBtn._wlcBound = true; }
+	if (listViewBtn && !listViewBtn._wlcBound) { listViewBtn.addEventListener('click', () => switchView('list')); listViewBtn._wlcBound = true; }
+	if (tableViewBtn && !tableViewBtn._wlcBound) { tableViewBtn.addEventListener('click', () => switchView('table')); tableViewBtn._wlcBound = true; }
+
+	const personalViewBtn = document.getElementById('personalViewBtn');
+	if (personalViewBtn && !personalViewBtn._scopeBound) {
+		personalViewBtn.addEventListener('click', () => switchToPersonalView());
+		personalViewBtn._scopeBound = true;
+	}
+	const globalViewBtn = document.getElementById('globalViewBtn');
+	if (globalViewBtn && !globalViewBtn._scopeBound) {
+		globalViewBtn.addEventListener('click', () => switchToGlobalView());
+		globalViewBtn._scopeBound = true;
+	}
+	const scopePersonalOption = document.getElementById('scopePersonalOption');
+	if (scopePersonalOption && !scopePersonalOption._scopeBound) {
+		scopePersonalOption.addEventListener('click', () => {
+			switchToPersonalView();
+			const scopeMenu = document.getElementById('scopeMenu');
+			if (scopeMenu) scopeMenu.classList.remove('active');
+		});
+		scopePersonalOption._scopeBound = true;
+	}
+	const scopeGlobalOption = document.getElementById('scopeGlobalOption');
+	if (scopeGlobalOption && !scopeGlobalOption._scopeBound) {
+		scopeGlobalOption.addEventListener('click', () => {
+			switchToGlobalView();
+			const scopeMenu = document.getElementById('scopeMenu');
+			if (scopeMenu) scopeMenu.classList.remove('active');
+		});
+		scopeGlobalOption._scopeBound = true;
+	}
+
+	if (!window._wlcStoreEventsBound) {
+		const handleWarrantiesChanged = () => {
+			populateTagFilter();
+			populateVendorFilter();
+			populateWarrantyTypeFilter();
+			renderWarrantiesList(storeGetWarranties());
+		};
+		const handleFiltersChanged = () => applyFilters();
+		window.addEventListener(StoreEvents.WARRANTIES_CHANGED, handleWarrantiesChanged);
+		window.addEventListener(StoreEvents.FILTERS_CHANGED, handleFiltersChanged);
+		window._wlcStoreEventsBound = true;
+	}
 
 	// Export / Import
 	const exportBtn = document.getElementById('exportBtn');
-	if (exportBtn && !exportBtn._wlcBound) { exportBtn.addEventListener('click', () => callIfExists(window.exportWarranties)); exportBtn._wlcBound = true; }
+	if (exportBtn && !exportBtn._wlcBound) { exportBtn.addEventListener('click', exportWarranties); exportBtn._wlcBound = true; }
 	const importBtn = document.getElementById('importBtn');
 	const csvFileInput = document.getElementById('csvFileInput');
 	if (importBtn && csvFileInput && !importBtn._wlcBound) {
 		importBtn.addEventListener('click', () => csvFileInput.click());
 		csvFileInput.addEventListener('change', (event) => {
 			if (event.target.files && event.target.files.length > 0) {
-				callIfExists(window.handleImport, event.target.files[0]);
+				importCsv(event.target.files[0]);
 			}
 		});
 		importBtn._wlcBound = true;
@@ -472,7 +711,7 @@ export function initEventListeners() {
 	// Refresh
 	const refreshBtn = document.getElementById('refreshBtn');
 	if (refreshBtn && !refreshBtn._wlcBound) {
-		refreshBtn.addEventListener('click', () => loadWarranties(true));
+		refreshBtn.addEventListener('click', () => loadWarranties());
 		refreshBtn._wlcBound = true;
 	}
 
@@ -512,30 +751,26 @@ export function initEventListeners() {
 	// Save warranty changes
 	const saveWarrantyBtn = document.getElementById('saveWarrantyBtn');
 	if (saveWarrantyBtn && !saveWarrantyBtn._wlcBound) {
-		let baseSave =
-			(window.components && window.components.editModal && window.components.editModal.saveWarranty)
-				? window.components.editModal.saveWarranty
-				: window.saveWarranty;
-		let functionToAttachOnClick = baseSave;
-		if (typeof window.setupSaveWarrantyObserver === 'function') {
-			try {
-				functionToAttachOnClick = window.setupSaveWarrantyObserver(baseSave);
-				window.saveWarrantyObserverAttachedByScriptJS = true;
-			} catch (e) {
-				console.error('[warrantyListController] Failed to wrap saveWarranty:', e);
-			}
+	let handler = saveEditedWarranty;
+	if (typeof window.setupSaveWarrantyObserver === 'function') {
+		try {
+			handler = window.setupSaveWarrantyObserver(saveEditedWarranty);
+			window.saveWarrantyObserverAttachedByScriptJS = true;
+		} catch (e) {
+			console.error('[warrantyListController] Failed to wrap saveWarranty:', e);
 		}
-		saveWarrantyBtn.addEventListener('click', () => {
-			if (typeof functionToAttachOnClick === 'function') functionToAttachOnClick();
-		});
+	}
+	saveWarrantyBtn.addEventListener('click', () => {
+		if (typeof handler === 'function') handler();
+	});
 		saveWarrantyBtn._wlcBound = true;
 	}
 
 	// Confirm delete/archive
 	const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-	if (confirmDeleteBtn && !confirmDeleteBtn._wlcBound) { confirmDeleteBtn.addEventListener('click', () => callIfExists(window.deleteWarranty)); confirmDeleteBtn._wlcBound = true; }
+	if (confirmDeleteBtn && !confirmDeleteBtn._wlcBound) { confirmDeleteBtn.addEventListener('click', deleteWarrantyAction); confirmDeleteBtn._wlcBound = true; }
 	const confirmArchiveBtn = document.getElementById('confirmArchiveBtn');
-	if (confirmArchiveBtn && !confirmArchiveBtn._wlcBound) { confirmArchiveBtn.addEventListener('click', () => callIfExists(window.confirmArchive)); confirmArchiveBtn._wlcBound = true; }
+	if (confirmArchiveBtn && !confirmArchiveBtn._wlcBound) { confirmArchiveBtn.addEventListener('click', confirmArchiveAction); confirmArchiveBtn._wlcBound = true; }
 
 	// List delegated events (claims/edit/delete/notes/archive/unarchive) - controller owns this exclusively
 	const list = document.getElementById('warrantiesList');
@@ -552,8 +787,14 @@ export function initEventListeners() {
 				const el = e.target.closest('.edit-btn');
 				if (el?.disabled) return;
 				const id = parseInt(el?.dataset?.id);
-				const warranty = ((window.store && window.store.getWarranties && window.store.getWarranties()) || []).find(w => w.id === id);
-				if (warranty && typeof window.openEditModal === 'function') window.openEditModal(warranty);
+				const warranty = storeGetWarranties().find(w => w.id === id);
+				if (warranty) {
+					if (typeof openEditModal === 'function') {
+						openEditModal(warranty);
+					} else if (typeof window.openEditModal === 'function') {
+						window.openEditModal(warranty);
+					}
+				}
 				return;
 			}
 			if (e.target.closest('.delete-btn')) {
@@ -570,7 +811,7 @@ export function initEventListeners() {
 				e.preventDefault();
 				const el = e.target.closest('.notes-link');
 				const id = parseInt(el?.dataset?.id);
-				const warranty = ((window.store && window.store.getWarranties && window.store.getWarranties()) || []).find(w => w.id === id);
+				const warranty = storeGetWarranties().find(w => w.id === id);
 				if (warranty && typeof window.showNotesModal === 'function') window.showNotesModal(warranty.notes, warranty);
 				return;
 			}
@@ -587,7 +828,7 @@ export function initEventListeners() {
 			if (e.target.closest('.unarchive-btn')) {
 				e.preventDefault();
 				const id = parseInt(e.target.closest('.unarchive-btn')?.dataset?.id);
-				if (typeof window.toggleArchiveStatus === 'function' && id) window.toggleArchiveStatus(id, false);
+				if (Number.isFinite(id)) toggleArchive(id, false);
 				return;
 			}
 		});
@@ -607,6 +848,11 @@ if (typeof window !== 'undefined') {
 		populateWarrantyTypeFilter,
 		saveFilterPreferences,
 		loadFilterAndSortPreferences,
+		switchView,
+		loadViewPreference,
+		switchToPersonalView,
+		switchToGlobalView,
+		initViewControls,
 		initEventListeners
 	};
 	// Legacy globals to avoid breaking existing references during staged extraction
@@ -615,6 +861,13 @@ if (typeof window !== 'undefined') {
 	window.populateWarrantyTypeFilter = populateWarrantyTypeFilter;
 	window.saveFilterPreferences = saveFilterPreferences;
 	window.loadFilterAndSortPreferences = loadFilterAndSortPreferences;
+	window.switchView = switchView;
+	window.loadViewPreference = loadViewPreference;
+	window.switchToPersonalView = switchToPersonalView;
+	window.switchToGlobalView = switchToGlobalView;
+	window.initViewControls = initViewControls;
+	window.saveViewScopePreference = saveViewScopePreference;
+	window.loadViewScopePreference = loadViewScopePreference;
 }
 
 export const init = initEventListeners;

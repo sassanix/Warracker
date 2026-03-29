@@ -1,69 +1,77 @@
-// Centralized Authentication Service
-// Provides a single source of truth for auth state and UI updates.
+// Centralized Authentication Service implemented as an AuthManager class.
+class AuthManager {
+  constructor() {
+    this.cachedToken = null;
+    this.cachedUser = null;
+    this.logoutCallbacks = [];
+    this.globalClickListenerAttached = false;
+    this.storageListenerAttached = false;
+    this.registrationObserver = null;
+    this.initialized = false;
+  }
 
-const authService = (() => {
-  let cachedToken = null;
-  let cachedUser = null;
-  const logoutCallbacks = [];
-
-  function readStateFromStorage() {
-    cachedToken = localStorage.getItem('auth_token');
+  readStateFromStorage() {
+    this.cachedToken = localStorage.getItem('auth_token');
     const userInfoString = localStorage.getItem('user_info');
-    cachedUser = null;
+    this.cachedUser = null;
     if (userInfoString) {
       try {
-        cachedUser = JSON.parse(userInfoString);
+        this.cachedUser = JSON.parse(userInfoString);
       } catch {
         localStorage.removeItem('user_info');
-        cachedUser = null;
+        this.cachedUser = null;
       }
     }
   }
 
-  function isAuthenticated() {
-    return !!(cachedToken && cachedUser && cachedUser.id);
+  isAuthenticated() {
+    return !!(this.cachedToken && this.cachedUser && this.cachedUser.id);
   }
 
-  function getToken() {
-    if (!cachedToken) cachedToken = localStorage.getItem('auth_token');
-    return cachedToken;
+  getToken() {
+    if (!this.cachedToken) this.cachedToken = localStorage.getItem('auth_token');
+    return this.cachedToken;
   }
 
-  function getCurrentUser() {
-    if (!cachedUser) {
+  getCurrentUser() {
+    if (!this.cachedUser) {
       const userInfoString = localStorage.getItem('user_info');
       if (userInfoString) {
         try {
-          cachedUser = JSON.parse(userInfoString);
+          this.cachedUser = JSON.parse(userInfoString);
         } catch {
-          cachedUser = null;
+          this.cachedUser = null;
         }
       }
     }
-    return cachedUser;
+    return this.cachedUser;
   }
 
-  function clearAuthData() {
+  clearAuthData() {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user_info');
-    cachedToken = null;
-    cachedUser = null;
-    logoutCallbacks.forEach((cb) => {
-      try { cb(); } catch {}
+    this.cachedToken = null;
+    this.cachedUser = null;
+    this.logoutCallbacks.forEach((cb) => {
+      try {
+        cb();
+      } catch (error) {
+        console.error('[authService] logout callback failed', error);
+      }
     });
   }
 
-  function onLogout(callback) {
-    if (typeof callback === 'function') logoutCallbacks.push(callback);
+  onLogout(callback) {
+    if (typeof callback === 'function') this.logoutCallbacks.push(callback);
   }
 
-  function dispatchAuthStateEvent(isAuthed, user) {
+  dispatchAuthStateEvent(isAuthed, user) {
     setTimeout(() => {
       window.dispatchEvent(new CustomEvent('authStateReady', { detail: { isAuthenticated: isAuthed, user } }));
     }, 0);
   }
 
-  function updateHeaderUI(isAuthed, user) {
+  updateHeaderUI(isAuthed, user) {
     const authContainer = document.getElementById('authContainer');
     const userMenu = document.getElementById('userMenu');
     const userDisplayName = document.getElementById('userDisplayName');
@@ -98,8 +106,7 @@ const authService = (() => {
     }
   }
 
-  function immediateCssToggle() {
-    // Fast, CSS-based hide/show to prevent flicker before scripts finish
+  immediateCssToggle() {
     const styleId = 'auth-ui-style';
     let style = document.getElementById(styleId);
     if (!style) {
@@ -113,39 +120,31 @@ const authService = (() => {
       : `#authContainer, .auth-buttons { display: flex !important; visibility: visible !important; } a[href="login.html"], a[href="/login.html"], a[href="register.html"], a[href="/register.html"], .login-btn, .register-btn, .auth-btn.login-btn, .auth-btn.register-btn { display: inline-block !important; visibility: visible !important; } #userMenu, .user-menu { display: none !important; visibility: hidden !important; }`;
   }
 
-  async function validateTokenAndLoadUser() {
-    if (!cachedToken) return;
+  async validateTokenAndLoadUser() {
+    if (!this.cachedToken) return;
     try {
-      const res = await fetch('/api/auth/validate-token', { headers: { Authorization: `Bearer ${cachedToken}` } });
+      const res = await fetch('/api/auth/validate-token', { headers: { Authorization: `Bearer ${this.cachedToken}` } });
       if (!res.ok) throw new Error('Token validation failed');
       const data = await res.json();
       if (data && data.valid && data.user) {
-        cachedUser = data.user;
-        localStorage.setItem('user_info', JSON.stringify(cachedUser));
+        this.cachedUser = data.user;
+        localStorage.setItem('user_info', JSON.stringify(this.cachedUser));
       } else {
-        clearAuthData();
+        this.clearAuthData();
       }
     } catch {
-      clearAuthData();
+      this.clearAuthData();
     }
   }
 
-  async function initAuth() {
-    readStateFromStorage();
-    immediateCssToggle();
-    await validateTokenAndLoadUser();
-    updateHeaderUI(isAuthenticated(), cachedUser);
-    dispatchAuthStateEvent(isAuthenticated(), cachedUser);
-
-    // Keep dropdown handlers consistent
+  attachDropdownHandlers() {
     const logoutMenuItem = document.getElementById('logoutMenuItem');
     if (logoutMenuItem) {
       const clone = logoutMenuItem.cloneNode(true);
       logoutMenuItem.parentNode.replaceChild(clone, logoutMenuItem);
-      clone.addEventListener('click', () => logout());
+      clone.addEventListener('click', () => this.logout());
     }
 
-    // User menu toggle (replicates legacy behavior from auth.js)
     const userMenuBtnOriginal = document.getElementById('userMenuBtn');
     const userMenuDropdown = document.getElementById('userMenuDropdown');
     if (userMenuBtnOriginal && userMenuDropdown) {
@@ -157,7 +156,6 @@ const authService = (() => {
       });
     }
 
-    // Settings gear menu toggle if present
     const settingsBtnOriginal = document.getElementById('settingsBtn');
     const settingsMenu = document.getElementById('settingsMenu');
     if (settingsBtnOriginal && settingsMenu) {
@@ -169,8 +167,7 @@ const authService = (() => {
       });
     }
 
-    // Global click to close any open dropdowns (add once)
-    if (!window._authServiceGlobalClickListenerAdded) {
+    if (!this.globalClickListenerAttached) {
       document.addEventListener('click', (e) => {
         const dd = document.getElementById('userMenuDropdown');
         const btn = document.getElementById('userMenuBtn');
@@ -183,67 +180,87 @@ const authService = (() => {
           sm.classList.remove('active');
         }
       });
-      window._authServiceGlobalClickListenerAdded = true;
-    }
-
-    // Storage changes from other tabs
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'auth_token' || e.key === 'user_info') {
-        readStateFromStorage();
-        updateHeaderUI(isAuthenticated(), cachedUser);
-        dispatchAuthStateEvent(isAuthenticated(), cachedUser);
-      }
-    });
-
-    // Optionally hide registration links if registration disabled and user logged out
-    if (!getToken()) {
-      const hideRegistrationUI = () => {
-        const forceHide = (el) => {
-          if (!el) return;
-          // Strong hide to defeat CSS !important rules
-          el.style.setProperty('display', 'none', 'important');
-          el.style.setProperty('visibility', 'hidden', 'important');
-          el.setAttribute('hidden', 'true');
-          el.setAttribute('aria-hidden', 'true');
-        };
-
-        const selectors = [
-          '.register-btn', '.auth-btn.register-btn',
-          'a[href="register.html"]', 'a[href="./register.html"]', 'a[href="/register.html"]',
-          'a[data-i18n="auth.create_account"]'
-        ];
-        selectors.forEach((sel) => document.querySelectorAll(sel).forEach(forceHide));
-
-        const authLinks = document.querySelector('.auth-links');
-        if (authLinks) {
-          authLinks.querySelectorAll('a').forEach((a) => {
-            const text = (a.textContent || '').trim().toLowerCase();
-            if (text === 'create account' || a.getAttribute('href')?.includes('register.html') || a.dataset?.i18n === 'auth.create_account') {
-              forceHide(a);
-            }
-          });
-        }
-      };
-
-      try {
-        const res = await fetch('/api/auth/registration-status');
-        if (res.ok) {
-          const data = await res.json();
-          if (!data.enabled) {
-            hideRegistrationUI();
-            // Keep it hidden even if i18n or other scripts mutate DOM later
-            if (!window._authServiceRegObserver) {
-              const observer = new MutationObserver(() => hideRegistrationUI());
-              observer.observe(document.body, { childList: true, subtree: true });
-              window._authServiceRegObserver = observer;
-            }
-          }
-        }
-      } catch {}
+      this.globalClickListenerAttached = true;
     }
   }
 
-  async function login(username, password) {
+  attachStorageListener() {
+    if (this.storageListenerAttached) return;
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'auth_token' || e.key === 'user_info') {
+        this.readStateFromStorage();
+        this.updateHeaderUI(this.isAuthenticated(), this.cachedUser);
+        this.dispatchAuthStateEvent(this.isAuthenticated(), this.cachedUser);
+      }
+    });
+    this.storageListenerAttached = true;
+  }
+
+  async ensureRegistrationVisibility() {
+    if (this.getToken()) return;
+    const hideRegistrationUI = () => {
+      const forceHide = (el) => {
+        if (!el) return;
+        el.style.setProperty('display', 'none', 'important');
+        el.style.setProperty('visibility', 'hidden', 'important');
+        el.setAttribute('hidden', 'true');
+        el.setAttribute('aria-hidden', 'true');
+      };
+
+      const selectors = [
+        '.register-btn', '.auth-btn.register-btn',
+        'a[href="register.html"]', 'a[href="./register.html"]', 'a[href="/register.html"]',
+        'a[data-i18n="auth.create_account"]'
+      ];
+      selectors.forEach((sel) => document.querySelectorAll(sel).forEach(forceHide));
+
+      const authLinks = document.querySelector('.auth-links');
+      if (authLinks) {
+        authLinks.querySelectorAll('a').forEach((a) => {
+          const text = (a.textContent || '').trim().toLowerCase();
+          if (text === 'create account' || a.getAttribute('href')?.includes('register.html') || a.dataset?.i18n === 'auth.create_account') {
+            forceHide(a);
+          }
+        });
+      }
+    };
+
+    try {
+      const res = await fetch('/api/auth/registration-status');
+      if (res.ok) {
+        const data = await res.json();
+        if (!data.enabled) {
+          hideRegistrationUI();
+          if (!this.registrationObserver) {
+            this.registrationObserver = new MutationObserver(() => hideRegistrationUI());
+            this.registrationObserver.observe(document.body, { childList: true, subtree: true });
+          }
+        }
+      }
+    } catch {
+      // Ignore errors: failing to hide registration links is non-fatal
+    }
+  }
+
+  async initAuth() {
+    if (this.initialized) {
+      this.readStateFromStorage();
+      this.updateHeaderUI(this.isAuthenticated(), this.cachedUser);
+      this.dispatchAuthStateEvent(this.isAuthenticated(), this.cachedUser);
+      return;
+    }
+    this.initialized = true;
+    this.readStateFromStorage();
+    this.immediateCssToggle();
+    await this.validateTokenAndLoadUser();
+    this.updateHeaderUI(this.isAuthenticated(), this.cachedUser);
+    this.dispatchAuthStateEvent(this.isAuthenticated(), this.cachedUser);
+    this.attachDropdownHandlers();
+    this.attachStorageListener();
+    await this.ensureRegistrationVisibility();
+  }
+
+  async login(username, password) {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -253,38 +270,31 @@ const authService = (() => {
     if (!res.ok) throw new Error(data?.message || 'Login failed');
     localStorage.setItem('auth_token', data.token);
     localStorage.setItem('user_info', JSON.stringify(data.user));
-    readStateFromStorage();
-    updateHeaderUI(true, data.user);
-    dispatchAuthStateEvent(true, data.user);
+    this.readStateFromStorage();
+    this.updateHeaderUI(true, data.user);
+    this.dispatchAuthStateEvent(true, data.user);
     return data;
   }
 
-  async function logout() {
-    const tokenForApi = getToken();
-    clearAuthData();
-    updateHeaderUI(false, null);
-    dispatchAuthStateEvent(false, null);
+  async logout() {
+    const tokenForApi = this.getToken();
+    this.clearAuthData();
+    this.updateHeaderUI(false, null);
+    this.dispatchAuthStateEvent(false, null);
     try {
       if (tokenForApi) {
         await fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${tokenForApi}` } });
       }
-    } catch {}
+    } catch {
+      // ignore network errors during logout
+    }
     if (window.location.pathname !== '/login.html') {
       window.location.href = 'login.html';
     }
   }
+}
 
-  return {
-    initAuth,
-    login,
-    logout,
-    getToken,
-    getCurrentUser,
-    isAuthenticated,
-    clearAuthData,
-    onLogout,
-  };
-})();
+const authService = new AuthManager();
 
 // Backwards compatibility for existing scripts
 window.auth = {
@@ -294,6 +304,7 @@ window.auth = {
   login: (u, p) => authService.login(u, p),
   logout: () => authService.logout(),
   onLogout: (cb) => authService.onLogout(cb),
+  checkAuthState: (isInitialLoad) => authService.initAuth(),
 };
 
 // Auto-init on DOM ready

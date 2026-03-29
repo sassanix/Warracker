@@ -33,6 +33,11 @@ export async function getWarranties(query = '') {
   return res.json();
 }
 
+export async function createWarranty(formData) {
+  const res = await baseRequest('/api/warranties', { method: 'POST', body: formData });
+  return res.json();
+}
+
 export async function updateWarranty(id, formData) {
   const res = await baseRequest(`/api/warranties/${id}`, { method: 'PUT', body: formData });
   return res.json();
@@ -45,6 +50,32 @@ export async function deleteWarranty(id) {
 
 export async function getStatistics() {
   const res = await baseRequest('/api/statistics');
+  return res.json();
+}
+
+export async function listWarranties({ scope = 'personal', archived = false } = {}) {
+  const base = scope === 'global' ? '/api/warranties/global' : '/api/warranties';
+  const path = archived ? `${base}/archived` : base;
+  const res = await baseRequest(path);
+  return res.json();
+}
+
+export async function getGlobalViewStatus() {
+  const res = await baseRequest('/api/settings/global-view-status');
+  return res.json();
+}
+
+export async function getUserPreferences() {
+  const res = await baseRequest('/api/auth/preferences');
+  return res.json();
+}
+
+export async function saveUserPreferences(preferences) {
+  const res = await baseRequest('/api/auth/preferences', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(preferences),
+  });
   return res.json();
 }
 
@@ -95,6 +126,35 @@ export async function getAuditTrail() {
 export async function triggerNotifications() {
   const res = await baseRequest('/api/admin/send-notifications', { method: 'POST' });
   return res.json();
+}
+
+// Tags
+export async function getTags(force = false) {
+  const res = await baseRequest(force ? '/api/tags?force=1' : '/api/tags');
+  return res.json();
+}
+
+export async function createTagRequest(payload) {
+  const res = await baseRequest('/api/tags', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return res.json();
+}
+
+export async function updateTagRequest(id, payload) {
+  const res = await baseRequest(`/api/tags/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return res.json();
+}
+
+export async function deleteTagRequest(id) {
+  await baseRequest(`/api/tags/${id}`, { method: 'DELETE' });
+  return true;
 }
 
 // Generic request helper for arbitrary endpoints
@@ -151,9 +211,14 @@ if (typeof window !== 'undefined') {
 
 export default {
   getWarranties,
+  createWarranty,
   updateWarranty,
   deleteWarranty,
   getStatistics,
+  listWarranties,
+  getGlobalViewStatus,
+  getUserPreferences,
+  saveUserPreferences,
   request,
   savePreferences,
   // settings & admin
@@ -165,6 +230,10 @@ export default {
   deleteUser,
   getAuditTrail,
   triggerNotifications,
+  getTags,
+  createTagRequest,
+  updateTagRequest,
+  deleteTagRequest,
 };
 
 

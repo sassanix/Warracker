@@ -112,7 +112,7 @@ COPY --chown=warracker:warracker backend/migrations/ ./migrations/
 COPY --chown=warracker:warracker locales/ ./locales/
 COPY --chown=warracker:warracker locales/ /var/www/html/locales/
 
-# 4. Frontend (bundled in one instruction)
+# 4. Frontend (static files, no build step)
 COPY --chown=warracker:warracker frontend/ /var/www/html/
 
 # 5. Backend (bundled in one instruction)

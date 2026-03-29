@@ -1,3 +1,399 @@
+import authService from '../services/authService.js';
+import { getWarranties, getIsGlobalView } from '../store.js';
+import { showToast } from './ui.js';
+import { formatDate } from '../lib/dates.js';
+
+const state = {
+	currentWarrantyId: null,
+	claims: [],
+	canEdit: false,
+};
+
+const dom = {
+	claimsModal: null,
+	claimFormModal: null,
+	claimsListBody: null,
+	addClaimBtn: null,
+	claimForm: null,
+	warrantyClaimInfo: null,
+	editClaimId: null,
+	claimFormTitle: null,
+};
+
+const t = (key, fallback) => {
+	try {
+		if (window.i18next?.t) return window.i18next.t(key);
+	} catch (error) {
+		console.warn('[claims] translation failed', key, error);
+	}
+	return fallback;
+};
+
+const formatDateSafe = (value) => {
+	const date = value instanceof Date ? value : value ? new Date(value) : null;
+	if (!date || Number.isNaN(date.getTime())) return 'N/A';
+	return formatDate(date);
+};
+
+const escapeHtml = (text = '') => {
+	if (typeof text !== 'string') return '';
+	const div = document.createElement('div');
+	div.textContent = text;
+	return div.innerHTML;
+};
+
+function queryDom() {
+	dom.claimsModal = document.getElementById('claimsModal');
+	dom.claimFormModal = document.getElementById('claimFormModal');
+	dom.claimsListBody = document.getElementById('claimsListBody');
+	dom.addClaimBtn = document.getElementById('addClaimBtn');
+	dom.claimForm = document.getElementById('claimForm');
+	dom.warrantyClaimInfo = document.getElementById('warrantyClaimInfo');
+	dom.editClaimId = document.getElementById('editClaimId');
+	dom.claimFormTitle = document.getElementById('claimFormTitle');
+}
+
+function getToken() {
+	return authService.getToken?.() || window.auth?.getToken?.() || localStorage.getItem('auth_token');
+}
+
+function bindCloseButtons(modal, handler) {
+	if (!modal || modal._claimsCloseBound) return;
+	modal.querySelectorAll('[data-dismiss="modal"]').forEach((btn) => {
+		btn.addEventListener('click', handler);
+	});
+	modal._claimsCloseBound = true;
+}
+
+function bindClaimsListDelegation() {
+	const list = document.getElementById('warrantiesList');
+	if (!list || list._claimsLinkDelegated) return;
+	if (list._wlcDelegated) return;
+	list.addEventListener('click', (event) => {
+		const claimsLink = event.target.closest('.claims-link');
+		if (claimsLink) {
+			event.preventDefault();
+			const id = parseInt(claimsLink.dataset.id, 10);
+			if (Number.isFinite(id)) openClaimsModal(id);
+		}
+	});
+	list._claimsLinkDelegated = true;
+}
+
+function bindClaimsListBodyActions() {
+	if (!dom.claimsListBody || dom.claimsListBody._claimsActionsBound) return;
+	dom.claimsListBody.addEventListener('click', (event) => {
+		if (!state.canEdit) return;
+		const editBtn = event.target.closest('.edit-claim-btn');
+		if (editBtn) {
+			const claimId = parseInt(editBtn.dataset.claimId, 10);
+			const claim = state.claims.find((c) => c.id === claimId);
+			if (claim) openClaimFormModal(claim);
+			return;
+		}
+		const deleteBtn = event.target.closest('.delete-claim-btn');
+		if (deleteBtn) {
+			const claimId = parseInt(deleteBtn.dataset.claimId, 10);
+			const confirmMessage =
+				t('claims.confirm_delete_claim', 'Are you sure you want to delete this claim?');
+			if (window.confirm(confirmMessage)) {
+				deleteClaim(claimId);
+			}
+		}
+	});
+	dom.claimsListBody._claimsActionsBound = true;
+}
+
+function updateAddClaimVisibility() {
+	if (dom.addClaimBtn) {
+		dom.addClaimBtn.style.display = state.canEdit ? 'inline-block' : 'none';
+	}
+}
+
+function updateWarrantyInfo(warranty) {
+	if (!dom.warrantyClaimInfo) return;
+	if (!warranty) {
+		dom.warrantyClaimInfo.textContent = '';
+		return;
+	}
+	const vendorLabel = warranty.vendor || t('claims.unknown_vendor', 'Unknown Vendor');
+	const expiresLabel = `${t('claims.expires_label', 'Expires')}: ${formatDateSafe(warranty.expiration_date)}`;
+	const statusClass = warranty.status || 'unknown';
+	const statusText = warranty.statusText || t('warranties.unknown_status', 'Unknown Status');
+	dom.warrantyClaimInfo.innerHTML = `
+		<div class="warranty-info-card">
+			<h4>${warranty.product_name || t('warranties.unnamed_product', 'Unnamed Product')}</h4>
+			<div class="warranty-details">
+				<span><i class="fas fa-building"></i> ${vendorLabel}</span>
+				<span><i class="fas fa-calendar"></i> ${expiresLabel}</span>
+				<span class="warranty-status status-${statusClass}">
+					${statusText}
+				</span>
+			</div>
+		</div>
+	`;
+}
+
+function ensureFormSubmissionHandler() {
+	if (!dom.claimForm || dom.claimForm._claimsSubmitBound) return;
+	dom.claimForm.addEventListener('submit', handleClaimFormSubmit);
+	dom.claimForm._claimsSubmitBound = true;
+}
+
+function ensureAddClaimHandler() {
+	if (!dom.addClaimBtn || dom.addClaimBtn._claimsAddBound) return;
+	dom.addClaimBtn.addEventListener('click', () => openClaimFormModal());
+	dom.addClaimBtn._claimsAddBound = true;
+}
+
+function renderClaims() {
+	if (!dom.claimsListBody) return;
+	if (!state.claims.length) {
+		const message = state.canEdit
+			? t('claims.no_claims_message', 'Click "Add New Claim" to get started')
+			: t('claims.no_claims_view_only', 'No claims have been filed for this warranty');
+		dom.claimsListBody.innerHTML = `
+			<div class="no-claims-message" style="text-align: center; padding: 40px;">
+				<i class="fas fa-clipboard-list" style="font-size: 3rem; color: var(--medium-gray); margin-bottom: 1rem;"></i>
+				<h4>${t('claims.no_claims_yet', 'No Claims Yet')}</h4>
+				<p>${message}</p>
+			</div>
+		`;
+		return;
+}
+	const claimsHtml = state.claims
+		.map((claim) => {
+			const statusClass = claim.status ? claim.status.toLowerCase().replace(/\s+/g, '-') : 'unknown';
+			const resolutionDateHtml =
+				claim.resolution_date && claim.resolution_date.trim()
+					? `<span style="margin-left: 10px;"><i class="fas fa-check-circle"></i> ${t('claims.resolved_label', 'Resolved')}: ${formatDateSafe(claim.resolution_date)}</span>`
+					: '';
+			const actionsHtml = state.canEdit
+				? `
+					<button class="btn btn-sm btn-secondary edit-claim-btn" data-claim-id="${claim.id}">
+						<i class="fas fa-edit"></i> ${t('actions.edit', 'Edit')}
+					</button>
+					<button class="btn btn-sm btn-danger delete-claim-btn" data-claim-id="${claim.id}">
+						<i class="fas fa-trash"></i> ${t('actions.delete', 'Delete')}
+					</button>
+				`
+				: `
+					<span class="claim-readonly-indicator" style="color: var(--medium-gray); font-size: 0.9em;">
+						<i class="fas fa-eye"></i> ${t('claims.view_only', 'View Only')}
+					</span>
+				`;
+			return `
+				<div class="claim-item" data-claim-id="${claim.id}">
+					<div class="claim-header">
+						<div class="claim-info">
+							<div class="claim-title">
+								${claim.claim_number ? `<strong>${escapeHtml(claim.claim_number)}</strong>` : `<strong>${t('claims.claim_number_label', 'Claim #')}${claim.id}</strong>`}
+								<span class="claim-status-badge claim-status-${statusClass}">
+									${escapeHtml(claim.status || t('claims.status_unknown', 'Unknown'))}
+								</span>
+							</div>
+							<div class="claim-date">
+								<i class="fas fa-calendar"></i> ${formatDateSafe(claim.claim_date)}
+								${resolutionDateHtml}
+							</div>
+						</div>
+						<div class="claim-actions">
+							${actionsHtml}
+						</div>
+					</div>
+					${claim.description ? `<div class="claim-description">${escapeHtml(claim.description)}</div>` : ''}
+					${claim.resolution ? `<div class="claim-resolution"><strong>${t('claims.resolution_label', 'Resolution')}:</strong> ${escapeHtml(claim.resolution)}</div>` : ''}
+				</div>
+			`;
+		})
+		.join('');
+	dom.claimsListBody.innerHTML = claimsHtml;
+}
+
+async function loadClaims(warrantyId) {
+	if (!dom.claimsListBody) return;
+	dom.claimsListBody.innerHTML = `
+		<div class="loading-message" style="text-align: center; padding: 20px;">
+			<i class="fas fa-spinner fa-spin"></i> ${t('claims.loading', 'Loading claims...')}
+		</div>
+	`;
+	try {
+		const token = getToken();
+		if (!token) throw new Error(t('messages.authentication_required', 'Authentication required'));
+		const response = await fetch(`/api/warranties/${warrantyId}/claims`, {
+			headers: {
+				Authorization: `Bearer ${token}`,
+				'Content-Type': 'application/json',
+			},
+		});
+		if (!response.ok) throw new Error(t('claims.failed_to_load', 'Failed to load claims'));
+		state.claims = await response.json();
+		renderClaims();
+	} catch (error) {
+		console.error('[claims] loadClaims failed', error);
+		dom.claimsListBody.innerHTML = `
+			<div class="error-message" style="text-align: center; padding: 20px; color: var(--danger-color);">
+				<i class="fas fa-exclamation-triangle"></i> ${t('claims.failed_to_load', 'Failed to load claims')}
+			</div>
+		`;
+	}
+}
+
+function openClaimFormModal(claim = null) {
+	if (!dom.claimFormModal) return;
+	if (dom.claimFormTitle) {
+		dom.claimFormTitle.textContent = claim
+			? t('claims.edit_claim', 'Edit Claim')
+			: t('claims.add_new_claim', 'Add New Claim');
+	}
+	if (dom.claimForm) dom.claimForm.reset();
+	if (dom.editClaimId) dom.editClaimId.value = claim ? claim.id : '';
+
+	const fields = {
+		claimDate: claim?.claim_date || new Date().toISOString().split('T')[0],
+		claimStatus: claim?.status || 'Submitted',
+		claimNumber: claim?.claim_number || '',
+		claimDescription: claim?.description || '',
+		claimResolution: claim?.resolution || '',
+		resolutionDate: claim?.resolution_date || '',
+	};
+	Object.entries(fields).forEach(([id, value]) => {
+		const input = document.getElementById(id);
+		if (input) input.value = value || '';
+	});
+	dom.claimFormModal.classList.add('active');
+}
+
+async function handleClaimFormSubmit(event) {
+	if (event) event.preventDefault();
+	if (!dom.claimForm || !state.currentWarrantyId) return;
+	try {
+		const token = getToken();
+		if (!token) throw new Error(t('messages.authentication_required', 'Authentication required'));
+		const formData = new FormData(dom.claimForm);
+		const claimId = dom.editClaimId?.value;
+		const payload = {
+			claim_date: formData.get('claim_date') || null,
+			status: formData.get('status') || null,
+			claim_number: formData.get('claim_number') || null,
+			description: formData.get('description') || null,
+			resolution: formData.get('resolution') || null,
+			resolution_date: formData.get('resolution_date') || null,
+		};
+		const isEdit = Boolean(claimId);
+		const url = isEdit
+			? `/api/warranties/${state.currentWarrantyId}/claims/${claimId}`
+			: `/api/warranties/${state.currentWarrantyId}/claims`;
+		const response = await fetch(url, {
+			method: isEdit ? 'PUT' : 'POST',
+			headers: {
+				Authorization: `Bearer ${token}`,
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(payload),
+		});
+		if (!response.ok) {
+			const error = await response.json().catch(() => ({}));
+			throw new Error(error.error || t('claims.failed_to_save', 'Failed to save claim'));
+		}
+		showToast(
+			isEdit ? t('claims.claim_updated_successfully', 'Claim updated successfully') : t('claims.claim_created_successfully', 'Claim created successfully'),
+			'success',
+		);
+		closeClaimFormModal();
+		await loadClaims(state.currentWarrantyId);
+	} catch (error) {
+		console.error('[claims] save failed', error);
+		showToast(error.message || t('claims.failed_to_save', 'Failed to save claim'), 'error');
+	}
+}
+
+async function deleteClaim(claimId) {
+	if (!state.currentWarrantyId) return;
+	try {
+		const token = getToken();
+		if (!token) throw new Error(t('messages.authentication_required', 'Authentication required'));
+		const response = await fetch(`/api/warranties/${state.currentWarrantyId}/claims/${claimId}`, {
+			method: 'DELETE',
+			headers: {
+				Authorization: `Bearer ${token}`,
+				'Content-Type': 'application/json',
+			},
+		});
+		if (!response.ok) {
+			const error = await response.json().catch(() => ({}));
+			throw new Error(error.error || t('claims.failed_to_delete', 'Failed to delete claim'));
+		}
+		showToast(t('claims.claim_deleted_successfully', 'Claim deleted successfully'), 'success');
+		await loadClaims(state.currentWarrantyId);
+	} catch (error) {
+		console.error('[claims] delete failed', error);
+		showToast(error.message || t('claims.failed_to_delete', 'Failed to delete claim'), 'error');
+	}
+}
+
+export function closeClaimsModal() {
+	if (dom.claimsModal) dom.claimsModal.classList.remove('active');
+	state.currentWarrantyId = null;
+	state.claims = [];
+	state.canEdit = false;
+	if (dom.claimsListBody) dom.claimsListBody.innerHTML = '';
+}
+
+export function closeClaimFormModal() {
+	if (dom.claimFormModal) dom.claimFormModal.classList.remove('active');
+	if (dom.claimForm) dom.claimForm.reset();
+	if (dom.editClaimId) dom.editClaimId.value = '';
+}
+
+export async function openClaimsModal(warrantyId) {
+	queryDom();
+	if (!dom.claimsModal) {
+		console.warn('[claims] claims modal not found');
+		return;
+	}
+	const warranty = getWarranties().find((w) => w.id === warrantyId);
+	if (!warranty) {
+		showToast(t('claims.warranty_not_found', 'Warranty not found'), 'error');
+		return;
+	}
+	state.currentWarrantyId = warrantyId;
+	const currentUser = authService.getCurrentUser?.() || null;
+	const isAdmin = Boolean(currentUser?.is_admin);
+	const globalView = getIsGlobalView();
+	if (typeof warranty.permissions?.canEdit === 'boolean') {
+		state.canEdit = warranty.permissions.canEdit;
+	} else {
+		state.canEdit = !globalView || warranty.user_id === currentUser?.id || isAdmin;
+	}
+	updateAddClaimVisibility();
+	updateWarrantyInfo(warranty);
+	dom.claimsModal.classList.add('active');
+	await loadClaims(warrantyId);
+}
+
+export function init() {
+	queryDom();
+	ensureAddClaimHandler();
+	ensureFormSubmissionHandler();
+	bindCloseButtons(dom.claimsModal, closeClaimsModal);
+	bindCloseButtons(dom.claimFormModal, closeClaimFormModal);
+	bindClaimsListDelegation();
+	bindClaimsListBodyActions();
+}
+
+if (typeof window !== 'undefined') {
+	window.components = window.components || {};
+	window.components.claims = {
+		init,
+		openClaimsModal,
+		closeClaimsModal,
+		closeClaimFormModal,
+	};
+	window.openClaimsModal = openClaimsModal;
+	window.closeClaimsModal = closeClaimsModal;
+	window.closeClaimFormModal = closeClaimFormModal;
+}
 function el(tag, className, text) {
   const e = document.createElement(tag);
   if (className) e.className = className;

@@ -1,6 +1,69 @@
 # Changelog
-## 1.0.3 - 2025-10-31
+## 1.0.3 - 2026-03-29
 
+### Enhanced
+- **Frontend Architecture Refactoring:** Migrated frontend JavaScript from monolithic `script.js` to modular ES modules for improved maintainability and code organization.
+  - **New Modular Components:** Created dedicated modules for `addWarrantyForm`, `editModal`, `tagManager`, `notes`, `claims`, `importExport`, `warrantyActions`, `modals`, `ui`, and `paperless`.
+  - **Centralized State Management:** Implemented `store.js` module for centralized application state and event-driven UI updates.
+  - **Controller Pattern:** Added `warrantyListController.js` to orchestrate warranty display, filtering, and actions.
+  - **Bootstrap Module:** Created `bootstrap.js` for centralized initialization of core services (auth, theme, currencies, Paperless).
+  - **Backward Compatibility:** Legacy `script.js` remains functional during migration with sync mechanisms to ensure data consistency.
+  - _Files: `frontend/js/bootstrap.js`, `frontend/js/index.js`, `frontend/js/store.js`, `frontend/js/controllers/warrantyListController.js`, `frontend/js/components/*.js`_
+
+- **Frontend Architecture Refactoring - Phase 2:** Continued modularization effort, reducing `script.js` by 841 lines (9% reduction).
+  - **Form Tabs Module:** Extracted complete form tab navigation system to `formTabs.js` with validation, summary generation, and form reset functionality.
+  - **Serial Numbers Module:** Created `serialNumbers.js` for dynamic serial number input management with add/remove/get/set operations.
+  - **Code Consolidation:** Removed duplicate mobile menu code (157 lines), theme functions, and date utilities by delegating to existing modules (`mobile-menu.js`, `lib/theme.js`, `lib/dates.js`).
+  - **Claims Documentation:** Documented delegation pattern for claims functionality already extracted to `components/claims.js`.
+  - **Module Integration:** Added new modules to `js/index.js` with proper ES6 imports while maintaining backward compatibility via `window` exports.
+  - _Files: `frontend/js/components/formTabs.js`, `frontend/js/components/serialNumbers.js`, `frontend/script.js`, `frontend/js/index.js`_
+  - _Documentation: `memory_bank/frontend-refactoring-phase2.md`_
+
+- **Secure Image Loading Optimization:** Improved product photo loading performance with parallel fetching and caching.
+  - **Parallel Image Loading:** Images now load simultaneously using `Promise.all` instead of sequentially.
+  - **Image Preloading:** Warranty images are preloaded in the background after warranties load, enabling instant display when rendered.
+  - **Memory Caching:** Blob URLs are cached in memory to prevent re-fetching previously loaded images.
+  - **Loading Animation:** Added CSS shimmer skeleton animation during image loading with smooth fade-in on completion.
+  - _Files: `frontend/js/components/paperless.js`, `frontend/script.js`, `frontend/style.css`_
+
+### Fixed
+- **Paperless-ngx File Upload:** Fixed critical bug where files selected for Paperless-ngx storage were incorrectly uploaded locally instead.
+  - **Root Cause:** The `getStorageOption()` function was generating incorrect radio button names for the add warranty form (`InvoiceStorage` instead of `invoiceStorage`), causing the storage selection to default to 'local'.
+  - **Solution:** Corrected the function to use lowercase names for add form (`invoiceStorage`, `manualStorage`) and camelCase for edit form (`editInvoiceStorage`, `editManualStorage`).
+  - _Files: `frontend/js/components/paperless.js`, `frontend/script.js`_
+
+- **Authentication Compatibility:** Fixed `TypeError: window.auth.checkAuthState is not a function` error on protected pages.
+  - **Root Cause:** The `authService.js` module was overwriting `window.auth` without including the `checkAuthState` method.
+  - **Solution:** Added `checkAuthState` to the `window.auth` compatibility object.
+  - _Files: `frontend/js/services/authService.js`_
+
+- **Tag Management in Warranty Forms:** Fixed tags not being added or removed correctly when saving warranties.
+  - **Root Cause:** The modular `addWarrantyForm.js` and `editModal.js` were reading from stale global `window.selectedTags` arrays instead of the centralized store.
+  - **Solution:** Updated both modules to exclusively use `getSelectedTags()` and `getEditSelectedTags()` from the store.
+  - _Files: `frontend/js/components/addWarrantyForm.js`, `frontend/js/components/editModal.js`_
+
+- **Expiring Soon Status Display:** Fixed "Expiring Soon" status not showing correctly based on user preferences.
+  - **Root Cause:** The `expiringSoonDays` value from user preferences was not being synced to the store after loading from the API.
+  - **Solution:** Added explicit store update in `loadAndApplyUserPreferences()` and a storage event listener to keep the store in sync.
+  - _Files: `frontend/script.js`_
+
+- **Notes Modal Edit Warranty:** Fixed "Edit Warranty" button in notes modal not working with `messages.warranty_not_found_refresh` error.
+  - **Root Cause:** Duplicate global exposure in `notes.js` was overwriting the correct `showNotesModal` function, preventing the warranty object from being stored properly.
+  - **Solution:** Removed duplicate code and ensured `handleEditWarranty` uses the already-stored warranty object.
+  - _Files: `frontend/js/components/notes.js`_
+
+- **Warranty Delete/Archive Actions:** Fixed warranty deletion and archiving not working from the modular components.
+  - **Root Cause:** The `warrantyActions.js` module was reading from an empty store while `script.js` was setting global variables.
+  - **Solution:** Added fallback to `window.currentWarrantyId` and sync to store in `openDeleteModal`/`openArchiveModal`.
+  - _Files: `frontend/js/components/warrantyActions.js`, `frontend/script.js`_
+
+- **No Tags Selected Placeholder:** Fixed raw i18n key `tags.no_selected` displaying instead of translated text when no tags are selected.
+  - **Solution:** Added `defaultValue` option to `window.t()` calls to ensure a human-readable fallback is always displayed.
+  - _Files: `frontend/js/components/addWarrantyForm.js`, `frontend/js/components/tagManager.js`_
+
+- **Missing Translations:** Added missing translation keys to resolve console warnings.
+  - Added keys: `filters.filter`, `filters.filter_by`, `filters.clear`, `filters.apply`, `filters.sort`, `warranties.archived`, `actions.data`, `warranties.or_link_to_invoice_url`, `warranties.or_link_to_manual_url`, `warranties.or_link_to_files_url`, `warranties.enter_serial_number`, `warranties.add_serial_number`.
+  - _Files: `locales/en/translation.json`_
 
 ## 1.0.2 - 2025-10-30
 
