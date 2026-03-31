@@ -221,7 +221,7 @@ Warracker offers **full multilingual UI support** with **18 languages**, includi
 | <img src="https://flagcdn.com/16x12/de.png" width="16" height="12" alt="DE"> German | de | Deutsch | |
 | <img src="https://flagcdn.com/16x12/gb.png" width="16" height="12" alt="GB"> English | en | English | *Default* |
 | <img src="https://flagcdn.com/16x12/es.png" width="16" height="12" alt="ES"> Spanish | es | Español | |
-| <img src="https://flagcdn.com/16x12/ir.png" width="16" height="12" alt="IR"> Persian | fa | فارسی | *RTL Support* |
+| <img src="https://abs.twimg.com/responsive-web/client-web/1f1ee-1f1f7.4a41f56a.svg" width="16" height="12" alt="IR"> Persian | fa | فارسی | *RTL Support* |
 | <img src="https://flagcdn.com/16x12/fr.png" width="16" height="12" alt="FR"> French | fr | Français | |
 | <img src="https://flagcdn.com/16x12/in.png" width="16" height="12" alt="IN"> Hindi | hi | हिन्दी | |
 | <img src="https://flagcdn.com/16x12/it.png" width="16" height="12" alt="IT"> Italian | it | Italiano | |
