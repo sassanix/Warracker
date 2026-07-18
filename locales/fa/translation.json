@@ -145,6 +145,7 @@
     "add_any_notes": "هرگونه یادداشتی در مورد این گارانتی اضافه کنید...",
     "product_photo_optional": "عکس محصول (اختیاری)",
     "choose_photo": "انتخاب عکس",
+    "take_photo": "گرفتن عکس",
     "invoice_receipt": "فاکتور/رسید",
     "store_locally": "ذخیره محلی",
     "store_in_paperless": "ذخیره در Paperless-ngx",

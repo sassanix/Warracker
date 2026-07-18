@@ -537,6 +537,10 @@
                                             </label>
                                             <input type="file" id="productPhoto" name="product_photo" class="file-input" accept=".png,.jpg,.jpeg,.webp">
                                         </div>
+                                        <label for="productPhotoCamera" class="file-input-label">
+                                            <i class="fas fa-camera"></i> <span data-i18n="warranties.take_photo">Take Photo</span>
+                                        </label>
+                                        <input type="file" accept="image/*" capture="environment" id="productPhotoCamera" style="display: none;">
                                         <div id="productPhotoFileName" class="file-name"></div>
                                         <div id="productPhotoPreview" class="photo-preview" style="display: none;">
                                             <img id="productPhotoImg" src="" alt="Product Photo Preview" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 10px;">
@@ -941,6 +945,10 @@
                                 </label>
                                 <input type="file" id="editProductPhoto" name="product_photo" class="file-input" accept=".png,.jpg,.jpeg,.webp">
                             </div>
+                            <label for="editProductPhotoCamera" class="file-input-label">
+                                <i class="fas fa-camera"></i> <span data-i18n="warranties.take_photo">Take Photo</span>
+                            </label>
+                            <input type="file" accept="image/*" capture="environment" id="editProductPhotoCamera" style="display: none;">
                             <div id="editProductPhotoFileName" class="file-name"></div>
                             <div id="editProductPhotoPreview" class="photo-preview" style="display: none;">
                                 <img id="editProductPhotoImg" src="" alt="Product Photo Preview" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 10px;">
@@ -1327,7 +1335,7 @@
     
     <script type="module" src="js/index.js?v=20260518004"></script>
     <script src="auth.js?v=20250119001"></script>
-    <script src="script.js?v=20260518002"></script>
+    <script src="script.js?v=20260718001"></script>
     <script>
         // Lightweight UI logic for Filter/Sort popovers (no change to core logic)
         document.addEventListener('DOMContentLoaded', function () {

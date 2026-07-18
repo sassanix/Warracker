@@ -144,6 +144,7 @@
     "add_any_notes": "Fügen Sie Notizen zu dieser Garantie hinzu...",
     "product_photo_optional": "Produktfoto (optional)",
     "choose_photo": "Foto auswählen",
+    "take_photo": "Foto aufnehmen",
     "invoice_receipt": "Rechnung/Beleg",
     "store_locally": "Lokal speichern",
     "store_in_paperless": "In Paperless-ngx speichern",

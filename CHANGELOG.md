@@ -1,4 +1,12 @@
 # Changelog
+## Unreleased
+
+### Added
+- **Mobile Photo Capture and Client-Side Image Downscaling:** Added a "Take Photo" button that opens the camera directly on mobile (the photo never enters the phone's gallery) and automatic client-side downscaling of product photos to max 2048px JPEG before upload.
+  - Downscaling is EXIF-orientation-safe, renders transparency on white, never produces a larger file, and falls back to the original file on any error
+  - Applies to the add and edit warranty photo inputs on both the main and status pages
+  - _Files: `frontend/index.html`, `frontend/status.html`, `frontend/script.js`, `frontend/sw.js`, `locales/*/translation.json`_
+
 ## 1.0.3 - 2026-05-18
 
 ### Fixed

@@ -144,6 +144,7 @@
     "add_any_notes": "इस वारंटी के बारे में कोई नोट्स जोड़ें...",
     "product_photo_optional": "उत्पाद फोटो (वैकल्पिक)",
     "choose_photo": "फोटो चुनें",
+    "take_photo": "फ़ोटो लें",
     "invoice_receipt": "चालान/रसीद",
     "store_locally": "स्थानीय रूप से स्टोर करें",
     "store_in_paperless": "Paperless-ngx में स्टोर करें",

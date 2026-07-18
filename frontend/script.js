@@ -1206,6 +1206,113 @@ function updateFileName(event, inputId = 'invoice', outputId = 'fileName') {
     }
 }
 
+// Downscale large images client-side before upload (progressive enhancement)
+const downscaledFiles = new WeakSet();
+
+async function downscaleImage(file, maxEdge = 2048, quality = 0.85) {
+    try {
+        if (!file || (file.type && !file.type.startsWith('image/')) || typeof createImageBitmap === 'undefined') {
+            return file;
+        }
+
+        const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        try {
+            if (bitmap.width <= maxEdge && bitmap.height <= maxEdge && (file.type === 'image/jpeg' || file.size < 1024 * 1024)) {
+                return file;
+            }
+
+            const longest = Math.max(bitmap.width, bitmap.height);
+            const scale = Math.min(1, maxEdge / longest);
+            const width = Math.round(bitmap.width * scale);
+            const height = Math.round(bitmap.height * scale);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(bitmap, 0, 0, width, height);
+
+            const blob = await new Promise((resolve, reject) => {
+                canvas.toBlob(function(result) {
+                    if (result) {
+                        resolve(result);
+                    } else {
+                        reject(new Error('canvas.toBlob returned null'));
+                    }
+                }, 'image/jpeg', quality);
+            });
+
+            if (blob.size >= file.size) {
+                return file;
+            }
+
+            const jpgName = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+            return new File([blob], jpgName, { type: 'image/jpeg' });
+        } finally {
+            bitmap.close();
+        }
+    } catch (err) {
+        console.warn('[DEBUG] Image downscale failed, using original file:', err);
+        return file;
+    }
+}
+
+function setupPhotoCapture(namedInputId) {
+    const namedInput = document.getElementById(namedInputId);
+    if (!namedInput) return;
+
+    const cameraInput = document.getElementById(namedInputId + 'Camera');
+    if (cameraInput) {
+        cameraInput.addEventListener('change', () => {
+            const file = cameraInput.files && cameraInput.files[0];
+            if (!file) return;
+            // Reject known non-image types only; some Android pickers report an empty
+            // MIME type for valid camera JPEGs (capture is a hint; desktop pickers allow any file).
+            if (file.type && !file.type.startsWith('image/')) {
+                cameraInput.value = '';
+                return;
+            }
+            // Synchronous copy: the named input is populated immediately, so a fast
+            // Save never races an async gap; downscaling happens via the change listener below.
+            try {
+                namedInput.files = cameraInput.files;
+            } catch (e) {
+                console.warn('[DEBUG] Camera file copy failed:', e);
+                cameraInput.value = '';
+                return;
+            }
+            cameraInput.value = '';
+            namedInput.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    }
+
+    // Downscale-on-change for this input — independent of camera markup presence.
+    let generation = 0;
+    namedInput.addEventListener('change', async () => {
+        const file = namedInput.files && namedInput.files[0];
+        if (!file || downscaledFiles.has(file)) return;
+        // Empty MIME types still get a downscale attempt: createImageBitmap sniffs content,
+        // and a non-image simply fails decode and falls back to the original.
+        if (file.type && !file.type.startsWith('image/')) return;
+        const gen = ++generation;
+        const processed = await downscaleImage(file);
+        if (processed === file) return;              // nothing to improve
+        if (gen !== generation) return;              // a newer selection superseded this run
+        if (namedInput.files[0] !== file) return;    // input was cleared/replaced (form reset, modal close)
+        try {
+            const dt = new DataTransfer();
+            dt.items.add(processed);
+            downscaledFiles.add(processed);
+            namedInput.files = dt.files;
+            namedInput.dispatchEvent(new Event('change', { bubbles: true }));  // refresh label/preview with the processed file
+        } catch (e) {
+            console.warn('[DEBUG] Downscale swap failed, uploading original:', e);
+        }
+    });
+}
+
 // Helper function to process warranty data
 function processWarrantyData(warranty) {
     console.log('Processing warranty data:', warranty);
@@ -3338,6 +3445,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (warrantyForm) {
         initWarrantyForm();
     }
+    // Photo capture/downscale for pages that have the inputs but not the add form (e.g. status)
+    setupPhotoCapture('productPhoto');
+    setupPhotoCapture('editProductPhoto');
     
     // Load warranties (might need checks if warrantiesList doesn't always exist)
     if (warrantiesList) { 

@@ -492,6 +492,7 @@
     "add_any_notes": "Bu garanti hakkında herhangi bir not ekleyin...",
     "product_photo_optional": "Ürün Fotoğrafı (İsteğe Bağlı)",
     "choose_photo": "Fotoğraf Seç",
+    "take_photo": "Fotoğraf çek",
     "invoice_receipt": "Fatura/Fiş",
     "store_locally": "Yerel Olarak Sakla",
     "store_in_paperless": "Paperless-ngx'te Sakla",

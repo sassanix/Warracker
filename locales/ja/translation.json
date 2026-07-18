@@ -145,6 +145,7 @@
     "add_any_notes": "この保証に関するメモを追加...",
     "product_photo_optional": "製品写真（オプション）",
     "choose_photo": "写真を選択",
+    "take_photo": "写真を撮る",
     "invoice_receipt": "請求書/領収書",
     "store_locally": "ローカルに保存",
     "store_in_paperless": "Paperless-ngxに保存",
