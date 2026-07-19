@@ -1,4 +1,4 @@
-const CACHE_NAME = 'warracker-cache-v20260719001';
+const CACHE_NAME = 'warracker-cache-v20260719002';
 const urlsToCache = [
   // HTML pages
   './',
@@ -21,7 +21,7 @@ const urlsToCache = [
   './mobile-header.css?v=20250119002',
 
   // JavaScript (versioned)
-  './script.js?v=20260719001',
+  './script.js?v=20260719002',
   './auth.js?v=20250119001',
   './settings-new.js?v=20250119001',
   './status.js?v=20250119001',

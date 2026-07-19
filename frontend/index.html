@@ -533,11 +533,11 @@
                                         <label data-i18n="warranties.product_photo_optional">Product Photo (Optional)</label>
                                         <div class="file-input-wrapper">
                                             <label for="productPhoto" class="file-input-label">
-                                                <i class="fas fa-camera"></i> <span data-i18n="warranties.choose_photo">Choose Photo</span>
+                                                <i class="fas fa-upload"></i> <span data-i18n="warranties.choose_photo">Choose Photo</span>
                                             </label>
                                             <input type="file" id="productPhoto" name="product_photo" class="file-input" accept=".png,.jpg,.jpeg,.webp">
                                         </div>
-                                        <label for="productPhotoCamera" class="file-input-label">
+                                        <label for="productPhotoCamera" class="file-input-label" tabindex="0">
                                             <i class="fas fa-camera"></i> <span data-i18n="warranties.take_photo">Take Photo</span>
                                         </label>
                                         <input type="file" accept="image/*" capture="environment" id="productPhotoCamera" style="display: none;">
@@ -941,11 +941,11 @@
                             <label data-i18n="warranties.product_photo_optional">Product Photo (Optional)</label>
                             <div class="file-input-wrapper">
                                 <label for="editProductPhoto" class="file-input-label">
-                                    <i class="fas fa-camera"></i> <span data-i18n="warranties.choose_photo">Choose Photo</span>
+                                    <i class="fas fa-upload"></i> <span data-i18n="warranties.choose_photo">Choose Photo</span>
                                 </label>
                                 <input type="file" id="editProductPhoto" name="product_photo" class="file-input" accept=".png,.jpg,.jpeg,.webp">
                             </div>
-                            <label for="editProductPhotoCamera" class="file-input-label">
+                            <label for="editProductPhotoCamera" class="file-input-label" tabindex="0">
                                 <i class="fas fa-camera"></i> <span data-i18n="warranties.take_photo">Take Photo</span>
                             </label>
                             <input type="file" accept="image/*" capture="environment" id="editProductPhotoCamera" style="display: none;">
@@ -1335,7 +1335,7 @@
     
     <script type="module" src="js/index.js?v=20260518004"></script>
     <script src="auth.js?v=20250119001"></script>
-    <script src="script.js?v=20260719001"></script>
+    <script src="script.js?v=20260719002"></script>
     <script>
         // Lightweight UI logic for Filter/Sort popovers (no change to core logic)
         document.addEventListener('DOMContentLoaded', function () {
