@@ -1276,8 +1276,12 @@ function setupPhotoCapture(namedInputId) {
             }
             // Synchronous copy: the named input is populated immediately, so a fast
             // Save never races an async gap; downscaling happens via the change listener below.
+            // Copy through a fresh DataTransfer — assigning cameraInput.files directly would
+            // share one FileList, and clearing the camera input below would empty it too.
             try {
-                namedInput.files = cameraInput.files;
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                namedInput.files = dt.files;
             } catch (e) {
                 console.warn('[DEBUG] Camera file copy failed:', e);
                 cameraInput.value = '';
