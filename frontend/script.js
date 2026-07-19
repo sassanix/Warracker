@@ -3471,7 +3471,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (warrantyForm) {
         initWarrantyForm();
     }
-    // Photo capture/downscale for pages that have the inputs but not the add form (e.g. status)
+    // Sole registration point for photo capture/downscale — presence-keyed, covers every page
     setupPhotoCapture('productPhoto');
     setupPhotoCapture('editProductPhoto');
     
