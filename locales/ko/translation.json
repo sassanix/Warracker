@@ -145,6 +145,7 @@
     "add_any_notes": "이 보증에 대한 메모 추가...",
     "product_photo_optional": "제품 사진 (선택 사항)",
     "choose_photo": "사진 선택",
+    "take_photo": "사진 촬영",
     "invoice_receipt": "송장/영수증",
     "store_locally": "로컬에 저장",
     "store_in_paperless": "Paperless-ngx에 저장",

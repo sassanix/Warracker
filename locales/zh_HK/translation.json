@@ -145,6 +145,7 @@
     "add_any_notes": "新增關於此保養的任何備註...",
     "product_photo_optional": "產品照片（可選）",
     "choose_photo": "選擇照片",
+    "take_photo": "拍照",
     "invoice_receipt": "發票/收據",
     "store_locally": "本地儲存",
     "store_in_paperless": "儲存在Paperless-ngx",

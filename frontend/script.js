@@ -1206,6 +1206,139 @@ function updateFileName(event, inputId = 'invoice', outputId = 'fileName') {
     }
 }
 
+// Downscale large images client-side before upload (progressive enhancement).
+// Also re-encodes large (>= 1MB) non-JPEG images to JPEG, flattening transparency
+// onto white; animated GIFs pass through untouched to preserve animation.
+async function downscaleImage(file, maxEdge = 2048, quality = 0.85) {
+    try {
+        if (!file || file.type === 'image/gif' ||
+            (file.type && !file.type.startsWith('image/')) ||
+            typeof createImageBitmap === 'undefined') {
+            return file;
+        }
+
+        const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        let canvas = null;
+        try {
+            if (bitmap.width <= maxEdge && bitmap.height <= maxEdge && (file.type === 'image/jpeg' || file.size < 1024 * 1024)) {
+                return file;
+            }
+
+            const longest = Math.max(bitmap.width, bitmap.height);
+            const scale = Math.min(1, maxEdge / longest);
+            const width = Math.round(bitmap.width * scale);
+            const height = Math.round(bitmap.height * scale);
+
+            canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(bitmap, 0, 0, width, height);
+            bitmap.close();   // free the full-res bitmap before the encode; close() is idempotent
+
+            const blob = await new Promise((resolve, reject) => {
+                canvas.toBlob(function(result) {
+                    if (result) {
+                        resolve(result);
+                    } else {
+                        reject(new Error('canvas.toBlob returned null'));
+                    }
+                }, 'image/jpeg', quality);
+            });
+
+            if (blob.size >= file.size) {
+                return file;
+            }
+
+            const jpgName = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+            return new File([blob], jpgName, { type: 'image/jpeg' });
+        } finally {
+            bitmap.close();
+            if (canvas) canvas.width = canvas.height = 0;   // release the backing store deterministically
+        }
+    } catch (err) {
+        console.warn('[DEBUG] Image downscale failed, using original file:', err);
+        return file;
+    }
+}
+
+function setupPhotoCapture(namedInputId) {
+    const namedInput = document.getElementById(namedInputId);
+    if (!namedInput) return;
+
+    // Files this handler already produced or inspected; membership means
+    // "do not process again" and breaks the synthetic-change loop below.
+    const handledFiles = new WeakSet();
+
+    function trySetFiles(input, file) {
+        // Copy through a fresh DataTransfer: assigning another input's FileList directly
+        // would share one list object, and clearing the source input would empty it too.
+        try {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            input.files = dt.files;
+            return true;
+        } catch (e) {
+            console.warn('[DEBUG] Could not set files on #' + input.id + ':', e);
+            return false;
+        }
+    }
+
+    const cameraInput = document.getElementById(namedInputId + 'Camera');
+    const cameraLabel = cameraInput ? document.querySelector('label[for="' + cameraInput.id + '"]') : null;
+    if (cameraInput && typeof DataTransfer === 'undefined' && cameraLabel) {
+        // Without DataTransfer the capture pipeline cannot deliver a file — hide the
+        // button instead of failing silently after the user has taken a photo.
+        cameraLabel.style.display = 'none';
+    } else if (cameraInput) {
+        if (cameraLabel) {
+            cameraLabel.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    cameraInput.click();
+                }
+            });
+        }
+        cameraInput.addEventListener('change', () => {
+            let file = cameraInput.files && cameraInput.files[0];
+            cameraInput.value = '';
+            if (!file) return;
+            // Reject known non-image types only; some Android pickers report an empty
+            // MIME type for valid camera JPEGs (capture is a hint; desktop pickers allow any file).
+            if (file.type && !file.type.startsWith('image/')) return;
+            if (!file.type) {
+                // Normalize so preview code (gated on image/*) works; camera captures are JPEG.
+                file = new File([file], file.name, { type: 'image/jpeg' });
+            }
+            // Synchronous copy: the named input is populated immediately, so a fast
+            // Save never races the async downscale in the change listener below.
+            if (!trySetFiles(namedInput, file)) return;
+            // Note: change listeners on this input fire again after the downscale
+            // swap, with a different File — listeners must be idempotent.
+            namedInput.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    }
+
+    // Downscale-on-change for this input — independent of camera markup presence.
+    namedInput.addEventListener('change', async () => {
+        const file = namedInput.files && namedInput.files[0];
+        if (!file || handledFiles.has(file)) return;
+        const processed = await downscaleImage(file);
+        if (processed === file) {
+            handledFiles.add(file);                  // nothing to improve; skip re-inspection on re-fired events
+            return;
+        }
+        if (namedInput.files[0] !== file) return;    // input was cleared/replaced meanwhile (new pick, form reset)
+        handledFiles.add(processed);
+        if (trySetFiles(namedInput, processed)) {
+            // Second change with the swapped (downscaled) File — see note above.
+            namedInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
+}
+
 // Helper function to process warranty data
 function processWarrantyData(warranty) {
     console.log('Processing warranty data:', warranty);
@@ -3338,6 +3471,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (warrantyForm) {
         initWarrantyForm();
     }
+    // Sole registration point for photo capture/downscale — presence-keyed, covers every page
+    setupPhotoCapture('productPhoto');
+    setupPhotoCapture('editProductPhoto');
     
     // Load warranties (might need checks if warrantiesList doesn't always exist)
     if (warrantiesList) { 

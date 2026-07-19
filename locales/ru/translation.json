@@ -151,6 +151,7 @@
     "add_any_notes": "Добавьте любые заметки об этой гарантии...",
     "product_photo_optional": "Фото продукта (необязательно)",
     "choose_photo": "Выберите фото",
+    "take_photo": "Сделать фото",
     "invoice_receipt": "Счет/Чек",
     "store_locally": "Хранить локально",
     "store_in_paperless": "Хранить в Paperless-ngx",

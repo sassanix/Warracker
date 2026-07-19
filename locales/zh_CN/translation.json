@@ -146,6 +146,7 @@
     "add_any_notes": "填写这条保修记录的备注...",
     "product_photo_optional": "产品照片（可选）",
     "choose_photo": "选择照片",
+    "take_photo": "拍照",
     "invoice_receipt": "发票/收据",
     "store_locally": "本地存储",
     "store_in_paperless": "存到 Paperless-ngx",

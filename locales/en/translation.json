@@ -142,6 +142,7 @@
     "add_any_notes": "Add any notes about this warranty...",
     "product_photo_optional": "Product Photo (Optional)",
     "choose_photo": "Choose Photo",
+    "take_photo": "Take Photo",
     "invoice_receipt": "Invoice",
     "store_locally": "Store Locally",
     "store_in_paperless": "Store in Paperless-ngx",
