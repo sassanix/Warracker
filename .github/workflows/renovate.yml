@@ -16,7 +16,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Self-hosted Renovate
-        uses: renovatebot/github-action@98c8f1b0835e163b9fdfc7c86dff40dadc7162ee # v45.0.3
+        uses: renovatebot/github-action@37beffda261423addd537c33f2d126df7f6ffbab # v46.2.6
         with:
           token: ${{ secrets.RENOVATE_TOKEN }}
         env:
