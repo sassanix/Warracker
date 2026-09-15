@@ -292,11 +292,14 @@ def oidc_callback_route():
                     elif is_first_user_admin:
                         logger.info(f"[OIDC_HANDLER] Granting admin rights to new OIDC user {oidc_user_email_lower} as they are the first user.")
 
+                is_owner = user_count == 0
+                is_admin = is_admin or is_owner
+
                 # Insert new OIDC user
                 cur.execute(
-                    """INSERT INTO users (username, email, first_name, last_name, is_admin, oidc_sub, oidc_issuer, is_active)
-                       VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE) RETURNING id""",
-                    (username, email, first_name, last_name, is_admin, oidc_subject, oidc_issuer)
+                    """INSERT INTO users (username, email, first_name, last_name, is_admin, is_owner, oidc_sub, oidc_issuer, is_active)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE) RETURNING id""",
+                    (username, email, first_name, last_name, is_admin, is_owner, oidc_subject, oidc_issuer)
                 )
                 user_id = cur.fetchone()[0]
                 logger.info(f"[OIDC_HANDLER] New OIDC user created with ID {user_id} for sub {oidc_subject}")
