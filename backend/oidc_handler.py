@@ -182,7 +182,7 @@ def oidc_callback_route():
         conn = get_db_connection()
         with conn.cursor() as cur:
             # Check for existing OIDC user
-            cur.execute("SELECT id, username, email, first_name, last_name, is_admin FROM users WHERE oidc_sub = %s AND oidc_issuer = %s AND is_active = TRUE",
+            cur.execute("SELECT id, username, email, first_name, last_name, is_admin, is_owner FROM users WHERE oidc_sub = %s AND oidc_issuer = %s AND is_active = TRUE",
                         (oidc_subject, oidc_issuer))
             user_db_data = cur.fetchone()
 
@@ -211,7 +211,7 @@ def oidc_callback_route():
                     cur.execute('UPDATE users SET last_name = %s WHERE id = %s', (last_name, user_id))
                     logger.info(f"[OIDC_HANDLER] Updated last name for OIDC user ID {user_id} to {last_name}")
                 if admin_oidc_group:
-                    is_admin = admin_oidc_group in user_groups
+                    is_admin = admin_oidc_group in user_groups or user_db_data[6]
                     if is_admin != user_db_data[5]:
                         cur.execute('UPDATE users SET is_admin = %s WHERE id = %s', (is_admin, user_id))
                         logger.info(f"[OIDC_HANDLER] Updated admin status for OIDC user ID {user_id} to {is_admin} based on group membership.")
@@ -292,11 +292,14 @@ def oidc_callback_route():
                     elif is_first_user_admin:
                         logger.info(f"[OIDC_HANDLER] Granting admin rights to new OIDC user {oidc_user_email_lower} as they are the first user.")
 
+                is_owner = user_count == 0
+                is_admin = is_admin or is_owner
+
                 # Insert new OIDC user
                 cur.execute(
-                    """INSERT INTO users (username, email, first_name, last_name, is_admin, oidc_sub, oidc_issuer, is_active)
-                       VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE) RETURNING id""",
-                    (username, email, first_name, last_name, is_admin, oidc_subject, oidc_issuer)
+                    """INSERT INTO users (username, email, first_name, last_name, is_admin, is_owner, oidc_sub, oidc_issuer, is_active)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE) RETURNING id""",
+                    (username, email, first_name, last_name, is_admin, is_owner, oidc_subject, oidc_issuer)
                 )
                 user_id = cur.fetchone()[0]
                 logger.info(f"[OIDC_HANDLER] New OIDC user created with ID {user_id} for sub {oidc_subject}")
