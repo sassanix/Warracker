@@ -13,6 +13,6 @@ Authlib==1.7.2
 requests==2.34.2
 gevent==24.11.1
 setuptools==82.0.1
-apprise==1.10.0
+apprise==2.0.0
 Flask-Babel==4.0.0
 Babel==2.18.0
