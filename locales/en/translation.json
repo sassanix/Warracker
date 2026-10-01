@@ -710,5 +710,23 @@
     "failed_to_save_claim": "Failed to save claim",
     "failed_to_delete_claim": "Failed to delete claim",
     "warranty_not_found": "Warranty not found"
+  },
+  "paperless": {
+    "uploading_documents": "Uploading documents...",
+    "uploading": "Uploading {{documentType}}",
+    "uploading_to_server": "Uploading file to Paperless-ngx...",
+    "upload_failed": "Failed to upload to Paperless-ngx",
+    "upload_complete": "Document uploaded and ready!",
+    "upload_processing": "Document uploaded, processing...",
+    "duplicate_linked": "Duplicate document detected in Paperless-ngx. Linked to existing document.",
+    "processing_search": "Document processing, searching for link...",
+    "disabled": "Paperless-ngx integration is not enabled",
+    "popup_blocked": "Please allow popups to view documents in Paperless-ngx",
+    "documents_linked": "Documents linked successfully",
+    "document_selected": "Document selected",
+    "loading_documents": "Loading documents...",
+    "failed_to_load": "Failed to load documents",
+    "no_documents_found": "No documents found",
+    "try_adjusting_filters": "Try adjusting your search terms or filters."
   }
 }

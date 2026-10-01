@@ -320,8 +320,16 @@ class PaperlessHandler:
                     document_id = int(id_match.group(1))
                     logger.info(f"Extracted document ID from string: {document_id}")
                     return True, document_id, f"Document uploaded successfully: {result}"
-                else:
+                # The string may be a JSON-encoded task UUID (e.g. '"<uuid>"');
+                # poll the task endpoint the same way as for plain-text UUIDs.
+                uuid_pattern = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+                if uuid_pattern.match(result.strip()):
+                    resolved_id = self._get_document_id_from_task(result.strip())
+                    if resolved_id:
+                        return True, resolved_id, "Document uploaded and processed successfully"
+                    logger.info("Upload accepted; processing asynchronously (task %s)", result.strip())
                     return True, None, f"Document uploaded successfully: {result}"
+                return True, None, f"Document uploaded successfully: {result}"
             else:
                 # Other response type
                 logger.warning(f"Unexpected response type from Paperless-ngx: {type(result)} - {result}")
