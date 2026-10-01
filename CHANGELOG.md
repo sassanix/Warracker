@@ -2,6 +2,8 @@
 ## 1.0.3 - 2026-05-18
 
 ### Fixed
+- **Paperless "Test Connection" ignored unsaved form values:** Clicking "Test Connection" on the settings page with a freshly entered URL and API token always reported "Connection Failed!", even when the Paperless-ngx instance was reachable, because `POST /api/paperless/test` ignored the `url`/`api_token` in the request body and only ever tested the saved site settings. The endpoint now tests the provided values directly when both are present, and falls back to the saved settings otherwise.
+  - _Files: `backend/file_routes.py`
 - **Font Awesome now served locally (works offline):** The icon font was loaded from the cdnjs CDN, so all UI icons disappeared on offline or restricted networks. Font Awesome Free 7.0.1 (`all.min.css` + webfonts, ~312 KB) is now vendored under `frontend/vendor/fontawesome/` and referenced by all 8 pages; added `font/woff2`, `font/woff`, and `font/ttf` MIME types to `nginx.conf`.
   - _Files: `frontend/vendor/fontawesome/`, `frontend/*.html`, `nginx.conf`_
 - **Expired JWT Broken UI State:** Fixed critical issue where users returning to the app after their JWT expired would see a broken, empty UI instead of being redirected to login.

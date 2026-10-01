@@ -8,13 +8,13 @@ import logging
 try:
     from . import db_handler
     from .auth_utils import token_required, admin_required
-    from .paperless_handler import get_paperless_handler
+    from .paperless_handler import get_paperless_handler, PaperlessHandler
     from .utils import allowed_file
     from .db_handler import get_db_connection, release_db_connection
 except ImportError:
     import db_handler
     from auth_utils import token_required, admin_required
-    from paperless_handler import get_paperless_handler
+    from paperless_handler import get_paperless_handler, PaperlessHandler
     from utils import allowed_file
     from db_handler import get_db_connection, release_db_connection
 
@@ -426,13 +426,26 @@ def paperless_upload():
 @admin_required
 def test_paperless_connection():
     """
-    Test connection to Paperless-ngx instance
+    Test connection to Paperless-ngx instance.
+
+    If `url` and `api_token` are provided in the request body, those
+    (possibly unsaved) values are tested directly. Otherwise the saved
+    site settings are tested.
     """
     conn = None
     try:
-        conn = get_db_connection()
-        paperless_handler = get_paperless_handler(conn)
-        
+        data = request.get_json(silent=True) or {}
+        url = (data.get('url') or '').strip()
+        api_token = (data.get('api_token') or '').strip()
+
+        paperless_handler = None
+        if url and api_token:
+            # Test the provided values without requiring them to be saved first
+            paperless_handler = PaperlessHandler(url, api_token)
+        else:
+            conn = get_db_connection()
+            paperless_handler = get_paperless_handler(conn)
+
         if not paperless_handler:
             return jsonify({"error": "Paperless-ngx integration is not enabled or configured"}), 400
         
