@@ -46,7 +46,10 @@
     "confirm_new_password": "确认新密码",
     "invalid_or_expired_link": "链接无效或已过期",
     "invalid_link_info": "您点击的密码重置链接无效或已过期。",
-    "request_new_reset_link": "请求新的重置链接"
+    "request_new_reset_link": "请求新的重置链接",
+    "registration_disabled_contact": "如果您需要帐户，请联系网站管理员。",
+    "registration_disabled_message": "管理员已暂时禁止新帐户注册。",
+    "registration_disabled_title": "已禁用注册"
   },
   "warranties": {
     "title": "我的保修",
@@ -109,7 +112,6 @@
     "price": "金额",
     "serial_number": "序列号",
     "model_number": "型号",
-    "vendor": "商家",
     "type": "类型",
     "owner": "所属用户",
     "product_website": "产品网站",
@@ -209,14 +211,19 @@
     "invoice_receipt_short": "发票",
     "product_manual_short": "手册",
     "files_short": "附件",
-    "enter_serial_number": "输入序列号",
     "model_number_optional": "型号（可选）",
     "model_number_placeholder": "例如 SM-G991U1",
     "add_serial_number": "添加另一个序列号",
     "archived": "已归档",
     "or_link_to_invoice_url": "或链接到发票 URL",
     "or_link_to_manual_url": "或链接到手册 URL",
-    "or_link_to_files_url": "或链接到文件 URL"
+    "or_link_to_files_url": "或链接到文件 URL",
+    "expires": "过期",
+    "link": "关联",
+    "none": "没有任何",
+    "not_specified": "未指定",
+    "notes_title": "保修说明",
+    "unnamed_product": "未命名产品"
   },
   "settings": {
     "title": "Warracker - 设置",
@@ -404,7 +411,10 @@
     "close": "关闭",
     "save_changes": "保存更改",
     "data": "数据",
-    "view": "查看"
+    "view": "查看",
+    "edit_notes": "编辑注释",
+    "edit_warranty": "编辑保修",
+    "view_only": "仅供查看"
   },
   "filters": {
     "all_status": "所有状态",
@@ -539,7 +549,6 @@
     "failed_to_update_warranty": "更新保修记录失败",
     "confirm_delete_tag": "确定要删除此标签吗？它会从所有保修记录中移除。",
     "tag_already_exists": "已存在同名标签",
-    "failed_to_update_tag": "更新标签失败",
     "failed_to_load_fresh_user_data": "加载最新用户数据失败",
     "could_not_connect_fetch_user_data": "无法连接以获取用户数据。正在显示缓存信息。",
     "fill_in_first_and_last_name": "请填写名字和姓氏",
@@ -547,7 +556,6 @@
     "enter_valid_email_address": "请输入有效的邮箱地址。",
     "failed_to_update_profile": "更新个人资料失败：{{error}}",
     "preferences_saved_locally_failed_to_sync": "偏好设置已保存在本地，但与服务器同步失败：{{error}}",
-    "preferences_saved_locally": "偏好设置已保存在本地。",
     "fill_in_all_password_fields": "请填写所有密码字段",
     "new_passwords_do_not_match": "两次输入的新密码不一致",
     "password_at_least_8_characters": "密码长度至少为 8 个字符",
@@ -594,7 +602,40 @@
     "debug_error": "调试错误：{{error}}",
     "file_upload_test_successful": "文件上传测试成功！",
     "file_upload_test_failed": "文件上传测试失败",
-    "file_upload_test_error": "文件上传测试出错：{{error}}"
+    "file_upload_test_error": "文件上传测试出错：{{error}}",
+    "login_to_access_files": "请登录以访问文件。",
+    "no_archived_warranties": "没有存档的保修。",
+    "no_tags_created_yet": "尚未创建标签",
+    "no_warranties_to_export": "无出口保证",
+    "no_warranty_selected_for_deletion": "未选择保修",
+    "no_warranty_selected_for_update": "未选择保修",
+    "note_updated_successfully": "注释已更新",
+    "notes_updated_successfully": "笔记更新成功",
+    "popup_blocked": "请允许弹出窗口查看文档",
+    "product_name_required": "产品名称为必填项",
+    "purchase_date_required": "购买日期为必填项",
+    "unarchived_success": "保修未存档",
+    "warranty_duration_required": "需要保修期限",
+    "warranty_not_found_refresh": "未找到保修。请刷新并重试。",
+    "archived_success": "保修已存档",
+    "authentication_error_login_again": "认证错误。请重新登录。",
+    "deleted_successfully": "保修已删除",
+    "error_loading_global_warranties": "无法加载保修。请再试一次。",
+    "error_loading_warranties_try_again": "无法加载保修。请再试一次。",
+    "error_updating_archive_status": "无法更新存档状态",
+    "exact_expiration_date_required": "需要准确的到期日期",
+    "exported_warranties_successfully": "导出 {{count}} 份保修",
+    "failed_to_add_warranty": "添加保修失败",
+    "failed_to_save_site_settings": "无法保存站点设置",
+    "failed_to_update_note": "更新笔记失败",
+    "failed_to_update_notes": "更新笔记失败",
+    "field_is_invalid": "该字段无效。",
+    "global_view_disabled": "全局视图已禁用",
+    "import_success": "{{success}} 保修已导入。 {{failure}}失败。",
+    "invalid_warranty_duration_before_notes": "在保修期有效之前无法保存注释。",
+    "login_to_view_warranties": "请登录查看保修。",
+    "error_loading_personal_warranties": "无法加载您的保修。请再试一次。",
+    "expiration_date_after_purchase_date": "有效期必须晚于购买日期"
   },
   "languages": {
     "en": "English",
@@ -637,7 +678,8 @@
     "database_status": "数据库状态",
     "connected": "已连接",
     "version": "版本",
-    "uptime": "正常运行时间"
+    "uptime": "正常运行时间",
+    "archived_warranties": "存档的保修"
   },
   "about": {
     "title": "关于 - Warracker",
@@ -707,6 +749,49 @@
     "failed_to_load_claims": "加载理赔记录失败",
     "failed_to_save_claim": "保存理赔记录失败",
     "failed_to_delete_claim": "删除理赔记录失败",
-    "warranty_not_found": "未找到保修记录"
+    "warranty_not_found": "未找到保修记录",
+    "claim_number_label": "宣称 ＃",
+    "expires_label": "过期",
+    "failed_to_delete": "删除声明失败",
+    "failed_to_load": "无法加载索赔",
+    "failed_to_save": "未能保存索赔",
+    "loading": "正在加载索赔...",
+    "no_claims_view_only": "尚未针对此保修提出任何索赔",
+    "resolution_label": "解决",
+    "resolved_label": "已解决",
+    "status_unknown": "未知",
+    "unknown_vendor": "未知供应商",
+    "view_only": "仅供查看",
+    "resolved": "已解决"
+  },
+  "paperless": {
+    "disabled": "无纸化-ngx 集成未启用",
+    "document_selected": "选定的文档",
+    "documents_linked": "文档链接成功",
+    "duplicate_linked": "Paperless-ngx 中检测到重复文档。链接到现有文档。",
+    "failed_to_load": "加载文档失败",
+    "loading_documents": "正在加载文档...",
+    "no_documents_found": "没有找到文件",
+    "popup_blocked": "请允许弹出窗口查看 Paperless-ngx 中的文档",
+    "processing_search": "文档处理、搜索链接...",
+    "try_adjusting_filters": "尝试调整您的搜索词或过滤器。",
+    "upload_complete": "文件已上传并准备就绪！",
+    "upload_failed": "上传至 Paperless-ngx 失败",
+    "uploading": "正在上传{{documentType}}",
+    "uploading_documents": "正在上传文件...",
+    "uploading_to_server": "正在将文件上传到 Paperless-ngx...",
+    "upload_processing": "文件已上传，正在处理中..."
+  },
+  "tags": {
+    "actions": "行动",
+    "color": "颜色",
+    "confirm_delete": "删除这个标签吗？",
+    "create_with_name": "创建“{{name}}”",
+    "name": "姓名",
+    "no_selected": "没有选择标签",
+    "pick_color": "选择颜色"
+  },
+  "errors": {
+    "error": "错误"
   }
 }

@@ -46,7 +46,10 @@
     "confirm_new_password": "אשר סיסמה חדשה",
     "invalid_or_expired_link": "קישור לא תקף או שפג תוקפו",
     "invalid_link_info": "קישור איפוס הסיסמה שלחצת עליו אינו תקף או שפג תוקפו.",
-    "request_new_reset_link": "בקש קישור איפוס חדש"
+    "request_new_reset_link": "בקש קישור איפוס חדש",
+    "registration_disabled_contact": "אם אתה צריך חשבון, אנא פנה למנהל האתר.",
+    "registration_disabled_message": "מנהל המערכת השבית זמנית את רישום החשבון החדש.",
+    "registration_disabled_title": "הרישום מושבת"
   },
   "warranties": {
     "title": "אחריות",
@@ -220,7 +223,17 @@
     "months_placeholder": "חודשים",
     "days_placeholder": "ימים",
     "add_any_notes_placeholder": "הוסף הערות לגבי אחריות זו...",
-    "add_serial_number": "הוסף מספר סידורי נוסף"
+    "add_serial_number": "הוסף מספר סידורי נוסף",
+    "archived": "בארכיון",
+    "expires": "פג תוקף",
+    "link": "לְקַשֵׁר",
+    "none": "אַף לֹא אֶחָד",
+    "not_specified": "לא צוין",
+    "notes_title": "הערות אחריות",
+    "or_link_to_files_url": "או קישור לכתובת URL של קבצים",
+    "or_link_to_invoice_url": "או קישור לכתובת האתר של החשבונית",
+    "or_link_to_manual_url": "או קישור לכתובת אתר ידנית",
+    "unnamed_product": "ללא שם מוצר"
   },
   "settings": {
     "title": "הגדרות",
@@ -388,7 +401,9 @@
     "transfer_ownership_consequence_1": "תהפוך למנהל רגיל",
     "transfer_ownership_consequence_2": "לבעלים החדש תהיה שליטה מלאה באפליקציה",
     "transfer_ownership_consequence_3": "רק הבעלים החדש יוכל להעביר בעלות שוב",
-    "transfer_ownership_type_to_confirm": "כדי לאשר, הקלד \"TRANSFER\" בשדה:"
+    "transfer_ownership_type_to_confirm": "כדי לאשר, הקלד \"TRANSFER\" בשדה:",
+    "oidc_admin_desc": "קבוצה שקיבלה הרשאות מנהל. השאר ריק כדי להשבית.",
+    "oidc_admin_group": "קבוצת ניהול OIDC"
   },
   "actions": {
     "save": "שמור",
@@ -405,7 +420,11 @@
     "manage_tags": "נהל תגיות",
     "close": "סגור",
     "save_changes": "שמור שינויים",
-    "view": "הצג"
+    "view": "הצג",
+    "data": "נְתוּנִים",
+    "edit_notes": "ערוך הערות",
+    "edit_warranty": "ערוך אחריות",
+    "view_only": "לצפייה בלבד"
   },
   "filters": {
     "all_status": "כל המצבים",
@@ -424,7 +443,12 @@
     "vendor": "ספק",
     "warranty_type": "סוג אחריות",
     "view": "תצוגה",
-    "scope": "תחום"
+    "scope": "תחום",
+    "apply": "לִפְנוֹת",
+    "clear": "בָּרוּר",
+    "filter": "לְסַנֵן",
+    "filter_by": "סינון לפי",
+    "sort": "סוּג"
   },
   "messages": {
     "success": "הצלחה",
@@ -540,7 +564,6 @@
     "enter_valid_email_address": "אנא הזן כתובת דוא״ל חוקית.",
     "failed_to_update_profile": "עדכון הפרופיל נכשל: {{error}}",
     "preferences_saved_locally_failed_to_sync": "העדפות נשמרו מקומית, אך הסנכרון עם השרת נכשל: {{error}}",
-    "preferences_saved_locally": "העדפות נשמרו מקומית.",
     "fill_in_all_password_fields": "אנא מלא את כל שדות הסיסמה",
     "new_passwords_do_not_match": "הסיסמאות החדשות אינן תואמות",
     "password_at_least_8_characters": "הסיסמה חייבת להיות באורך 8 תווים לפחות",
@@ -551,7 +574,7 @@
     "error_during_user_deletion": "שגיאה במהלך מחיקת המשתמש: {{error}}",
     "trying_direct_api_call_for_user_id": "מנסה קריאת API ישירה עבור מזהה משתמש {{userId}}",
     "user_id_deleted_successfully_with_direct_api_call": "המשתמש עם מזהה {{userId}} נמחק בהצלחה בקריאה ישירה!",
-    "failed_to_delete_user_with_direct_api_call": "נכשל במחיקת המשתמש בקריאה ישירה.",
+    "failed_to_delete_user_with_direct_api_call": "נכשל במחיקת המשתמש {{username}} בקריאה ישירה.",
     "error_with_direct_api_call": "שגיאה בקריאה ישירה: {{error}}",
     "error_checking_if_user_exists": "שגיאה בבדיקת קיום המשתמש: {{error}}",
     "select_user_to_transfer_ownership": "אנא בחר משתמש להעברת בעלות",
@@ -589,7 +612,40 @@
     "file_upload_test_failed": "בדיקת העלאת קובץ נכשלה",
     "file_upload_test_error": "שגיאה בבדיקת העלאת קובץ: {{error}}",
     "paperless_upload_autolink_failed": "המסמך הועלה ל‑Paperless-ngx אך לא ניתן היה לקשר אותו אוטומטית. ניתן לקשר ידנית מאוחר יותר.",
-    "paperless_upload_autolink_failed_errors": "המסמך הועלה אך קישור אוטומטי נכשל עקב שגיאות. ניתן לקשר ידנית מאוחר יותר."
+    "paperless_upload_autolink_failed_errors": "המסמך הועלה אך קישור אוטומטי נכשל עקב שגיאות. ניתן לקשר ידנית מאוחר יותר.",
+    "archived_success": "האחריות הועברה לארכיון",
+    "authentication_error_login_again": "שגיאת אימות. נא להיכנס שוב.",
+    "deleted_successfully": "האחריות נמחקה",
+    "error_loading_global_warranties": "טעינת האחריות נכשלה. אנא נסה שוב.",
+    "error_loading_personal_warranties": "טעינת האחריות שלך נכשלה. אנא נסה שוב.",
+    "error_loading_warranties_try_again": "טעינת האחריות נכשלה. אנא נסה שוב.",
+    "error_updating_archive_status": "עדכון סטטוס הארכיון נכשל",
+    "exact_expiration_date_required": "נדרש תאריך תפוגה מדויק",
+    "expiration_date_after_purchase_date": "תאריך התפוגה חייב להיות לאחר תאריך הרכישה",
+    "exported_warranties_successfully": "{{count}} אחריות ייצאו",
+    "failed_to_add_warranty": "הוספת אחריות נכשלה",
+    "failed_to_save_site_settings": "שמירת הגדרות האתר נכשלה",
+    "failed_to_update_note": "עדכון ההערה נכשל",
+    "failed_to_update_notes": "עדכון ההערות נכשל",
+    "field_is_invalid": "שדה זה אינו חוקי.",
+    "global_view_disabled": "התצוגה הגלובלית מושבתת",
+    "invalid_warranty_duration_before_notes": "לא ניתן לשמור הערות עד שמשך האחריות בתוקף.",
+    "login_to_access_files": "נא להיכנס כדי לגשת לקבצים.",
+    "login_to_view_warranties": "אנא היכנס כדי להציג אחריות.",
+    "no_archived_warranties": "אין אחריות בארכיון.",
+    "no_tags_created_yet": "עדיין לא נוצרו תגים",
+    "no_warranties_to_export": "אין אחריות לייצוא",
+    "no_warranty_selected_for_deletion": "לא נבחרה אחריות",
+    "no_warranty_selected_for_update": "לא נבחרה אחריות",
+    "note_updated_successfully": "הערה עודכנה",
+    "notes_updated_successfully": "ההערות עודכנו בהצלחה",
+    "popup_blocked": "אנא אפשר חלונות קופצים כדי להציג מסמכים",
+    "product_name_required": "שם המוצר נדרש",
+    "purchase_date_required": "נדרש תאריך רכישה",
+    "unarchived_success": "האחריות בוטלה בארכיון",
+    "warranty_duration_required": "נדרש משך אחריות",
+    "warranty_not_found_refresh": "אחריות לא נמצאה. אנא רענן ונסה שוב.",
+    "import_success": "{{success}} אחריות יובאו. {{failure}} נכשל."
   },
   "languages": {
     "en": "אנגלית",
@@ -632,7 +688,8 @@
     "database_status": "מצב מסד הנתונים",
     "connected": "מחובר",
     "version": "גרסה",
-    "uptime": "זמן פעולה"
+    "uptime": "זמן פעולה",
+    "archived_warranties": "אחריות בארכיון"
   },
   "about": {
     "title": "אודות Warracker",
@@ -672,8 +729,7 @@
     "copyright": "זכויות יוצרים",
     "developed_by": "פותח על-ידי",
     "reddit_community": "קהילת Reddit"
-  }
-  ,
+  },
   "claims": {
     "claims": "תביעות",
     "warranty_claims": "תביעות אחריות",
@@ -703,6 +759,49 @@
     "failed_to_load_claims": "טעינת התביעות נכשלה",
     "failed_to_save_claim": "שמירת התביעה נכשלה",
     "failed_to_delete_claim": "מחיקת התביעה נכשלה",
-    "warranty_not_found": "האחריות לא נמצאה"
+    "warranty_not_found": "האחריות לא נמצאה",
+    "claim_number_label": "תביעה מס'",
+    "expires_label": "פג תוקף",
+    "failed_to_delete": "מחיקת התביעה נכשלה",
+    "failed_to_load": "טעינת התביעות נכשלה",
+    "failed_to_save": "שמירת התביעה נכשלה",
+    "loading": "טוען תביעות...",
+    "no_claims_view_only": "לא הוגשו תביעות בגין אחריות זו",
+    "resolution_label": "הַחְלָטָה",
+    "resolved": "נפתר",
+    "resolved_label": "נפתר",
+    "status_unknown": "לֹא יְדוּעַ",
+    "unknown_vendor": "ספק לא ידוע",
+    "view_only": "לצפייה בלבד"
+  },
+  "errors": {
+    "error": "שְׁגִיאָה"
+  },
+  "paperless": {
+    "disabled": "אינטגרציה של Paperless-ngx אינה מופעלת",
+    "document_selected": "מסמך נבחר",
+    "documents_linked": "מסמכים קושרו בהצלחה",
+    "duplicate_linked": "זוהה מסמך כפול ב-Paperless-ngx. מקושר למסמך קיים.",
+    "failed_to_load": "טעינת המסמכים נכשלה",
+    "loading_documents": "טוען מסמכים...",
+    "no_documents_found": "לא נמצאו מסמכים",
+    "popup_blocked": "אנא אפשר חלונות קופצים כדי להציג מסמכים ב-Paperless-ngx",
+    "processing_search": "עיבוד מסמכים, חיפוש קישור...",
+    "try_adjusting_filters": "נסה להתאים את מונחי החיפוש או המסננים שלך.",
+    "upload_complete": "המסמך הועלה ומוכן!",
+    "upload_failed": "ההעלאה ל-Paperless-ngx נכשלה",
+    "upload_processing": "המסמך הועלה, מעבד...",
+    "uploading": "מעלה את {{documentType}}",
+    "uploading_documents": "מעלה מסמכים...",
+    "uploading_to_server": "מעלה קובץ ל-Paperless-ngx..."
+  },
+  "tags": {
+    "actions": "פעולות",
+    "color": "צֶבַע",
+    "confirm_delete": "למחוק את התג הזה?",
+    "create_with_name": "צור \"{{name}}\"",
+    "name": "שֵׁם",
+    "no_selected": "לא נבחרו תגים",
+    "pick_color": "בחר צבע"
   }
 }

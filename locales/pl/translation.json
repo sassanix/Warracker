@@ -46,7 +46,10 @@
     "confirm_new_password": "Potwierdź nowe hasło",
     "invalid_or_expired_link": "Nieprawidłowy lub wygasły link",
     "invalid_link_info": "Link do resetowania hasła jest nieprawidłowy lub wygasł. Spróbuj ponownie.",
-    "request_new_reset_link": "Wyślij nowy link do resetowania"
+    "request_new_reset_link": "Wyślij nowy link do resetowania",
+    "registration_disabled_contact": "Jeżeli potrzebujesz konta skontaktuj się z administratorem serwisu.",
+    "registration_disabled_message": "Administrator tymczasowo wyłączył rejestrację nowego konta.",
+    "registration_disabled_title": "Rejestracja wyłączona"
   },
   "warranties": {
     "title": "Twoje gwarancje",
@@ -209,7 +212,18 @@
     "months_placeholder": "Miesiące",
     "days_placeholder": "Dni",
     "add_any_notes_placeholder": "Dodaj notatki dotyczące tej gwarancji...",
-    "add_serial_number": "Dodaj kolejny numer seryjny"
+    "add_serial_number": "Dodaj kolejny numer seryjny",
+    "archived": "Zarchiwizowane",
+    "expires": "Wygasa",
+    "link": "Połączyć",
+    "model_number_placeholder": "np. SM-G991U1",
+    "none": "Nic",
+    "not_specified": "Nie określono",
+    "notes_title": "Uwagi gwarancyjne",
+    "or_link_to_files_url": "Lub link do adresu URL plików",
+    "or_link_to_invoice_url": "Lub link do adresu URL faktury",
+    "or_link_to_manual_url": "Lub link do ręcznego adresu URL",
+    "unnamed_product": "Nienazwany produkt"
   },
   "settings": {
     "title": "Warracker - Ustawienia",
@@ -377,7 +391,9 @@
     "transfer_ownership_consequence_1": "Staniesz się zwykłym administratorem",
     "transfer_ownership_consequence_2": "Nowy właściciel będzie miał ostateczną kontrolę nad aplikacją",
     "transfer_ownership_consequence_3": "Tylko nowy właściciel będzie mógł ponownie przenieść własność",
-    "transfer_ownership_type_to_confirm": "Aby potwierdzić, wpisz proszę „TRANSFER” w polu poniżej:"
+    "transfer_ownership_type_to_confirm": "Aby potwierdzić, wpisz proszę „TRANSFER” w polu poniżej:",
+    "oidc_admin_desc": "Grupa, która ma uprawnienia administratora. Pozostaw puste, aby wyłączyć.",
+    "oidc_admin_group": "Grupa administracyjna OIDC"
   },
   "actions": {
     "save": "Zapisz",
@@ -394,7 +410,11 @@
     "manage_tags": "Zarządzaj tagami",
     "close": "Zamknij",
     "save_changes": "Zapisz zmiany",
-    "view": "Wyświetl"
+    "view": "Wyświetl",
+    "data": "Dane",
+    "edit_notes": "Edytuj notatki",
+    "edit_warranty": "Edytuj gwarancję",
+    "view_only": "Tylko przeglądaj"
   },
   "filters": {
     "all_status": "Wszystkie statusy",
@@ -413,7 +433,12 @@
     "vendor": "Sprzedawca",
     "warranty_type": "Rodzaj gwarancji",
     "view": "Widok",
-    "scope": "Zakres"
+    "scope": "Zakres",
+    "apply": "Stosować",
+    "clear": "Jasne",
+    "filter": "Filtr",
+    "filter_by": "Filtruj według",
+    "sort": "Sortować"
   },
   "messages": {
     "success": "Sukces",
@@ -577,7 +602,40 @@
     "debug_error": "Błąd debugowania: {{error}}",
     "file_upload_test_successful": "Test przesyłania pliku zakończony powodzeniem!",
     "file_upload_test_failed": "Test przesyłania pliku nie powiódł się",
-    "file_upload_test_error": "Błąd testu przesyłania pliku: {{error}}"
+    "file_upload_test_error": "Błąd testu przesyłania pliku: {{error}}",
+    "archived_success": "Gwarancja zarchiwizowana",
+    "authentication_error_login_again": "Błąd uwierzytelnienia. Proszę zalogować się ponownie.",
+    "deleted_successfully": "Gwarancja usunięta",
+    "error_loading_global_warranties": "Nie udało się wczytać gwarancji. Spróbuj ponownie.",
+    "error_loading_personal_warranties": "Nie udało się wczytać gwarancji. Spróbuj ponownie.",
+    "error_loading_warranties_try_again": "Nie udało się wczytać gwarancji. Spróbuj ponownie.",
+    "error_updating_archive_status": "Nie udało się zaktualizować stanu archiwum",
+    "exact_expiration_date_required": "Wymagana jest dokładna data ważności",
+    "expiration_date_after_purchase_date": "Data ważności musi być późniejsza niż data zakupu",
+    "exported_warranties_successfully": "Wyeksportowano {{count}} gwarancji",
+    "failed_to_add_warranty": "Nie udało się dodać gwarancji",
+    "failed_to_save_site_settings": "Nie udało się zapisać ustawień witryny",
+    "failed_to_update_note": "Nie udało się zaktualizować notatki",
+    "failed_to_update_notes": "Nie udało się zaktualizować notatek",
+    "field_is_invalid": "To pole jest nieprawidłowe.",
+    "global_view_disabled": "Widok globalny jest wyłączony",
+    "invalid_warranty_duration_before_notes": "Nie można zapisać notatek do czasu wygaśnięcia gwarancji.",
+    "login_to_access_files": "Aby uzyskać dostęp do plików, zaloguj się.",
+    "login_to_view_warranties": "Aby zobaczyć gwarancję, zaloguj się.",
+    "no_archived_warranties": "Brak archiwalnych gwarancji.",
+    "no_tags_created_yet": "Nie utworzono jeszcze żadnych tagów",
+    "no_warranties_to_export": "Brak gwarancji na eksport",
+    "no_warranty_selected_for_deletion": "Nie wybrano gwarancji",
+    "no_warranty_selected_for_update": "Nie wybrano gwarancji",
+    "note_updated_successfully": "Uwaga zaktualizowana",
+    "notes_updated_successfully": "Notatki zostały pomyślnie zaktualizowane",
+    "popup_blocked": "Zezwól na wyskakujące okienka umożliwiające przeglądanie dokumentów",
+    "product_name_required": "Nazwa produktu jest wymagana",
+    "purchase_date_required": "Wymagana jest data zakupu",
+    "unarchived_success": "Gwarancja niezarchiwizowana",
+    "warranty_duration_required": "Wymagany jest okres gwarancji",
+    "warranty_not_found_refresh": "Nie znaleziono gwarancji. Odśwież i spróbuj ponownie.",
+    "import_success": "Zaimportowano gwarancje {{success}}. {{failure}} nie powiodło się."
   },
   "languages": {
     "en": "English",
@@ -598,7 +656,8 @@
     "pt": "Português",
     "ko": "한국어",
     "tr": "Türkçe",
-    "pl": "Polski"
+    "pl": "Polski",
+    "he": "עברית"
   },
   "status": {
     "title": "Status - Warracker",
@@ -619,7 +678,8 @@
     "database_status": "Status bazy danych",
     "connected": "Połączono",
     "version": "Wersja",
-    "uptime": "Czas działania"
+    "uptime": "Czas działania",
+    "archived_warranties": "Archiwizowane gwarancje"
   },
   "about": {
     "title": "O aplikacji - Warracker",
@@ -689,6 +749,49 @@
     "failed_to_load_claims": "Nie udało się załadować reklamacji",
     "failed_to_save_claim": "Nie udało się zapisać reklamacji",
     "failed_to_delete_claim": "Nie udało się usunąć reklamacji",
-    "warranty_not_found": "Gwarancja nie znaleziona"
+    "warranty_not_found": "Gwarancja nie znaleziona",
+    "claim_number_label": "Prawo #",
+    "expires_label": "Wygasa",
+    "failed_to_delete": "Nie udało się usunąć roszczenia",
+    "failed_to_load": "Nie udało się wczytać roszczeń",
+    "failed_to_save": "Nie udało się zapisać roszczenia",
+    "loading": "Ładowanie roszczeń...",
+    "no_claims_view_only": "Z tytułu tej gwarancji nie zgłoszono żadnych roszczeń",
+    "resolution_label": "Rezolucja",
+    "resolved": "Rozwiązany",
+    "resolved_label": "Rozwiązany",
+    "status_unknown": "Nieznany",
+    "unknown_vendor": "Nieznany dostawca",
+    "view_only": "Tylko przeglądaj"
+  },
+  "errors": {
+    "error": "Błąd"
+  },
+  "paperless": {
+    "disabled": "Integracja Paperless-ngx nie jest włączona",
+    "document_selected": "Wybrano dokument",
+    "documents_linked": "Dokumenty zostały pomyślnie połączone",
+    "duplicate_linked": "W Paperless-ngx wykryto zduplikowany dokument. Połączono z istniejącym dokumentem.",
+    "failed_to_load": "Nie udało się załadować dokumentów",
+    "loading_documents": "Ładowanie dokumentów...",
+    "no_documents_found": "Nie znaleziono żadnych dokumentów",
+    "popup_blocked": "Zezwól na wyświetlanie wyskakujących okienek w celu przeglądania dokumentów w Paperless-ngx",
+    "processing_search": "Przetwarzanie dokumentów, wyszukiwanie linków...",
+    "try_adjusting_filters": "Spróbuj dostosować wyszukiwane hasła lub filtry.",
+    "upload_complete": "Dokument przesłany i gotowy!",
+    "upload_failed": "Nie udało się przesłać do Paperless-ngx",
+    "upload_processing": "Dokument przesłany, przetwarzanie...",
+    "uploading": "Przesyłanie {{documentType}}",
+    "uploading_documents": "Przesyłanie dokumentów...",
+    "uploading_to_server": "Przesyłanie pliku do Paperless-ngx..."
+  },
+  "tags": {
+    "actions": "Działania",
+    "color": "Kolor",
+    "confirm_delete": "Usunąć ten tag?",
+    "create_with_name": "Utwórz „{{name}}”",
+    "name": "Nazwa",
+    "no_selected": "Nie wybrano tagów",
+    "pick_color": "Wybierz kolor"
   }
 }

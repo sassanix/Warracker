@@ -169,7 +169,40 @@
     "tag_updated_successfully": "Etiket başarıyla güncellendi",
     "tag_deleted_successfully": "Etiket başarıyla silindi",
     "failed_to_create_tag": "Etiket oluşturulamadı",
-    "failed_to_delete_tag": "Etiket silinemedi"
+    "failed_to_delete_tag": "Etiket silinemedi",
+    "archived_success": "Garanti arşivlendi",
+    "authentication_error_login_again": "Kimlik doğrulama hatası. Lütfen tekrar giriş yapın.",
+    "deleted_successfully": "Garanti silindi",
+    "error_loading_global_warranties": "Garantiler yüklenemedi. Lütfen tekrar deneyin.",
+    "error_loading_personal_warranties": "Garantileriniz yüklenemedi. Lütfen tekrar deneyin.",
+    "error_loading_warranties_try_again": "Garantiler yüklenemedi. Lütfen tekrar deneyin.",
+    "exact_expiration_date_required": "Kesin son kullanma tarihi gerekli",
+    "expiration_date_after_purchase_date": "Son kullanma tarihi satın alma tarihinden sonra olmalıdır",
+    "exported_warranties_successfully": "{{count}} garantiyi dışa aktardı",
+    "failed_to_add_warranty": "Garanti eklenemedi",
+    "failed_to_save_site_settings": "Site ayarları kaydedilemedi",
+    "failed_to_update_note": "Not güncellenemedi",
+    "failed_to_update_notes": "Notlar güncellenemedi",
+    "field_is_invalid": "Bu alan geçersiz.",
+    "global_view_disabled": "Genel görünüm devre dışı",
+    "import_success": "{{success}} garanti içe aktarıldı. {{failure}} başarısız oldu.",
+    "invalid_warranty_duration_before_notes": "Garanti süresi geçerli olana kadar notlar kaydedilemez.",
+    "login_to_access_files": "Dosyalara erişmek için lütfen giriş yapın.",
+    "login_to_view_warranties": "Garantileri görüntülemek için lütfen giriş yapın.",
+    "no_archived_warranties": "Arşivlenmiş garanti yok.",
+    "no_tags_created_yet": "Henüz etiket oluşturulmadı",
+    "no_warranties_to_export": "İhracat garantisi yok",
+    "no_warranty_selected_for_deletion": "Garanti seçilmedi",
+    "no_warranty_selected_for_update": "Garanti seçilmedi",
+    "note_updated_successfully": "Not güncellendi",
+    "notes_updated_successfully": "Notlar başarıyla güncellendi",
+    "popup_blocked": "Lütfen açılır pencerelerin belgeleri görüntülemesine izin verin",
+    "product_name_required": "Ürün adı gerekli",
+    "purchase_date_required": "Satın alma tarihi gerekli",
+    "unarchived_success": "Garanti arşivden çıkarıldı",
+    "warranty_duration_required": "Garanti süresi gereklidir",
+    "error_updating_archive_status": "Arşiv durumu güncellenemedi",
+    "warranty_not_found_refresh": "Garanti bulunamadı. Lütfen yenileyin ve tekrar deneyin."
   },
   "settings": {
     "title": "Ayarlar",
@@ -337,7 +370,9 @@
     "transfer_ownership_consequence_1": "Normal bir yönetici olacaksınız",
     "transfer_ownership_consequence_2": "Yeni sahip, uygulama üzerinde nihai kontrole sahip olacak",
     "transfer_ownership_consequence_3": "Yalnızca yeni sahip tekrar sahipliği devredebilir",
-    "transfer_ownership_type_to_confirm": "Onaylamak için lütfen aşağıdaki alana \"TRANSFER\" yazın:"
+    "transfer_ownership_type_to_confirm": "Onaylamak için lütfen aşağıdaki alana \"TRANSFER\" yazın:",
+    "oidc_admin_desc": "Yönetici ayrıcalıklarının verildiği grup. Devre dışı bırakmak için boş bırakın.",
+    "oidc_admin_group": "OIDC Yönetici Grubu"
   },
   "languages": {
     "en": "İngilizce",
@@ -357,7 +392,9 @@
     "ja": "Japonca",
     "pt": "Portekizce",
     "ko": "Korece",
-    "tr": "Türkçe"
+    "tr": "Türkçe",
+    "he": "עברית",
+    "pl": "Polski"
   },
   "auth": {
     "login": "Giriş",
@@ -397,7 +434,11 @@
     "confirm_new_password": "Yeni Parolayı Onayla",
     "invalid_or_expired_link": "Geçersiz veya Süresi Dolmuş Bağlantı",
     "invalid_link_info": "Tıkladığınız parola sıfırlama bağlantısı geçersiz veya süresi dolmuş.",
-    "request_new_reset_link": "Yeni Sıfırlama Bağlantısı İste"
+    "request_new_reset_link": "Yeni Sıfırlama Bağlantısı İste",
+    "login_title": "Giriş - Warracer",
+    "registration_disabled_contact": "Bir hesaba ihtiyacınız varsa lütfen site yöneticisiyle iletişime geçin.",
+    "registration_disabled_message": "Yönetici yeni hesap kaydını geçici olarak devre dışı bıraktı.",
+    "registration_disabled_title": "Kayıt Devre Dışı Bırakıldı"
   },
   "warranties": {
     "title": "Garantileriniz",
@@ -560,7 +601,18 @@
     "months_placeholder": "Ay",
     "days_placeholder": "Gün",
     "add_any_notes_placeholder": "Bu garanti hakkında herhangi bir not ekleyin...",
-    "add_serial_number": "Başka bir seri numarası ekle"
+    "add_serial_number": "Başka bir seri numarası ekle",
+    "archived": "Arşivlendi",
+    "expires": "Süresi doluyor",
+    "link": "Bağlantı",
+    "model_number_placeholder": "örneğin SM-G991U1",
+    "none": "Hiçbiri",
+    "not_specified": "Belirtilmedi",
+    "notes_title": "Garanti Notları",
+    "or_link_to_files_url": "Veya dosya URL'sine bağlantı",
+    "or_link_to_invoice_url": "Veya fatura URL'sine bağlantı",
+    "or_link_to_manual_url": "Veya manuel URL'ye bağlantı",
+    "unnamed_product": "Adsız Ürün"
   },
   "actions": {
     "save": "Kaydet",
@@ -577,7 +629,11 @@
     "manage_tags": "Etiketleri Yönet",
     "close": "Kapat",
     "save_changes": "Değişiklikleri Kaydet",
-    "view": "Görüntüle"
+    "view": "Görüntüle",
+    "data": "Veri",
+    "edit_notes": "Notları Düzenle",
+    "edit_warranty": "Garantiyi Düzenle",
+    "view_only": "Yalnızca Görüntüle"
   },
   "filters": {
     "all_status": "Tüm Durumlar",
@@ -596,7 +652,12 @@
     "vendor": "Satıcı",
     "warranty_type": "Garanti Türü",
     "view": "Görünüm",
-    "scope": "Kapsam"
+    "scope": "Kapsam",
+    "apply": "Uygula",
+    "clear": "Temizlemek",
+    "filter": "Filtre",
+    "filter_by": "Filtrele",
+    "sort": "Düzenlemek"
   },
   "status": {
     "title": "Sistem Durumu",
@@ -617,7 +678,8 @@
     "database_status": "Veritabanı Durumu",
     "connected": "Bağlı",
     "version": "Sürüm",
-    "uptime": "Çalışma Süresi"
+    "uptime": "Çalışma Süresi",
+    "archived_warranties": "Arşivlenmiş Garantiler"
   },
   "about": {
     "title": "Warracker Hakkında",
@@ -687,6 +749,49 @@
     "failed_to_load_claims": "Talepler yüklenemedi",
     "failed_to_save_claim": "Talep kaydedilemedi",
     "failed_to_delete_claim": "Talep silinemedi",
-    "warranty_not_found": "Garanti bulunamadı"
+    "warranty_not_found": "Garanti bulunamadı",
+    "claim_number_label": "İddia #",
+    "expires_label": "Süresi doluyor",
+    "failed_to_delete": "Hak talebi silinemedi",
+    "failed_to_load": "Hak talepleri yüklenemedi",
+    "failed_to_save": "Hak talebi kaydedilemedi",
+    "loading": "Talepler yükleniyor...",
+    "no_claims_view_only": "Bu garanti için herhangi bir talepte bulunulmamıştır",
+    "resolution_label": "Çözünürlük",
+    "resolved": "Çözüldü",
+    "resolved_label": "Çözüldü",
+    "status_unknown": "Bilinmiyor",
+    "unknown_vendor": "Bilinmeyen Satıcı",
+    "view_only": "Yalnızca Görüntüle"
+  },
+  "errors": {
+    "error": "Hata"
+  },
+  "paperless": {
+    "disabled": "Kağıtsız-ngx entegrasyonu etkin değil",
+    "document_selected": "Seçilen belge",
+    "documents_linked": "Dokümanlar başarıyla bağlandı",
+    "duplicate_linked": "Paperless-ngx'te yinelenen belge algılandı. Mevcut belgeye bağlı.",
+    "failed_to_load": "Dokümanlar yüklenemedi",
+    "loading_documents": "Belgeler yükleniyor...",
+    "no_documents_found": "Hiçbir belge bulunamadı",
+    "popup_blocked": "Lütfen açılır pencerelerin Paperless-ngx'teki belgeleri görüntülemesine izin verin",
+    "processing_search": "Belge işleme, bağlantı aranıyor...",
+    "try_adjusting_filters": "Arama terimlerinizi veya filtrelerinizi ayarlamayı deneyin.",
+    "upload_complete": "Belge yüklendi ve hazır!",
+    "upload_failed": "Paperless-ngx'e yüklenemedi",
+    "upload_processing": "Belge yüklendi, işleniyor...",
+    "uploading": "{{documentType}} yükleniyor",
+    "uploading_documents": "Belgeler yükleniyor...",
+    "uploading_to_server": "Dosya Paperless-ngx'e yükleniyor..."
+  },
+  "tags": {
+    "actions": "Eylemler",
+    "color": "Renk",
+    "confirm_delete": "Bu etiket silinsin mi?",
+    "create_with_name": "\"{{name}}\" oluştur",
+    "name": "İsim",
+    "no_selected": "Hiçbir etiket seçilmedi",
+    "pick_color": "Renk seç"
   }
 }
