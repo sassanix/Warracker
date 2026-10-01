@@ -3347,8 +3347,10 @@ document.addEventListener('DOMContentLoaded', function() {
         initTagFunctionality(); // Initialize tag search/selection
     }
     
-    // Initialize theme (should be safe on all pages)
-    initializeTheme();
+    // Initialize theme (safe on all pages: js/lib/theme.js is not included everywhere)
+    if (typeof initializeTheme === 'function') {
+        initializeTheme();
+    }
     
     // Set up event listeners for other UI controls (should contain checks)
     setupUIEventListeners();
