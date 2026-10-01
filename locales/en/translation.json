@@ -46,7 +46,10 @@
     "confirm_new_password": "Confirm New Password",
     "invalid_or_expired_link": "Invalid or Expired Link",
     "invalid_link_info": "The password reset link you clicked is invalid or has expired.",
-    "request_new_reset_link": "Request New Reset Link"
+    "request_new_reset_link": "Request New Reset Link",
+    "registration_disabled_title": "Registration Disabled",
+    "registration_disabled_message": "The administrator has temporarily disabled new account registration.",
+    "registration_disabled_contact": "If you need an account, please contact the site administrator."
   },
   "warranties": {
     "title": "Your Warranties",
@@ -109,11 +112,9 @@
     "price": "Price",
     "serial_number": "Serial Number",
     "model_number": "Model Number",
-    "vendor": "Vendor",
     "type": "Type",
     "owner": "Owner",
     "product_website": "Product Website",
-    "notes": "Notes",
     "documents": "Documents",
     "summary": "Summary",
     "product_url_optional": "Product URL (Optional)",
@@ -169,7 +170,7 @@
     "current_document": "Current document:",
     "upload_new_photo_replace": "(Upload a new photo to replace)",
     "no_photo_uploaded": "No photo uploaded",
-    "no_invoice_uploaded": "No invoice uploaded", 
+    "no_invoice_uploaded": "No invoice uploaded",
     "no_manual_uploaded": "No manual uploaded",
     "no_document_uploaded": "No other document uploaded",
     "photo_will_be_deleted": "Photo will be deleted on save",
@@ -205,8 +206,6 @@
     "invoice_receipt_short": "Invoice",
     "product_manual_short": "Manual",
     "files_short": "Files",
-    "product_manual_short": "Manual",
-    "files_short": "Files",
     "product_url_placeholder": "https://example.com/product",
     "years_placeholder": "Years",
     "months_placeholder": "Months",
@@ -218,7 +217,13 @@
     "archived": "Archived",
     "or_link_to_invoice_url": "Or link to invoice URL",
     "or_link_to_manual_url": "Or link to manual URL",
-    "or_link_to_files_url": "Or link to files URL"
+    "or_link_to_files_url": "Or link to files URL",
+    "expires": "Expires",
+    "link": "Link",
+    "none": "None",
+    "not_specified": "Not specified",
+    "notes_title": "Warranty Notes",
+    "unnamed_product": "Unnamed Product"
   },
   "settings": {
     "title": "Warracker - Settings",
@@ -406,7 +411,10 @@
     "close": "Close",
     "save_changes": "Save Changes",
     "data": "Data",
-    "view": "View"
+    "view": "View",
+    "edit_notes": "Edit Notes",
+    "edit_warranty": "Edit Warranty",
+    "view_only": "View Only"
   },
   "filters": {
     "all_status": "All Status",
@@ -541,7 +549,6 @@
     "failed_to_update_warranty": "Failed to update warranty",
     "confirm_delete_tag": "Are you sure you want to delete this tag? It will be removed from all warranties.",
     "tag_already_exists": "A tag with this name already exists",
-    "failed_to_update_tag": "Failed to update tag",
     "failed_to_load_fresh_user_data": "Failed to load fresh user data",
     "could_not_connect_fetch_user_data": "Could not connect to fetch user data. Displaying cached info.",
     "fill_in_first_and_last_name": "Please fill in First Name and Last Name",
@@ -549,7 +556,6 @@
     "enter_valid_email_address": "Please enter a valid email address.",
     "failed_to_update_profile": "Failed to update profile: {{error}}",
     "preferences_saved_locally_failed_to_sync": "Preferences saved locally, but failed to sync with server: {{error}}",
-    "preferences_saved_locally": "Preferences saved locally.",
     "fill_in_all_password_fields": "Please fill in all password fields",
     "new_passwords_do_not_match": "New passwords do not match",
     "password_at_least_8_characters": "Password must be at least 8 characters long",
@@ -596,7 +602,40 @@
     "debug_error": "Debug error: {{error}}",
     "file_upload_test_successful": "File upload test successful!",
     "file_upload_test_failed": "File upload test failed",
-  "file_upload_test_error": "File upload test error: {{error}}"
+    "file_upload_test_error": "File upload test error: {{error}}",
+    "archived_success": "Warranty archived",
+    "authentication_error_login_again": "Authentication error. Please log in again.",
+    "deleted_successfully": "Warranty deleted",
+    "error_loading_global_warranties": "Failed to load warranties. Please try again.",
+    "error_loading_personal_warranties": "Failed to load your warranties. Please try again.",
+    "error_loading_warranties_try_again": "Failed to load warranties. Please try again.",
+    "error_updating_archive_status": "Failed to update archive status",
+    "exact_expiration_date_required": "Exact expiration date is required",
+    "expiration_date_after_purchase_date": "Expiration date must be after purchase date",
+    "exported_warranties_successfully": "Exported {{count}} warranties",
+    "failed_to_add_warranty": "Failed to add warranty",
+    "failed_to_save_site_settings": "Failed to save site settings",
+    "failed_to_update_note": "Failed to update note",
+    "failed_to_update_notes": "Failed to update notes",
+    "field_is_invalid": "This field is invalid.",
+    "global_view_disabled": "Global view is disabled",
+    "invalid_warranty_duration_before_notes": "Cannot save notes until warranty duration is valid.",
+    "login_to_access_files": "Please log in to access files.",
+    "login_to_view_warranties": "Please log in to view warranties.",
+    "no_archived_warranties": "No archived warranties.",
+    "no_tags_created_yet": "No tags created yet",
+    "no_warranties_to_export": "No warranties to export",
+    "no_warranty_selected_for_deletion": "No warranty selected",
+    "no_warranty_selected_for_update": "No warranty selected",
+    "note_updated_successfully": "Note updated",
+    "notes_updated_successfully": "Notes updated successfully",
+    "popup_blocked": "Please allow popups to view documents",
+    "product_name_required": "Product name is required",
+    "purchase_date_required": "Purchase date is required",
+    "unarchived_success": "Warranty unarchived",
+    "warranty_duration_required": "Warranty duration is required",
+    "warranty_not_found_refresh": "Warranty not found. Please refresh and try again.",
+    "import_success": "{{success}} warranties imported. {{failure}} failed."
   },
   "languages": {
     "en": "English",
@@ -710,7 +749,20 @@
     "failed_to_load_claims": "Failed to load claims",
     "failed_to_save_claim": "Failed to save claim",
     "failed_to_delete_claim": "Failed to delete claim",
-    "warranty_not_found": "Warranty not found"
+    "warranty_not_found": "Warranty not found",
+    "claim_number_label": "Claim #",
+    "expires_label": "Expires",
+    "failed_to_delete": "Failed to delete claim",
+    "failed_to_load": "Failed to load claims",
+    "failed_to_save": "Failed to save claim",
+    "loading": "Loading claims...",
+    "no_claims_view_only": "No claims have been filed for this warranty",
+    "resolution_label": "Resolution",
+    "resolved": "Resolved",
+    "resolved_label": "Resolved",
+    "status_unknown": "Unknown",
+    "unknown_vendor": "Unknown Vendor",
+    "view_only": "View Only"
   },
   "paperless": {
     "uploading_documents": "Uploading documents...",
@@ -729,5 +781,17 @@
     "failed_to_load": "Failed to load documents",
     "no_documents_found": "No documents found",
     "try_adjusting_filters": "Try adjusting your search terms or filters."
+  },
+  "errors": {
+    "error": "Error"
+  },
+  "tags": {
+    "no_selected": "No tags selected",
+    "confirm_delete": "Delete this tag?",
+    "color": "Color",
+    "name": "Name",
+    "actions": "Actions",
+    "pick_color": "Pick color",
+    "create_with_name": "Create \"{{name}}\""
   }
 }
