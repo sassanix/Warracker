@@ -2,6 +2,8 @@
 ## 1.0.3 - 2026-05-18
 
 ### Fixed
+- **Font Awesome now served locally (works offline):** The icon font was loaded from the cdnjs CDN, so all UI icons disappeared on offline or restricted networks. Font Awesome Free 7.0.1 (`all.min.css` + webfonts, ~312 KB) is now vendored under `frontend/vendor/fontawesome/` and referenced by all 8 pages; added `font/woff2`, `font/woff`, and `font/ttf` MIME types to `nginx.conf`.
+  - _Files: `frontend/vendor/fontawesome/`, `frontend/*.html`, `nginx.conf`_
 - **Expired JWT Broken UI State:** Fixed critical issue where users returning to the app after their JWT expired would see a broken, empty UI instead of being redirected to login.
   - **Root Cause:** `auth-redirect.js` only checked for the *presence* of `auth_token` in localStorage, not its validity. An expired token was treated as authenticated, causing the UI to render with stale cached data while API calls returned 401.
   - **Solution:** Updated `auth-redirect.js` to synchronously decode the JWT payload and verify the `exp` claim before allowing protected pages to load. Expired or malformed tokens are automatically cleared from localStorage and the user is redirected to login.
