@@ -97,6 +97,24 @@
   - **Solution:** Changed the SW fetch handler to use a **network-first** strategy for all script requests (falling back to cache only when offline) and kept cache-first only for non-code assets (images, fonts, CSS, HTML). Also updated nginx to serve `.js` files with `Cache-Control: no-cache, must-revalidate` so the browser always revalidates JS on each visit.
   - _Files: `frontend/sw.js`, `nginx.conf`_
 
+- **Local File Downloads Returning Empty Files:** Fixed invoice, manual, and product photo downloads returning empty files.
+  - **Root Cause:** `USE_X_SENDFILE` was enabled, so Flask returned an `X-Sendfile` header with an empty body, expecting nginx to serve the file — but `nginx.conf` has no X-Sendfile (or X-Accel-Redirect) handling.
+  - **Solution:** Disabled `USE_X_SENDFILE` so Flask streams file bytes directly.
+  - _Files: `backend/config.py`_
+
+- **Paperless-ngx Upload Never Linking Documents (JSON Task IDs):** Fixed files uploaded to Paperless-ngx silently never linking to the warranty when Paperless returned the task UUID JSON-encoded.
+  - **Root Cause:** `upload_document()` only polled the Paperless task endpoint when the task UUID came back as plain text; JSON-encoded UUIDs were ignored, leaving `document_id` null.
+  - **Solution:** Handle both plain-text and JSON-encoded task UUID shapes and poll the task endpoint in both cases.
+  - _Files: `backend/paperless_handler.py`_
+
+- **Missing Paperless UI Translations:** Added the 16 missing `paperless` i18n keys to the English locale — every Paperless UI string was rendering as a raw key (e.g. `paperless.loading_documents`).
+  - _Files: `locales/en/translation.json`_
+
+- **Archived Warranties Counted in Dashboard Statistics:** Fixed dashboard statistics (total/active/expired/expiring-soon) including archived warranties.
+  - **Root Cause:** The statistics queries in `statistics_routes.py` never filtered on `archived_at`, so archiving a warranty left all dashboard cards unchanged.
+  - **Solution:** Both `/api/statistics` and `/api/statistics/global` now exclude archived warranties from all counts, the expiration timeline, and the recent-warranties list. A new `archived` count is returned by both endpoints and shown as an "Archived" card on the dashboard.
+  - _Files: `backend/statistics_routes.py`, `frontend/status.html`, `frontend/status.js`, `locales/en/translation.json`_
+
 ## 1.0.2 - 2025-10-30
 
 ### Added  
