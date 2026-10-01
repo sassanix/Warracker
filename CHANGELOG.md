@@ -112,7 +112,7 @@
 
 - **Archived Warranties Counted in Dashboard Statistics:** Fixed dashboard statistics (total/active/expired/expiring-soon) including archived warranties.
   - **Root Cause:** The statistics queries in `statistics_routes.py` never filtered on `archived_at`, so archiving a warranty left all dashboard cards unchanged.
-  - **Solution:** Both `/api/statistics` and `/api/statistics/global` now exclude archived warranties from all counts, the expiration timeline, and the recent-warranties list. A new `archived` count is returned by both endpoints and shown as an "Archived" card on the dashboard.
+  - **Solution:** Both `/api/statistics` and `/api/statistics/global` now exclude archived warranties from all counts, the expiration timeline, and the recent-warranties list. A new `archived` count is returned by both endpoints and shown as an "Archived" card on the dashboard. The dashboard init was also fixed to pass the `archived` value through to the summary cards (it was being dropped, leaving the card stuck at 0).
   - _Files: `backend/statistics_routes.py`, `frontend/status.html`, `frontend/status.js`, `locales/en/translation.json`_
 
 ## 1.0.2 - 2025-10-30

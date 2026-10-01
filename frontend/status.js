@@ -928,7 +928,8 @@
                     active: data.active || 0,
                     expiring_soon: data.expiring_soon || 0,
                     expired: data.expired || 0,
-                    total: data.total || 0
+                    total: data.total || 0,
+                    archived: data.archived || 0
                 };
 
                 if (Object.keys(statusDistributionData).length > 0 && statusDistributionData.total > 0) {
