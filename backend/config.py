@@ -79,7 +79,7 @@ class Config:
     
     # Request Handling Optimization
     MAX_COOKIE_SIZE = 4093  # Slightly under 4KB limit
-    USE_X_SENDFILE = True  # Let nginx handle file serving
+    USE_X_SENDFILE = False  # Serve files directly via Flask; nginx is not configured to handle X-Sendfile
     
     @staticmethod
     def init_app(app):
