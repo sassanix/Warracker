@@ -418,10 +418,12 @@
         const activeEl = document.getElementById('activeCount');
         const expiringEl = document.getElementById('expiringCount');
         const expiredEl = document.getElementById('expiredCount');
+        const archivedEl = document.getElementById('archivedCount');
         if (totalEl) totalEl.textContent = statusData.total || 0;
         if (activeEl) activeEl.textContent = statusData.active || 0;
         if (expiringEl) expiringEl.textContent = statusData.expiring_soon || 0;
         if (expiredEl) expiredEl.textContent = statusData.expired || 0;
+        if (archivedEl) archivedEl.textContent = statusData.archived || 0;
     }
 
     function createStatusChart(stats) {

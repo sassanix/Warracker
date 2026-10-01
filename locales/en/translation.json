@@ -630,6 +630,7 @@
     "active_warranties": "Active Warranties",
     "expiring_soon": "Expiring Soon",
     "expired_warranties": "Expired Warranties",
+    "archived_warranties": "Archived Warranties",
     "warranty_distribution": "Warranty Distribution",
     "expiration_timeline": "Expiration Timeline",
     "recent_activity": "Recent Activity",
