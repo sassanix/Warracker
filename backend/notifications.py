@@ -109,6 +109,7 @@ def get_expiring_warranties(get_db_connection, release_db_connection):
                     u.id, -- Select user_id
                     u.email,
                     u.first_name,
+                    w.id AS warranty_id,
                     w.product_name,
                     w.expiration_date,
                     COALESCE(up.expiring_soon_days, 30) AS expiring_soon_days
@@ -128,12 +129,13 @@ def get_expiring_warranties(get_db_connection, release_db_connection):
 
             expiring_warranties = []
             for row in cur.fetchall():
-                user_id, email, first_name, product_name, expiration_date, expiring_soon_days = row
+                user_id, email, first_name, warranty_id, product_name, expiration_date, expiring_soon_days = row
                 expiration_date_str = expiration_date.strftime('%Y-%m-%d')
                 expiring_warranties.append({
                     'user_id': user_id,
                     'email': email,
                     'first_name': first_name or 'User',  # Default if first_name is NULL
+                    'warranty_id': warranty_id,
                     'product_name': product_name,
                     'expiration_date': expiration_date_str,
                 })
@@ -391,6 +393,75 @@ def process_email_notifications(all_warranties, eligible_user_ids, is_manual, ge
     except Exception as e:
         logger.error(f"Error connecting to SMTP server: {e}")
 
+def days_until_expiry(expiration_date):
+    """Days from today until expiration. Returns None if unparseable."""
+    try:
+        if isinstance(expiration_date, str):
+            parsed = datetime.fromisoformat(expiration_date.replace('Z', '+00:00'))
+            exp_date = parsed.date()
+        elif isinstance(expiration_date, datetime):
+            exp_date = expiration_date.date()
+        else:
+            exp_date = expiration_date
+        return (exp_date - date.today()).days
+    except Exception:
+        return None
+
+def filter_to_due_thresholds(warranties, thresholds, channel, conn):
+    """Keep warranties due for a threshold notification (issue #188).
+
+    A warranty is due when days_until_expiry <= one of the configured
+    thresholds and no notification_log row exists for that
+    (warranty, threshold, channel) yet. Returns [(warranty, threshold)].
+    The <= comparison (instead of ==) lets a missed day still notify
+    once at the next run instead of skipping the threshold entirely.
+    """
+    if not thresholds:
+        return []
+    thresholds = sorted(set(int(t) for t in thresholds))
+    due = []
+    try:
+        with conn.cursor() as cur:
+            for w in warranties:
+                warranty_id = w.get('warranty_id')
+                if not warranty_id:
+                    continue
+                days_left = days_until_expiry(w.get('expiration_date'))
+                if days_left is None or days_left < 0:
+                    continue
+                hit = next((t for t in thresholds if days_left <= t), None)
+                if hit is None:
+                    continue
+                cur.execute(
+                    "SELECT 1 FROM notification_log WHERE warranty_id = %s AND days_before = %s AND channel = %s",
+                    (warranty_id, hit, channel),
+                )
+                if cur.fetchone():
+                    continue  # already notified for this threshold
+                due.append((w, hit))
+    except Exception as e:
+        logger.error(f"Error filtering threshold notifications: {e}")
+        return []
+    return due
+
+def mark_thresholds_sent(due_pairs, channel, conn):
+    """Record sent threshold notifications so they are not repeated."""
+    try:
+        with conn.cursor() as cur:
+            for w, threshold in due_pairs:
+                cur.execute(
+                    """INSERT INTO notification_log (warranty_id, days_before, channel)
+                       VALUES (%s, %s, %s) ON CONFLICT DO NOTHING""",
+                    (w.get('warranty_id'), threshold, channel),
+                )
+        conn.commit()
+    except Exception as e:
+        logger.error(f"Error recording sent notifications: {e}")
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
 def process_apprise_notifications(all_warranties, eligible_user_ids, is_manual, get_db_connection, release_db_connection):
     """Process and send Apprise notifications"""
     # ---> FIX: Get the handler from the application context <---
@@ -464,12 +535,55 @@ def process_apprise_notifications(all_warranties, eligible_user_ids, is_manual, 
             return
 
         logger.info(f"Processing Apprise notifications in {notification_mode.upper()} mode for {len(warranties_for_apprise)} warranties")
-        
+
+        # Issue #188: only notify once per configured threshold (e.g. 30d, 7d)
+        # instead of every day until expiration. Filter to warranties that
+        # have crossed a threshold without being notified for it yet.
+        due_pairs = []
+        filter_conn = None
+        try:
+            filter_conn = get_db_connection()
+            due_pairs = filter_to_due_thresholds(
+                warranties_for_apprise,
+                apprise_handler.expiration_days,
+                'apprise',
+                filter_conn,
+            )
+        except Exception as e:
+            logger.error(f"Error preparing threshold notifications: {e}")
+        finally:
+            if filter_conn:
+                try:
+                    release_db_connection(filter_conn)
+                except Exception:
+                    pass
+        if not due_pairs:
+            logger.info("No threshold notifications due; skipping Apprise send")
+            return
+        warranties_for_apprise = [w for w, _ in due_pairs]
+        logger.info(f"{len(warranties_for_apprise)} warranties due for a threshold notification")
+
+        def _record_sent(pairs):
+            rc = None
+            try:
+                rc = get_db_connection()
+                mark_thresholds_sent(pairs, 'apprise', rc)
+            except Exception as e:
+                logger.error(f"Error recording sent notifications: {e}")
+            finally:
+                if rc:
+                    try:
+                        release_db_connection(rc)
+                    except Exception:
+                        pass
+
         if notification_mode == 'global':
             # GLOBAL MODE: Send one consolidated notification
             logger.info("Sending GLOBAL Apprise notification")
             success = apprise_handler.send_global_expiration_notification(warranties_for_apprise)
             logger.info(f"Global Apprise notification result: {'Success' if success else 'Failed'}")
+            if success:
+                _record_sent(due_pairs)
         
         elif notification_mode == 'individual':
             # INDIVIDUAL MODE: Send one notification per user
@@ -477,13 +591,13 @@ def process_apprise_notifications(all_warranties, eligible_user_ids, is_manual, 
             sent_count = 0
             error_count = 0
             
-            # Group warranties by user
+            # Group due warranties by user
             user_warranties = {}
-            for w in warranties_for_apprise:
+            user_pairs = {}
+            for w, threshold in due_pairs:
                 uid = w['user_id']
-                if uid not in user_warranties:
-                    user_warranties[uid] = []
-                user_warranties[uid].append(w)
+                user_warranties.setdefault(uid, []).append(w)
+                user_pairs.setdefault(uid, []).append((w, threshold))
             
             # Send notification for each user
             for user_id, warranties in user_warranties.items():
@@ -492,6 +606,7 @@ def process_apprise_notifications(all_warranties, eligible_user_ids, is_manual, 
                     if success:
                         sent_count += 1
                         logger.info(f"Individual Apprise notification sent for user {user_id}")
+                        _record_sent(user_pairs[user_id])
                     else:
                         error_count += 1
                         logger.warning(f"Individual Apprise notification failed for user {user_id}")
