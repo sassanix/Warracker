@@ -227,11 +227,12 @@ def format_expiration_email(user, warranties, get_db_connection, release_db_conn
     # Create a MIMEMultipart object for both text and HTML
     msg = MIMEMultipart('alternative')
     msg['Subject'] = subject
-    # use SMTP_FROM_ADDRESS if provided, otherwise use SMTP_USERNAME or a default value as below
-    _from_address = os.environ.get('SMTP_FROM_ADDRESS')
-    if _from_address is None:
-        _from_address = os.environ.get('SMTP_USERNAME', 'notifications@warracker.com')
-    msg['From'] = _from_address
+    # Single canonical sender variable (issue #201)
+    try:
+        from .utils import get_smtp_from_address
+    except ImportError:
+        from utils import get_smtp_from_address
+    msg['From'] = get_smtp_from_address()
     msg['To'] = user['email']
 
     part1 = MIMEText(text_body, 'plain')
@@ -299,7 +300,7 @@ def process_email_notifications(all_warranties, eligible_user_ids, is_manual, ge
     # Get SMTP settings from environment variables
     smtp_host = os.environ.get('SMTP_HOST', 'localhost')
     smtp_port = int(os.environ.get('SMTP_PORT', '1025'))
-    smtp_username = os.environ.get('SMTP_USERNAME', 'notifications@warracker.com')
+    smtp_username = os.environ.get('SMTP_USERNAME')  # no fake default (issue #201)
     smtp_password = os.environ.get('SMTP_PASSWORD', '')
     if os.environ.get('SMTP_PASSWORD_FILE'):
         smtp_password = open(os.environ.get('SMTP_PASSWORD_FILE'), 'r').read().strip()
@@ -380,7 +381,7 @@ def process_email_notifications(all_warranties, eligible_user_ids, is_manual, ge
                 release_db_connection
             )
             try:
-                server.sendmail(smtp_username, email, msg.as_string())
+                server.sendmail(smtp_username or msg['From'], email, msg.as_string())
                 last_notification_sent[email] = timestamp
                 emails_sent += 1
                 logger.info(f"Email sent to {email} for {len(user_data['warranties'])} warranties")

@@ -765,7 +765,11 @@ def send_password_reset_email(recipient_email, reset_link):
             smtp_password = open(os.environ.get('SMTP_PASSWORD_FILE'), 'r').read().strip()
         smtp_use_tls = os.environ.get('SMTP_USE_TLS', 'true').lower() == 'true'
         smtp_use_ssl = os.environ.get('SMTP_USE_SSL', 'false').lower() == 'true'
-        sender_email = os.environ.get('SMTP_SENDER_EMAIL', 'noreply@warracker.com')
+        try:
+            from .utils import get_smtp_from_address
+        except ImportError:
+            from utils import get_smtp_from_address
+        sender_email = get_smtp_from_address()
         app_name = "Warracker"
         
         subject = f"Password Reset - {app_name}"
