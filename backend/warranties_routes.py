@@ -1159,9 +1159,20 @@ def import_warranties():
     ]
 
     try:
-        # Read the file content
-        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+        # Read the file content. utf-8-sig strips a BOM, which Excel and
+        # other tools commonly prepend (issue #236: the first header then
+        # reads as '\ufeffProductName' and fails validation).
+        stream = io.StringIO(file.stream.read().decode("utf-8-sig"), newline=None)
         csv_reader = csv.DictReader(stream)
+
+        # Normalize headers: strip whitespace/BOM remnants and match
+        # case-insensitively against the documented header names.
+        canonical = {h.lower(): h for h in REQUIRED_CSV_HEADERS + OPTIONAL_CSV_HEADERS}
+        normalized_fieldnames = []
+        for h in (csv_reader.fieldnames or []):
+            key = (h or '').strip().lower()
+            normalized_fieldnames.append(canonical.get(key, (h or '').strip()))
+        csv_reader.fieldnames = normalized_fieldnames
 
         # Validate headers
         headers = csv_reader.fieldnames
