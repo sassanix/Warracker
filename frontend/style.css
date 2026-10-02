@@ -762,6 +762,8 @@ input.invalid {
   border-radius: var(--border-radius);
   box-shadow: var(--shadow);
   overflow: hidden;
+  overflow-wrap: break-word;
+  word-break: break-word;
   transition: var(--transition);
   border: 1px solid var(--border-color);
   display: flex;
@@ -878,11 +880,15 @@ input.invalid {
 .warranty-details div {
   margin-bottom: 8px;
   font-size: 0.95rem;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .warranty-details span {
   font-weight: 500;
   color: var(--text-color);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .warranty-status {
