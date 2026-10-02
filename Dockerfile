@@ -32,6 +32,8 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         nginx \
         supervisor \
+        logrotate \
+        cron \
         postgresql-client \
         gettext-base \
         curl \
@@ -79,6 +81,7 @@ COPY --chown=warracker:warracker backend/app.py backend/gunicorn_config.py ./
 
 # Copy configuration files and scripts from Docker directory
 COPY --chown=root:root Docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --chown=root:root Docker/logrotate-nginx /etc/logrotate.d/nginx-warracker
 COPY --chown=warracker:warracker Docker/entrypoint.sh /app/entrypoint.sh
 COPY --chown=root:root Docker/nginx-wrapper.sh /app/nginx-wrapper.sh
 

@@ -1,0 +1,17 @@
+/var/log/nginx/*.log {
+    weekly
+    rotate 4
+    compress
+    delaycompress
+    missingok
+    notifempty
+    size 50M
+    create 0644 warracker warracker
+    sharedscripts
+    postrotate
+        # Reopen nginx log files after rotation
+        if [ -f /run/nginx.pid ]; then
+            kill -USR1 $(cat /run/nginx.pid)
+        fi
+    endscript
+}
