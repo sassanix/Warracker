@@ -555,7 +555,9 @@ export function resetAddWarrantyWizard() {
 		addSerialNumberInput('');
 	}
 	Object.values(state.fileInputs).forEach((entry) => {
+		if (entry.input) entry.input.value = '';
 		if (entry.label) entry.label.textContent = '';
+		if (entry.previewImage) entry.previewImage.removeAttribute('src');
 		if (entry.previewWrapper) entry.previewWrapper.style.display = 'none';
 	});
 	clearPaperlessSelection('invoice');
