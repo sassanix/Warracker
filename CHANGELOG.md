@@ -1,5 +1,5 @@
 # Changelog
-## 1.0.3 - 2026-05-18
+## 1.0.3 - 2026-10-02
 
 ### Fixed
 - **Validation errors are now machine-readable and translated:** the three new HTTP 400 validations (product name > 255 chars, expiration before purchase, invalid claim status) now return a stable `code` (`product_name_too_long`, `expiration_before_purchase`, `invalid_claim_status`; claim-status errors also include `valid_statuses`) alongside the English fallback message. The frontend maps those codes to i18n keys via a new `apiErrorMessage()` helper in `ui.js` (used by the add-warranty form, edit modal, and claims toasts), so error toasts render in the user's language instead of always-English. Two new English keys were added (`messages.product_name_too_long`, `messages.invalid_claim_status`) and machine-translated into all 19 non-English locales with `{{statuses}}` placeholder integrity verified; 100% key coverage vs English and zero placeholder mismatches confirmed. Also removed the now-unused `safeErrorMessage()` helper from `apiService.js`.
