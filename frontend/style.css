@@ -1193,6 +1193,7 @@ input.invalid {
   top: 20px;
   right: 20px;
   z-index: 1001;
+  pointer-events: none;
 }
 
 .toast {
@@ -1204,6 +1205,7 @@ input.invalid {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  pointer-events: auto;
   animation: slide-in 0.3s ease, fade-out 0.3s ease 2.7s forwards;
 }
 
@@ -1214,7 +1216,14 @@ input.invalid {
 
 @keyframes fade-out {
   from { opacity: 1; }
-  to { opacity: 0; }
+  to { opacity: 0; visibility: hidden; }
+}
+
+/* Fading toasts must not intercept clicks while invisible (issue #197) */
+.toast-fade-out {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .toast-success {
