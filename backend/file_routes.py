@@ -578,16 +578,29 @@ def paperless_tags():
         if not paperless_handler:
             return jsonify({'success': False, 'message': 'Paperless-ngx integration not available'}), 400
         
-        # Make request to Paperless-ngx tags endpoint
+        # Make request to Paperless-ngx tags endpoint.
+        # Paperless paginates (default 25/page), so follow pages until we
+        # have every tag (issue #255: filter showed only the first page).
         try:
-            response = paperless_handler.get('/api/tags/', timeout=30)
-            response.raise_for_status()
+            all_tags = []
+            url = '/api/tags/?page_size=1000'
+            while url:
+                response = paperless_handler.get(url, timeout=30)
+                response.raise_for_status()
+                page = response.json()
+                all_tags.extend(page.get('results', []))
+                url = page.get('next')
+                # paperless_handler.get takes a path; convert absolute next URLs
+                if url and url.startswith('http'):
+                    from urllib.parse import urlparse
+                    parts = urlparse(url)
+                    url = parts.path + (('?' + parts.query) if parts.query else '')
         except Exception as e:
             return jsonify({'success': False, 'message': f'Paperless-ngx tags failed: {str(e)}'}), 400
-        tags_result = response.json()
-        
-        logger.info(f"Paperless tags returned {len(tags_result.get('results', []))} tags")
-        
+        tags_result = {'results': all_tags, 'count': len(all_tags)}
+
+        logger.info(f"Paperless tags returned {len(all_tags)} tags")
+
         return jsonify(tags_result)
         
     except Exception as e:
