@@ -137,6 +137,42 @@
   - **Solution:** Both `/api/statistics` and `/api/statistics/global` now exclude archived warranties from all counts, the expiration timeline, and the recent-warranties list. A new `archived` count is returned by both endpoints and shown as an "Archived" card on the dashboard. The dashboard init was also fixed to pass the `archived` value through to the summary cards (it was being dropped, leaving the card stuck at 0).
   - _Files: `backend/statistics_routes.py`, `frontend/status.html`, `frontend/status.js`, `locales/en/translation.json`_
 
+- **Gevent worker freeze on stale DB connections (#239):** Under gevent workers, a database restart or connection drop could leave the whole app unresponsive: stale pooled connections raised mid-request and the Docker container still reported healthy.
+  - **Solution:** Added `GET /api/health` with a real DB round-trip (5s statement timeout, rollback before release); Docker `HEALTHCHECK` now requires backend health. Added 30s statement timeout + TCP keepalive options, `psycogreen==1.0.2` with gevent patching, and fork-safe pool reinitialization.
+  - _Files: `backend/__init__.py`, `backend/db_handler.py`, `Dockerfile`, `docker-compose.yml`, `requirements.txt`_
+- **CSV export truncated at `#` (#245):** The legacy `script.js` CSV export built a `data:` URI with `encodeURI` (which leaves `#` unencoded, truncating the file at the first `#`) and double-bound the export button. Removed the legacy function/binding; the modular Blob-based export is the single path.
+  - _Files: `frontend/script.js`_
+- **Password reset crashed on naive/aware datetime comparison (#216):** Comparing the `TIMESTAMP WITHOUT TIME ZONE` reset-expiry column against `datetime.now(UTC)` raised `TypeError` → HTTP 500 on every reset attempt. The comparison is now timezone-safe.
+  - _Files: `backend/auth_routes.py`_
+- **Nginx debug logging filled disks (#211):** `error_log ... debug` was set in production. Changed to `warn` and added logrotate configuration plus cron/supervisor wiring.
+  - _Files: `nginx.conf`, `Dockerfile`, `supervisord.conf`_
+- **OIDC redirect dropped nonstandard ports (#238):** Nginx used `$host` (no port) when building redirect targets. Now uses `$http_host` so callbacks preserve e.g. `:8005`.
+  - _Files: `nginx.conf`_
+- **Repeated expiry email notifications (#188):** A warranty inside the expiry window re-notified every day. New migration `051_add_notification_log.sql` records `(warranty_id, days_before, channel)`; each threshold now notifies exactly once (check-then-insert with `ON CONFLICT DO NOTHING`).
+  - _Files: `backend/notifications.py`, `backend/migrations/051_add_notification_log.sql`_
+- **Mixed-case `DB_USER` broke migrations (#187):** Migrations interpolated the role name unquoted (`AsIs`), so PostgreSQL folded `MyUser` to `myuser`. Role identifiers are now properly quoted and passwords parameterized.
+  - _Files: `backend/migrations/apply_migrations.py`_
+- **`DATABASE_URL` ignored by app and migrations (#108):** The pool and the migration runner now accept a full `DATABASE_URL` (URL-decoded, query options such as `?sslmode=require` preserved); `DB_*` variables remain as fallback.
+  - _Files: `backend/db_handler.py`, `backend/migrations/apply_migrations.py`_
+- **Contradictory proxy scheme headers (#97, #190):** Nginx and gunicorn disagreed on `X-Forwarded-Proto` handling. Nginx now forwards a single `X-Forwarded-Proto` and strips alternate scheme headers; `DISABLE_NGINX=true` lets Flask serve frontend+API directly on port 5000.
+  - _Files: `nginx.conf`, `backend/__init__.py`, `docker-compose.yml`_
+- **Expired JWT left a broken UI (#225):** API 401s now trigger logout/redirect to login instead of leaving an empty authenticated-looking UI.
+  - _Files: `frontend/js/services/apiService.js`_
+- **Complete Paperless tag pagination (#255):** The tags endpoint returned only the first Paperless page. It now requests `page_size=1000` and follows `next` links.
+  - _Files: `backend/paperless_handler.py`_
+- **CSV import rejected BOM/cased/whitespace headers (#236):** The importer now decodes with `utf-8-sig`, trims headers, and matches documented column names case-insensitively.
+  - _Files: `backend/warranties_routes.py`_
+- **Long labels overflowed warranty cards (#212):** Added `overflow-wrap`/`word-break` for warranty card and detail content.
+  - _Files: `frontend/style.css`_
+- **Add-warranty dialog kept the previous photo (#206):** The reset cleared the file input and hid the preview wrapper but never cleared the preview `<img>` `src`, so the old photo's data URL survived. The reset now clears the input value and removes the preview `src` (tags were already reset correctly).
+  - _Files: `frontend/js/components/addWarrantyForm.js`_
+- **NOK/DKK currency reverted to SEK in settings (#205):** The currency dropdown used the *symbol* as the option value and looked the code up with `find(c => c.symbol === 'kr')`, which returns SEK (first match) even for NOK/DKK/ISK. Option values are now the unambiguous currency codes; loading prefers the stored code with fallback to legacy stored symbols.
+  - _Files: `frontend/settings-new.js`_
+- **Inconsistent SMTP sender variables (#201):** Password reset used the undocumented `SMTP_SENDER_EMAIL` (default `noreply@warracker.com`) while notifications used `SMTP_FROM_ADDRESS` (default `notifications@warracker.com`); `SMTP_USERNAME` also had a fake `notifications@warracker.com` default that leaked into the envelope sender. New `get_smtp_from_address()` helper: `SMTP_FROM_ADDRESS` > `SMTP_SENDER_EMAIL` (legacy) > `SMTP_USERNAME` > default; both mail paths use it. `SMTP_USERNAME` no longer defaults to a placeholder; the envelope sender falls back to the From address.
+  - _Files: `backend/utils.py`, `backend/auth_routes.py`, `backend/notifications.py`_
+- **Invisible toasts blocked clicks (#197):** The fade-out animation set `opacity: 0` at ~3s but the element stayed in the DOM until ~5s, intercepting clicks at `z-index: 1001`. The keyframes now end with `visibility: hidden`, the container is `pointer-events: none`, and the previously undefined `.toast-fade-out` class is now defined.
+  - _Files: `frontend/style.css`_
+
 ## 1.0.2 - 2025-10-30
 
 ### Added  
