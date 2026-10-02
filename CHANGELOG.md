@@ -2,6 +2,16 @@
 ## 1.0.3 - 2026-05-18
 
 ### Fixed
+- **Expiry-day inconsistency fixed:** a warranty expiring *today* got three different answers — statistics counted it as `expired` (`expiration_date <= today`), the UI showed "expiring" (0 days left), and the notification query excluded it (`expiration_date > today`). All three now agree it is still valid: statistics uses `expiration_date < today` for expired and `>= today` for the active / expiring-soon / timeline buckets, and the expiry notification query includes it (`>= today`).
+  - _Files: `backend/statistics_routes.py`, `backend/notifications.py`_
+- **Product name length validated:** a 500-character product name (column is `VARCHAR(255)`) caused an unhandled DB error → HTTP 500. Both the create and update endpoints now return HTTP 400 when the name exceeds 255 characters.
+  - _Files: `backend/warranties_routes.py`_
+- **Expiration-before-purchase rejected:** an exact expiration date earlier than the purchase date was accepted (201). Both the create and update endpoints now return HTTP 400 in that case.
+  - _Files: `backend/warranties_routes.py`_
+- **CSV tag/serial round-trip fixed:** the frontend export joined tags and serial numbers with spaces while the import splits on commas, so re-importing an export merged multi-tag warranties into a single tag. Export now joins with `", "` to match the import.
+  - _Files: `frontend/js/components/importExport.js`_
+- **Invalid claim status now rejected:** creating or updating a claim with an invalid status returned 200 and silently coerced it (to `'Submitted'` on create, to the previous value on update). Both endpoints now return HTTP 400 listing the valid statuses.
+  - _Files: `backend/warranties_routes.py`_
 - **All 19 non-English locales now fully translated (machine translation):** Every key in `locales/en/translation.json` (767 keys) was missing from at least one other locale — 2,015 missing keys in total (ru 173, it 150, most others ~95–98) — and a further 1,194 strings existed in 14 locales only as untranslated English. All have now been machine-translated from English (Google Translate), with `{{placeholder}}` integrity verified on every string (22 cases where the engine translated placeholder names like `{{name}}` → `{{nombre}}` were repaired; one Hindi string that dropped `{{count}}` was fixed by hand). Also fixed a pre-existing Hebrew translation that dropped the `{{username}}` placeholder. Short brand/technical terms (Warracker, Paperless-ngx, CSV, OIDC, URLs) were deliberately left as-is. These are machine translations — native-speaker review is recommended before relying on them for customer-facing polish.
   - _Files: `locales/*/translation.json`_
 - **66 i18n keys referenced by the frontend had no English definition:** Static analysis of every `t('…')` call and `data-i18n` attribute found 66 keys (toast messages, validation errors, claims labels, tag-manager strings, the registration-disabled notice) missing from `locales/en/translation.json`. i18next renders undefined keys as raw key text, so users saw strings like `messages.deleted_successfully` in toasts. All values were taken from the inline English fallbacks already present at the call sites, so default-language UX is unchanged; other languages now fall back to English instead of showing raw keys.

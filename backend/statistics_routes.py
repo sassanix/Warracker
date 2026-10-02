@@ -91,18 +91,18 @@ def get_statistics():
             logger.info(f"Archived warranties: {archived_count}")
             
             # Get active count (includes lifetime, excludes archived)
-            cur.execute(f"SELECT COUNT(*) {from_clause} {where_clause} {active_where if where_clause else 'WHERE'} (w.is_lifetime = TRUE OR w.expiration_date > %s) AND w.archived_at IS NULL", params + [today])
+            cur.execute(f"SELECT COUNT(*) {from_clause} {where_clause} {active_where if where_clause else 'WHERE'} (w.is_lifetime = TRUE OR w.expiration_date >= %s) AND w.archived_at IS NULL", params + [today])
             active_count = cur.fetchone()[0]
             logger.info(f"Active warranties: {active_count}")
             
             # Get expired count (excludes lifetime and archived)
-            cur.execute(f"SELECT COUNT(*) {from_clause} {where_clause} {active_where if where_clause else 'WHERE'} w.is_lifetime = FALSE AND w.expiration_date <= %s AND w.archived_at IS NULL", params + [today])
+            cur.execute(f"SELECT COUNT(*) {from_clause} {where_clause} {active_where if where_clause else 'WHERE'} w.is_lifetime = FALSE AND w.expiration_date < %s AND w.archived_at IS NULL", params + [today])
             expired_count = cur.fetchone()[0]
             logger.info(f"Expired warranties: {expired_count}")
             
             # Get expiring soon count (excludes lifetime and archived) using user preference
             cur.execute(f"""SELECT COUNT(*) {from_clause} {where_clause} {active_where if where_clause else 'WHERE'}
-                          w.is_lifetime = FALSE AND w.expiration_date > %s AND w.expiration_date <= %s AND w.archived_at IS NULL""",
+                          w.is_lifetime = FALSE AND w.expiration_date >= %s AND w.expiration_date <= %s AND w.archived_at IS NULL""",
                       params + [today, expiring_soon_date])
             expiring_soon_count = cur.fetchone()[0]
             logger.info(f"Expiring soon ({expiring_soon_days} days) warranties: {expiring_soon_count}")
@@ -115,7 +115,7 @@ def get_statistics():
                     COUNT(*) as count
                 {from_clause} 
                 {where_clause} {active_where if where_clause else 'WHERE'} 
-                w.is_lifetime = FALSE AND w.expiration_date > %s AND w.expiration_date <= %s AND w.archived_at IS NULL
+                w.is_lifetime = FALSE AND w.expiration_date >= %s AND w.expiration_date <= %s AND w.archived_at IS NULL
                 GROUP BY EXTRACT(YEAR FROM expiration_date), EXTRACT(MONTH FROM expiration_date)
                 ORDER BY year, month
             """, params + [today, ninety_days_later])
@@ -280,16 +280,16 @@ def get_global_statistics():
             archived_count = cur.fetchone()[0]
             
             # Get active count (includes lifetime, excludes archived)
-            cur.execute("SELECT COUNT(*) FROM warranties w WHERE (w.is_lifetime = TRUE OR w.expiration_date > %s) AND w.archived_at IS NULL", (today,))
+            cur.execute("SELECT COUNT(*) FROM warranties w WHERE (w.is_lifetime = TRUE OR w.expiration_date >= %s) AND w.archived_at IS NULL", (today,))
             active_count = cur.fetchone()[0]
             
             # Get expired count (excludes lifetime and archived)
-            cur.execute("SELECT COUNT(*) FROM warranties w WHERE w.is_lifetime = FALSE AND w.expiration_date <= %s AND w.archived_at IS NULL", (today,))
+            cur.execute("SELECT COUNT(*) FROM warranties w WHERE w.is_lifetime = FALSE AND w.expiration_date < %s AND w.archived_at IS NULL", (today,))
             expired_count = cur.fetchone()[0]
             
             # Get expiring soon count (excludes lifetime and archived)
             cur.execute("""SELECT COUNT(*) FROM warranties w WHERE
-                          w.is_lifetime = FALSE AND w.expiration_date > %s AND w.expiration_date <= %s AND w.archived_at IS NULL""",
+                          w.is_lifetime = FALSE AND w.expiration_date >= %s AND w.expiration_date <= %s AND w.archived_at IS NULL""",
                       (today, expiring_soon_date))
             expiring_soon_count = cur.fetchone()[0]
             
@@ -300,7 +300,7 @@ def get_global_statistics():
                     EXTRACT(MONTH FROM expiration_date) as month,
                     COUNT(*) as count
                 FROM warranties w 
-                WHERE w.is_lifetime = FALSE AND w.expiration_date > %s AND w.expiration_date <= %s AND w.archived_at IS NULL
+                WHERE w.is_lifetime = FALSE AND w.expiration_date >= %s AND w.expiration_date <= %s AND w.archived_at IS NULL
                 GROUP BY EXTRACT(YEAR FROM expiration_date), EXTRACT(MONTH FROM expiration_date)
                 ORDER BY year, month
             """, (today, ninety_days_later))

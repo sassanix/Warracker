@@ -60,10 +60,10 @@ export async function exportWarranties() {
   let csv = `${headers.join(',')}\n`;
   filtered.forEach((warranty) => {
     const serials = Array.isArray(warranty.serial_numbers)
-      ? warranty.serial_numbers.filter(Boolean).join(' ')
+      ? warranty.serial_numbers.filter(Boolean).join(', ')
       : '';
     const tags = Array.isArray(warranty.tags)
-      ? warranty.tags.map((tag) => tag.name).join(' ')
+      ? warranty.tags.map((tag) => tag.name).join(', ')
       : '';
     const row = [
       warranty.product_name || '',

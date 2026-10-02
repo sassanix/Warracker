@@ -192,6 +192,9 @@ def add_warranty():
         # Validate input data
         if not request.form.get('product_name'):
             return jsonify({"error": "Product name is required"}), 400
+
+        if len(request.form.get('product_name')) > 255:
+            return jsonify({"error": "Product name must be 255 characters or less"}), 400
             
         if not request.form.get('purchase_date'):
             return jsonify({"error": "Purchase date is required"}), 400
@@ -325,7 +328,11 @@ def add_warranty():
             else:
                 # Neither exact date nor duration provided
                 return jsonify({"error": "Either exact expiration date or warranty duration must be specified for non-lifetime warranties."}), 400
-        
+
+        # Expiration date cannot precede the purchase date
+        if expiration_date is not None and expiration_date < purchase_date:
+            return jsonify({"error": "Expiration date cannot be before purchase date"}), 400
+
         # Handle Paperless-ngx document IDs if provided (check before file uploads)
         paperless_invoice_id = request.form.get('paperless_invoice_id')
         paperless_manual_id = request.form.get('paperless_manual_id')
@@ -635,6 +642,8 @@ def update_warranty(warranty_id):
             # Validate input data similar to the add_warranty route
             if not request.form.get('product_name'):
                 return jsonify({"error": "Product name is required"}), 400
+            if len(request.form.get('product_name')) > 255:
+                return jsonify({"error": "Product name must be 255 characters or less"}), 400
             if not request.form.get('purchase_date'):
                 return jsonify({"error": "Purchase date is required"}), 400
             logger.info(f"Received update request for warranty {warranty_id}")
@@ -704,7 +713,11 @@ def update_warranty(warranty_id):
                             return jsonify({"error": "Failed to calculate expiration date from duration components"}), 500
                     else:
                         return jsonify({"error": "Either exact expiration date or warranty duration must be specified for non-lifetime warranties."}), 400
-            
+
+            # Expiration date cannot precede the purchase date
+            if expiration_date is not None and expiration_date < purchase_date:
+                return jsonify({"error": "Expiration date cannot be before purchase date"}), 400
+
             logger.info(f"Calculated values: Y={warranty_duration_years}, M={warranty_duration_months}, D={warranty_duration_days}, expiration_date={expiration_date}")
             product_name = request.form['product_name']
             serial_numbers = request.form.getlist('serial_numbers[]') # Ensure correct parsing for lists
@@ -2166,7 +2179,7 @@ def create_claim(warranty_id):
         # Validate status
         valid_statuses = ['Submitted', 'In Progress', 'Approved', 'Denied', 'Resolved', 'Cancelled']
         if status not in valid_statuses:
-            status = 'Submitted'
+            return jsonify({'error': f"Invalid claim status. Must be one of: {', '.join(valid_statuses)}"}), 400
 
         # Insert new claim
         cur.execute("""
@@ -2362,8 +2375,8 @@ def update_claim(warranty_id, claim_id):
         # Validate status
         valid_statuses = ['Submitted', 'In Progress', 'Approved', 'Denied', 'Resolved', 'Cancelled']
         if status not in valid_statuses:
-            status = current_claim[1]
-        
+            return jsonify({'error': f"Invalid claim status. Must be one of: {', '.join(valid_statuses)}"}), 400
+
         # Handle empty strings as None
         claim_number = claim_number.strip() if claim_number else None
         description = description.strip() if description else None
