@@ -635,7 +635,9 @@
     "purchase_date_required": "Kaufdatum ist erforderlich",
     "unarchived_success": "Garantie nicht archiviert",
     "warranty_duration_required": "Die Garantiedauer ist erforderlich",
-    "warranty_not_found_refresh": "Garantie nicht gefunden. Bitte aktualisieren Sie und versuchen Sie es erneut."
+    "warranty_not_found_refresh": "Garantie nicht gefunden. Bitte aktualisieren Sie und versuchen Sie es erneut.",
+    "invalid_claim_status": "Ungültiger Anspruchsstatus. Muss einer der folgenden sein: {{statuses}}",
+    "product_name_too_long": "Der Produktname darf maximal 255 Zeichen lang sein"
   },
   "languages": {
     "en": "Englisch",

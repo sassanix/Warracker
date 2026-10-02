@@ -725,7 +725,9 @@
     "unarchived_success": "Garanzia non archiviata",
     "warranty_duration_required": "È richiesta la durata della garanzia",
     "warranty_not_found_refresh": "Garanzia non trovata. Aggiorna e riprova.",
-    "import_success": "{{success}} garanzie importate. {{failure}} non riuscito."
+    "import_success": "{{success}} garanzie importate. {{failure}} non riuscito.",
+    "invalid_claim_status": "Stato del reclamo non valido. Deve essere uno tra: {{statuses}}",
+    "product_name_too_long": "Il nome del prodotto deve contenere massimo 255 caratteri"
   },
   "claims": {
     "claims": "Reclami",

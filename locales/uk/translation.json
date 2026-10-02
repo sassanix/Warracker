@@ -641,7 +641,9 @@
     "warranty_not_found_refresh": "Гарантія не знайдена. Оновіть і повторіть спробу.",
     "deleted_successfully": "Гарантія видалена",
     "error_loading_global_warranties": "Не вдалося завантажити гарантії. Спробуйте ще раз.",
-    "import_success": "Імпортовано {{success}} гарантій. {{failure}} помилка."
+    "import_success": "Імпортовано {{success}} гарантій. {{failure}} помилка.",
+    "invalid_claim_status": "Недійсний статус претензії. Має бути один із: {{statuses}}",
+    "product_name_too_long": "Назва продукту має містити не більше 255 символів"
   },
   "languages": {
     "en": "English",

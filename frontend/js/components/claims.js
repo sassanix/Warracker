@@ -1,6 +1,6 @@
 import authService from '../services/authService.js';
 import { getWarranties, getIsGlobalView } from '../store.js';
-import { showToast } from './ui.js';
+import { showToast, apiErrorMessage } from './ui.js';
 import { formatDate } from '../lib/dates.js';
 
 const state = {
@@ -294,7 +294,10 @@ async function handleClaimFormSubmit(event) {
 		});
 		if (!response.ok) {
 			const error = await response.json().catch(() => ({}));
-			throw new Error(error.error || t('claims.failed_to_save', 'Failed to save claim'));
+			const err = new Error(error.error || t('claims.failed_to_save', 'Failed to save claim'));
+			if (error.code) err.code = error.code;
+			if (error.valid_statuses) err.validStatuses = error.valid_statuses;
+			throw err;
 		}
 		showToast(
 			isEdit ? t('claims.claim_updated_successfully', 'Claim updated successfully') : t('claims.claim_created_successfully', 'Claim created successfully'),
@@ -304,7 +307,7 @@ async function handleClaimFormSubmit(event) {
 		await loadClaims(state.currentWarrantyId);
 	} catch (error) {
 		console.error('[claims] save failed', error);
-		showToast(error.message || t('claims.failed_to_save', 'Failed to save claim'), 'error');
+		showToast(apiErrorMessage(error, t('claims.failed_to_save', 'Failed to save claim')), 'error');
 	}
 }
 

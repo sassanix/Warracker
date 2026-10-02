@@ -635,7 +635,9 @@
     "unarchived_success": "保証はアーカイブされていません",
     "warranty_duration_required": "保証期間は必須です",
     "warranty_not_found_refresh": "保証書が見つかりません。更新してもう一度お試しください。",
-    "import_success": "{{success}} 個の保証がインポートされました。 {{failure}} が失敗しました。"
+    "import_success": "{{success}} 個の保証がインポートされました。 {{failure}} が失敗しました。",
+    "invalid_claim_status": "無効な請求ステータスです。次のいずれかである必要があります: {{statuses}}",
+    "product_name_too_long": "製品名は255文字以内である必要があります"
   },
   "languages": {
     "en": "English",

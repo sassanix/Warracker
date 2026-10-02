@@ -685,7 +685,9 @@
     "warranty_duration_required": "Требуется гарантийный срок",
     "warranty_not_found_refresh": "Гарантия не найдена. Пожалуйста, обновите и повторите попытку.",
     "warranty_updated_successfully": "Гарантия успешно обновлена",
-    "error_colon": "Ошибка: {{error}}"
+    "error_colon": "Ошибка: {{error}}",
+    "invalid_claim_status": "Неверный статус заявки. Должен быть одним из: {{statuses}}",
+    "product_name_too_long": "Название продукта должно содержать не более 255 символов."
   },
   "languages": {
     "en": "English",

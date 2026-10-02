@@ -635,7 +635,9 @@
     "invalid_warranty_duration_before_notes": "在保修期有效之前无法保存注释。",
     "login_to_view_warranties": "请登录查看保修。",
     "error_loading_personal_warranties": "无法加载您的保修。请再试一次。",
-    "expiration_date_after_purchase_date": "有效期必须晚于购买日期"
+    "expiration_date_after_purchase_date": "有效期必须晚于购买日期",
+    "product_name_too_long": "产品名称不得超过 255 个字符",
+    "invalid_claim_status": "无效的索赔状态。必须是以下之一：{{statuses}}"
   },
   "languages": {
     "en": "English",

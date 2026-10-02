@@ -645,7 +645,9 @@
     "unarchived_success": "الضمان غير مؤرشف",
     "warranty_duration_required": "مدة الضمان مطلوبة",
     "warranty_not_found_refresh": "لم يتم العثور على الضمان. يرجى التحديث والمحاولة مرة أخرى.",
-    "import_success": "{{success}} ضمانات مستوردة. {{failure}} فشل."
+    "import_success": "{{success}} ضمانات مستوردة. {{failure}} فشل.",
+    "invalid_claim_status": "حالة المطالبة غير صالحة. يجب أن يكون واحدًا من: {{statuses}}",
+    "product_name_too_long": "يجب أن يكون اسم المنتج 255 حرفًا أو أقل"
   },
   "languages": {
     "en": "English",

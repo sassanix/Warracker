@@ -202,7 +202,9 @@
     "unarchived_success": "Garanti arşivden çıkarıldı",
     "warranty_duration_required": "Garanti süresi gereklidir",
     "error_updating_archive_status": "Arşiv durumu güncellenemedi",
-    "warranty_not_found_refresh": "Garanti bulunamadı. Lütfen yenileyin ve tekrar deneyin."
+    "warranty_not_found_refresh": "Garanti bulunamadı. Lütfen yenileyin ve tekrar deneyin.",
+    "invalid_claim_status": "Geçersiz hak talebi durumu. Şunlardan biri olmalı: {{statuses}}",
+    "product_name_too_long": "Ürün adı 255 karakter veya daha az olmalıdır"
   },
   "settings": {
     "title": "Ayarlar",

@@ -635,7 +635,9 @@
     "unarchived_success": "Garantie niet gearchiveerd",
     "warranty_duration_required": "Garantieduur is vereist",
     "warranty_not_found_refresh": "Garantie niet gevonden. Vernieuw de pagina en probeer het opnieuw.",
-    "import_success": "{{success}} garanties geïmporteerd. {{failure}} is mislukt."
+    "import_success": "{{success}} garanties geïmporteerd. {{failure}} is mislukt.",
+    "invalid_claim_status": "Ongeldige claimstatus. Moet een van zijn: {{statuses}}",
+    "product_name_too_long": "De productnaam moet 255 tekens of minder bevatten"
   },
   "languages": {
     "en": "Engels",

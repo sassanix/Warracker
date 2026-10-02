@@ -679,7 +679,9 @@
     "unarchived_success": "Garantia desarquivada",
     "warranty_duration_required": "A duração da garantia é obrigatória",
     "warranty_not_found_refresh": "Garantia não encontrada. Atualize e tente novamente.",
-    "import_success": "{{success}} garantias importadas. {{failure}} falhou."
+    "import_success": "{{success}} garantias importadas. {{failure}} falhou.",
+    "invalid_claim_status": "Status de reivindicação inválido. Deve ser um dos seguintes: {{statuses}}",
+    "product_name_too_long": "O nome do produto deve ter 255 caracteres ou menos"
   },
   "languages": {
     "en": "English",

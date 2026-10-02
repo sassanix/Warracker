@@ -645,7 +645,9 @@
     "unarchived_success": "האחריות בוטלה בארכיון",
     "warranty_duration_required": "נדרש משך אחריות",
     "warranty_not_found_refresh": "אחריות לא נמצאה. אנא רענן ונסה שוב.",
-    "import_success": "{{success}} אחריות יובאו. {{failure}} נכשל."
+    "import_success": "{{success}} אחריות יובאו. {{failure}} נכשל.",
+    "invalid_claim_status": "סטטוס תביעה לא חוקי. חייב להיות אחד מ: {{statuses}}",
+    "product_name_too_long": "שם המוצר חייב להכיל 255 תווים או פחות"
   },
   "languages": {
     "en": "אנגלית",

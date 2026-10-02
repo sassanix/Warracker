@@ -635,7 +635,9 @@
     "unarchived_success": "گارانتی بایگانی نشده است",
     "warranty_duration_required": "مدت زمان گارانتی مورد نیاز است",
     "warranty_not_found_refresh": "گارانتی پیدا نشد لطفاً بازخوانی کنید و دوباره امتحان کنید.",
-    "import_success": "ضمانت‌های {{success}} وارد شد. {{failure}} ناموفق بود."
+    "import_success": "ضمانت‌های {{success}} وارد شد. {{failure}} ناموفق بود.",
+    "invalid_claim_status": "وضعیت ادعا نامعتبر است. باید یکی از این موارد باشد: {{statuses}}",
+    "product_name_too_long": "نام محصول باید 255 کاراکتر یا کمتر باشد"
   },
   "languages": {
     "en": "انگلیسی",

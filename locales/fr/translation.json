@@ -635,7 +635,9 @@
     "unarchived_success": "Garantie non archivée",
     "warranty_duration_required": "La durée de la garantie est requise",
     "warranty_not_found_refresh": "Garantie introuvable. Veuillez actualiser et réessayer.",
-    "import_success": "{{success}} garanties importées. {{failure}} a échoué."
+    "import_success": "{{success}} garanties importées. {{failure}} a échoué.",
+    "invalid_claim_status": "Statut de réclamation invalide. Doit être l'un des : {{statuses}}",
+    "product_name_too_long": "Le nom du produit doit comporter 255 caractères maximum"
   },
   "languages": {
     "en": "English",

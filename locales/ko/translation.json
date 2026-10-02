@@ -635,7 +635,9 @@
     "unarchived_success": "보관 취소된 보증",
     "warranty_duration_required": "보증 기간은 필수 항목입니다.",
     "warranty_not_found_refresh": "보증을 찾을 수 없습니다. 새로고침한 후 다시 시도해 주세요.",
-    "import_success": "{{success}} 보증을 가져왔습니다. {{failure}} 실패했습니다."
+    "import_success": "{{success}} 보증을 가져왔습니다. {{failure}} 실패했습니다.",
+    "invalid_claim_status": "청구 상태가 잘못되었습니다. 다음 중 하나여야 합니다. {{statuses}}",
+    "product_name_too_long": "제품 이름은 255자 이하여야 합니다."
   },
   "languages": {
     "en": "English",

@@ -1,6 +1,6 @@
 // Edit modal helper components (DOM-based, no innerHTML templates)
 import { updateWarranty } from '../services/apiService.js';
-import { showToast, showLoadingSpinner, hideLoadingSpinner } from './ui.js';
+import { showToast, showLoadingSpinner, hideLoadingSpinner, apiErrorMessage } from './ui.js';
 import { autoLinkRecentDocuments, processEditPaperlessUploads, loadSecureImages, clearPaperlessSelection } from './paperless.js';
 import { loadWarranties, applyFilters } from '../controllers/warrantyListController.js';
 import { getCurrentWarrantyId, setCurrentWarrantyId, getEditSelectedTags, setEditSelectedTags } from '../store.js';
@@ -751,7 +751,7 @@ export async function saveWarranty() {
   } catch (error) {
     hideLoadingSpinner();
     console.error('Error updating warranty:', error);
-    showToast(error?.message || (window.i18next ? window.i18next.t('messages.failed_to_update_warranty') : 'Failed to update warranty'), 'error');
+    showToast(apiErrorMessage(error, window.i18next ? window.i18next.t('messages.failed_to_update_warranty') : 'Failed to update warranty'), 'error');
   }
 }
 

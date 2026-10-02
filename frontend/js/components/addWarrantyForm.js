@@ -1,4 +1,4 @@
-import { showToast, showLoadingSpinner, hideLoadingSpinner } from './ui.js';
+import { showToast, showLoadingSpinner, hideLoadingSpinner, apiErrorMessage } from './ui.js';
 import { createWarranty } from '../services/apiService.js';
 import { loadWarranties, applyFilters } from '../controllers/warrantyListController.js';
 import {
@@ -533,7 +533,7 @@ export async function handleFormSubmit(event) {
 	} catch (error) {
 		hideLoadingSpinner();
 		console.error('[addWarrantyForm] Failed to save warranty', error);
-		showToast(error?.message || (window.i18next ? window.i18next.t('messages.failed_to_add_warranty') : 'Failed to add warranty'), 'error');
+		showToast(apiErrorMessage(error, window.i18next ? window.i18next.t('messages.failed_to_add_warranty') : 'Failed to add warranty'), 'error');
 	} finally {
 		isSubmitting = false;
 		console.log('[addWarrantyForm] Submission complete, flag reset');

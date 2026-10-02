@@ -9,22 +9,33 @@ async function baseRequest(path, options = {}) {
   const opts = { ...options, headers };
   const response = await fetch(path, opts);
   if (!response.ok) {
-    const message = await safeErrorMessage(response);
-    throw new Error(message || `Request failed: ${response.status}`);
+    const data = await safeErrorData(response);
+    let message;
+    if (data) {
+      message = data.message || data.error || `Request failed: ${response.status}`;
+    } else {
+      try {
+        message = (await response.clone().text()) || `Request failed: ${response.status}`;
+      } catch {
+        message = `Request failed: ${response.status}`;
+      }
+    }
+    const err = new Error(message);
+    // Carry machine-readable error codes so the UI can show translated messages
+    if (data) {
+      if (data.code) err.code = data.code;
+      if (data.valid_statuses) err.validStatuses = data.valid_statuses;
+    }
+    throw err;
   }
   return response;
 }
 
-async function safeErrorMessage(response) {
+async function safeErrorData(response) {
   try {
-    const data = await response.clone().json();
-    return data?.message || data?.error || null;
+    return await response.clone().json();
   } catch {
-    try {
-      return await response.clone().text();
-    } catch {
-      return null;
-    }
+    return null;
   }
 }
 

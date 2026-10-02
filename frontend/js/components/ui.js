@@ -44,8 +44,30 @@ export function hideLoadingSpinner() {
   }
 }
 
-export function showToast(message, type = 'info', duration = 5000) {
-  const toastContainer = getToastContainer();
+// Maps backend API error codes to i18n message keys so server-side
+// validation errors can be shown translated. Add new codes here as the
+// backend gains them; unknown codes fall back to the English message.
+const API_ERROR_KEYS = {
+  product_name_too_long: 'messages.product_name_too_long',
+  // Reuses the existing client-side key (same meaning, already translated)
+  expiration_before_purchase: 'messages.expiration_date_after_purchase_date',
+  invalid_claim_status: 'messages.invalid_claim_status',
+};
+
+export function apiErrorMessage(error, fallbackMessage) {
+  const fallback = error?.message || fallbackMessage || 'An error occurred';
+  const i18n = window.i18next;
+  const key = error?.code && API_ERROR_KEYS[error.code];
+  if (key && i18n && typeof i18n.t === 'function') {
+    return i18n.t(key, {
+      statuses: error.validStatuses ? error.validStatuses.join(', ') : '',
+      defaultValue: fallback,
+    });
+  }
+  return fallback;
+}
+
+export function showToast(message, type = 'info', duration = 5000) {  const toastContainer = getToastContainer();
   if (!toastContainer) return null;
 
   const existingToasts = toastContainer.querySelectorAll(`.toast.toast-${type}`);
@@ -120,6 +142,7 @@ if (typeof window !== 'undefined') {
     showLoadingSpinner,
     hideLoadingSpinner,
     showToast,
+    apiErrorMessage,
   };
   window.showLoading = showLoading;
   window.hideLoading = hideLoading;

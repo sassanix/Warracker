@@ -635,7 +635,9 @@
     "purchase_date_required": "購買日期為必填項",
     "unarchived_success": "保固未存檔",
     "warranty_duration_required": "需要保固期限",
-    "warranty_not_found_refresh": "未找到保固。請刷新並重試。"
+    "warranty_not_found_refresh": "未找到保固。請刷新並重試。",
+    "invalid_claim_status": "無效的索賠狀態。必須是以下之一：{{statuses}}",
+    "product_name_too_long": "產品名稱不得超過 255 個字符"
   },
   "languages": {
     "en": "English",

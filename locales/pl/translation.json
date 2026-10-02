@@ -635,7 +635,9 @@
     "unarchived_success": "Gwarancja niezarchiwizowana",
     "warranty_duration_required": "Wymagany jest okres gwarancji",
     "warranty_not_found_refresh": "Nie znaleziono gwarancji. Odśwież i spróbuj ponownie.",
-    "import_success": "Zaimportowano gwarancje {{success}}. {{failure}} nie powiodło się."
+    "import_success": "Zaimportowano gwarancje {{success}}. {{failure}} nie powiodło się.",
+    "invalid_claim_status": "Nieprawidłowy status roszczenia. Musi być jednym z: {{statuses}}",
+    "product_name_too_long": "Nazwa produktu może mieć maksymalnie 255 znaków"
   },
   "languages": {
     "en": "English",

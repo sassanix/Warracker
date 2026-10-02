@@ -642,7 +642,9 @@
     "purchase_date_required": "Datum nákupu je povinné",
     "unarchived_success": "Záruka nebyla archivována",
     "warranty_duration_required": "Je vyžadována záruční doba",
-    "warranty_not_found_refresh": "Záruka nenalezena. Obnovte stránku a zkuste to znovu."
+    "warranty_not_found_refresh": "Záruka nenalezena. Obnovte stránku a zkuste to znovu.",
+    "invalid_claim_status": "Neplatný stav nároku. Musí být jeden z: {{statuses}}",
+    "product_name_too_long": "Název produktu musí mít 255 znaků nebo méně"
   },
   "languages": {
     "en": "Angličtina",

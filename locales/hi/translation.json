@@ -635,7 +635,9 @@
     "warranty_duration_required": "वारंटी अवधि आवश्यक है",
     "warranty_not_found_refresh": "वारंटी नहीं मिली. कृपया ताज़ा करें और पुनः प्रयास करें।",
     "import_success": "{{success}} वारंटी आयातित। {{failure}} विफल।",
-    "exported_warranties_successfully": "निर्यात की गई {{count}} वारंटी"
+    "exported_warranties_successfully": "निर्यात की गई {{count}} वारंटी",
+    "invalid_claim_status": "अमान्य दावा स्थिति. इनमें से एक होना चाहिए: {{statuses}}",
+    "product_name_too_long": "उत्पाद का नाम 255 अक्षर या उससे कम होना चाहिए"
   },
   "languages": {
     "en": "अंग्रेज़ी",
