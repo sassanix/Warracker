@@ -662,7 +662,17 @@ def reset_password():
             cur.execute('SELECT user_id, expires_at FROM password_reset_tokens WHERE token = %s', (token,))
             token_info = cur.fetchone()
             
-            if not token_info or token_info[1] < datetime.now(UTC):
+            if not token_info:
+                return jsonify({'message': 'Invalid or expired token!'}), 400
+
+            expires_at = token_info[1]
+            if expires_at is not None and expires_at.tzinfo is None:
+                # expires_at is TIMESTAMP WITHOUT TIME ZONE, so psycopg2
+                # returns it offset-naive. Tokens are created with
+                # datetime.now(UTC), so interpret the stored value as UTC
+                # before comparing with the offset-aware current time.
+                expires_at = expires_at.replace(tzinfo=UTC)
+            if expires_at is None or expires_at < datetime.now(UTC):
                 return jsonify({'message': 'Invalid or expired token!'}), 400
             
             user_id = token_info[0]
