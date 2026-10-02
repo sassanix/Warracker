@@ -145,7 +145,9 @@ async function loadCurrenciesForSettings() {
             // Add currencies from API
             currencies.forEach(currency => {
                 const option = document.createElement('option');
-                option.value = currency.symbol;
+                // Use the code as the value: several currencies share a symbol
+                // (e.g. kr for SEK/NOK/DKK/ISK), and the code is unambiguous.
+                option.value = currency.code;
                 option.textContent = `${currency.symbol} (${currency.code} - ${currency.name})`;
                 currencySymbolSelect.appendChild(option);
             });
@@ -921,16 +923,20 @@ async function loadPreferences() {
         console.log(`${prefix}defaultView not found, defaulting view to grid`);
     }
 
-    // Currency Symbol - Load stored preference first
-    const storedCurrency = localStorage.getItem(`${prefix}currencySymbol`);
+    // Currency - Load stored preference first (code preferred; symbol is legacy)
+    const storedCurrencyCode = localStorage.getItem(`${prefix}currencyCode`);
+    const storedCurrency = storedCurrencyCode || localStorage.getItem(`${prefix}currencySymbol`);
     
     // Load currencies from API and set the saved preference
     await loadCurrenciesForSettings();
     
     if (storedCurrency) {
         if (currencySymbolSelect) {
-            // Check if the stored symbol is a standard option
-            const standardOption = Array.from(currencySymbolSelect.options).find(opt => opt.value === storedCurrency);
+            // Check if the stored code/symbol matches a standard option
+            // (option values are currency codes; legacy stored values may be symbols)
+            const standardOption = Array.from(currencySymbolSelect.options).find(opt =>
+                opt.value === storedCurrency ||
+                (globalCurrenciesData.find(c => c.code === opt.value)?.symbol === storedCurrency));
             if (standardOption) {
                 currencySymbolSelect.value = storedCurrency;
                 if (currencySymbolCustom) currencySymbolCustom.style.display = 'none';
@@ -1705,11 +1711,13 @@ async function savePreferences() {
             // For custom symbols, try to derive currency code or default to USD
             currencyCode = 'USD'; // Default for custom symbols
         } else {
-            currencySymbol = currencySymbolSelect.value;
-            // Find the currency code for the selected symbol
-            const selectedCurrency = globalCurrenciesData.find(currency => currency.symbol === currencySymbol);
+            currencyCode = currencySymbolSelect.value;
+            // Find the symbol for the selected code
+            const selectedCurrency = globalCurrenciesData.find(currency => currency.code === currencyCode);
             if (selectedCurrency) {
-                currencyCode = selectedCurrency.code;
+                currencySymbol = selectedCurrency.symbol;
+            } else {
+                currencySymbol = currencyCode;
             }
         }
     }
