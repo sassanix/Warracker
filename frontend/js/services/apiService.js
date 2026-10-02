@@ -8,6 +8,11 @@ async function baseRequest(path, options = {}) {
   }
   const opts = { ...options, headers };
   const response = await fetch(path, opts);
+  if (response.status === 401) {
+    // Token expired or invalid (issue #225): drop the cached session and
+    // send the user to the login page instead of rendering a stale UI.
+    try { await authService.logout(); } catch { /* ignore */ }
+  }
   if (!response.ok) {
     const data = await safeErrorData(response);
     let message;
