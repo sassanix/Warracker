@@ -20,6 +20,14 @@ if memory_mode in ('optimized', 'performance'):
         print("✅ Early gevent monkey patch applied for SSL compatibility.")
     except ImportError:
         print("⚠️ Gevent not found, but gevent workers will be requested. This may cause issues.")
+    # Make psycopg2 cooperate with the gevent hub so a blocked socket read
+    # yields to the event loop instead of freezing the worker (see issue #239)
+    try:
+        from psycogreen.gevent import patch_psycopg
+        patch_psycopg()
+        print("✅ psycogreen gevent patch applied for psycopg2.")
+    except ImportError:
+        print("⚠️ psycogreen not installed; psycopg2 will block gevent workers on slow queries.")
 
 import multiprocessing
 

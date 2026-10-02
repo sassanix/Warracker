@@ -2,7 +2,7 @@
 import os
 import logging
 import psycopg2.errors
-from flask import Flask
+from flask import Flask, jsonify
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 logger = logging.getLogger(__name__)
@@ -215,5 +215,28 @@ def create_app(config_name=None):
             # Continue without notifications - the app can still function
         
         logger.info("Application factory completed successfully")
-    
+
+    @app.route('/api/health', methods=['GET'])
+    def health_check():
+        """Unauthenticated health check for Docker HEALTHCHECK / load balancers.
+
+        Verifies the app can actually reach the database with a short timeout.
+        Returns 503 when the DB is unreachable so a frozen backend is detected
+        instead of the container reporting healthy (see issue #239).
+        """
+        try:
+            from .db_handler import get_db_connection, release_db_connection
+            conn = get_db_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SET LOCAL statement_timeout = '5s'")
+                    cur.execute("SELECT 1")
+                    cur.fetchone()
+            finally:
+                release_db_connection(conn)
+            return jsonify({"status": "ok"}), 200
+        except Exception as e:
+            logger.warning(f"Health check failed: {e}")
+            return jsonify({"status": "error"}), 503
+
     return app

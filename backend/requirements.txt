@@ -12,6 +12,7 @@ python-dateutil==2.9.0.post0
 Authlib==1.7.2
 requests==2.34.2
 gevent==24.11.1
+psycogreen==1.0.2
 setuptools==82.0.1
 apprise==1.10.0
 Flask-Babel==4.0.0

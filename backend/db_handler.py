@@ -66,7 +66,16 @@ def init_db_pool(max_retries=5, retry_delay=5):
                 password=DB_PASSWORD,
                 # Memory optimization settings
                 connect_timeout=10,  # Connection timeout
-                application_name='warracker_optimized'  # Identify connections
+                application_name='warracker_optimized',  # Identify connections
+                # Resilience against stale/dead connections (see issue #239):
+                # - statement_timeout bounds any single query so a greenlet can
+                #   never block inside libpq forever on a dead connection
+                # - TCP keepalives let the OS detect a dead peer on idle conns
+                options='-c statement_timeout=30000',
+                keepalives=1,
+                keepalives_idle=30,
+                keepalives_interval=10,
+                keepalives_count=5,
             )
             logger.info("[DB_HANDLER] Database connection pool initialized successfully.")
             pool_pid = current_pid
