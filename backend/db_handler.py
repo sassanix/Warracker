@@ -10,11 +10,26 @@ from typing import List, Dict, Optional
 logger = logging.getLogger(__name__)
 
 # PostgreSQL connection details
+# DATABASE_URL (e.g. postgresql://user:pass@host:5432/dbname) takes precedence
+# over the individual DB_* variables when set (issue #108).
+DATABASE_URL = os.environ.get('DATABASE_URL')
 DB_HOST = os.environ.get('DB_HOST', 'warrackerdb')
 DB_PORT = os.environ.get('DB_PORT', '5432')
 DB_NAME = os.environ.get('DB_NAME', 'warranty_db')
 DB_USER = os.environ.get('DB_USER', 'warranty_user')
 DB_PASSWORD = os.environ.get('DB_PASSWORD', 'warranty_password')
+
+def _connection_kwargs():
+    """psycopg2 connection kwargs: DATABASE_URL wins over DB_* parts."""
+    if DATABASE_URL:
+        return {'dsn': DATABASE_URL}
+    return {
+        'host': DB_HOST,
+        'port': DB_PORT,
+        'database': DB_NAME,
+        'user': DB_USER,
+        'password': DB_PASSWORD,
+    }
 
 connection_pool = None # Global connection pool for this module
 # Track the PID that created the current pool to detect post-fork reuse
@@ -59,11 +74,7 @@ def init_db_pool(max_retries=5, retry_delay=5):
             # Optimized connection pool for memory efficiency
             connection_pool = pool.SimpleConnectionPool(
                 1, 4, # Reduced from 1,10 to 1,4 for memory efficiency
-                host=DB_HOST,
-                port=DB_PORT,
-                database=DB_NAME,
-                user=DB_USER,
-                password=DB_PASSWORD,
+                **_connection_kwargs(),
                 # Memory optimization settings
                 connect_timeout=10,  # Connection timeout
                 application_name='warracker_optimized',  # Identify connections

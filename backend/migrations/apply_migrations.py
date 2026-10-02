@@ -27,11 +27,34 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # PostgreSQL connection details
-DB_HOST = os.environ.get('DB_HOST', 'localhost')
-DB_PORT = os.environ.get('DB_PORT', '5432')
-DB_NAME = os.environ.get('DB_NAME', 'warranty_db')
-DB_USER = os.environ.get('DB_USER', 'warranty_user')
-DB_PASSWORD = os.environ.get('DB_PASSWORD', 'warranty_password')
+# DATABASE_URL (e.g. postgresql://user:pass@host:5432/dbname) takes precedence
+# over the individual DB_* variables when set (issue #108).
+def _db_parts():
+    url = os.environ.get('DATABASE_URL')
+    if url:
+        from urllib.parse import urlparse, unquote
+        p = urlparse(url)
+        return {
+            'host': p.hostname or 'localhost',
+            'port': str(p.port) if p.port else '5432',
+            'name': (p.path or '').lstrip('/') or 'warranty_db',
+            'user': unquote(p.username) if p.username else 'warranty_user',
+            'password': unquote(p.password) if p.password else 'warranty_password',
+        }
+    return {
+        'host': os.environ.get('DB_HOST', 'localhost'),
+        'port': os.environ.get('DB_PORT', '5432'),
+        'name': os.environ.get('DB_NAME', 'warranty_db'),
+        'user': os.environ.get('DB_USER', 'warranty_user'),
+        'password': os.environ.get('DB_PASSWORD', 'warranty_password'),
+    }
+
+_DB = _db_parts()
+DB_HOST = _DB['host']
+DB_PORT = _DB['port']
+DB_NAME = _DB['name']
+DB_USER = _DB['user']
+DB_PASSWORD = _DB['password']
 DB_ADMIN_USER = os.environ.get('DB_ADMIN_USER', 'warracker_admin')
 DB_ADMIN_PASSWORD = os.environ.get('DB_ADMIN_PASSWORD', 'change_this_password_in_production')
 
