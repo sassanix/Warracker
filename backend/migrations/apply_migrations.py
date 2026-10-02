@@ -9,6 +9,15 @@ import importlib.util
 
 from psycopg2.extensions import AsIs
 
+def _quote_ident(name):
+    """Quote a PostgreSQL identifier, preserving case (issue #187).
+
+    Unquoted identifiers are folded to lowercase by PostgreSQL, so a
+    mixed-case DB_USER like 'WarrantyUser' must be double-quoted.
+    Embedded double quotes are escaped by doubling.
+    """
+    return '"' + str(name).replace('"', '""') + '"'
+
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -120,10 +129,17 @@ def apply_migrations():
                         cur.execute(
                             sql,
                             {
-                                "db_name": AsIs(DB_NAME),
-                                "db_user": AsIs(DB_USER),
-                                "db_admin_user": AsIs(DB_ADMIN_USER),
-                                "db_admin_password": AsIs(DB_ADMIN_PASSWORD),
+                                # Identifiers are double-quoted so PostgreSQL
+                                # preserves their case (issue #187)
+                                "db_name": AsIs(_quote_ident(DB_NAME)),
+                                "db_user": AsIs(_quote_ident(DB_USER)),
+                                "db_admin_user": AsIs(_quote_ident(DB_ADMIN_USER)),
+                                # Raw names for string-literal contexts
+                                # (e.g. rolname comparisons)
+                                "db_user_name": DB_USER,
+                                "db_admin_user_name": DB_ADMIN_USER,
+                                # Password is a value: let psycopg2 escape it
+                                "db_admin_password": DB_ADMIN_PASSWORD,
                             }
                         )
                     else:

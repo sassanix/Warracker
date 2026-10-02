@@ -6,8 +6,8 @@ BEGIN
     -- Try to create admin role, but continue if it fails
     BEGIN
         -- Check if the db_admin_user exists, if not create it
-        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '%(db_admin_user)s') THEN
-            CREATE ROLE %(db_admin_user)s WITH LOGIN PASSWORD '%(db_admin_password)s';
+        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = %(db_admin_user_name)s) THEN
+            CREATE ROLE %(db_admin_user)s WITH LOGIN PASSWORD %(db_admin_password)s;
             RAISE NOTICE 'Successfully created admin role %(db_admin_user)s';
         END IF;
         
