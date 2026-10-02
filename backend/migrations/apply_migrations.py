@@ -32,15 +32,21 @@ logger = logging.getLogger(__name__)
 def _db_parts():
     url = os.environ.get('DATABASE_URL')
     if url:
-        from urllib.parse import urlparse, unquote
+        from urllib.parse import urlparse, unquote, parse_qsl
         p = urlparse(url)
-        return {
+        parts = {
             'host': p.hostname or 'localhost',
             'port': str(p.port) if p.port else '5432',
             'name': (p.path or '').lstrip('/') or 'warranty_db',
             'user': unquote(p.username) if p.username else 'warranty_user',
             'password': unquote(p.password) if p.password else 'warranty_password',
         }
+        # Preserve URL query options (e.g. ?sslmode=require) instead of
+        # silently dropping them (issue #108 follow-up).
+        options = dict(parse_qsl(p.query, keep_blank_values=True))
+        if options:
+            parts['options'] = options
+        return parts
     return {
         'host': os.environ.get('DB_HOST', 'localhost'),
         'port': os.environ.get('DB_PORT', '5432'),
@@ -70,6 +76,7 @@ def get_db_connection(max_attempts=5, attempt_delay=5):
                 dbname=DB_NAME,
                 user=DB_USER,
                 password=DB_PASSWORD,
+                **_DB.get('options', {}),
             )
             
             # Set autocommit to False for transaction control

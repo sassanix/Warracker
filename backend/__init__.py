@@ -252,6 +252,11 @@ def create_app(config_name=None):
                     cur.execute("SELECT 1")
                     cur.fetchone()
             finally:
+                # Roll back so SET LOCAL doesn't leak to the next pool borrower
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
                 release_db_connection(conn)
             return jsonify({"status": "ok"}), 200
         except Exception as e:
