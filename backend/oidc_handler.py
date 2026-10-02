@@ -301,6 +301,15 @@ def oidc_callback_route():
                 user_id = cur.fetchone()[0]
                 logger.info(f"[OIDC_HANDLER] New OIDC user created with ID {user_id} for sub {oidc_subject}")
 
+                # Initialize default preferences (local registration does the
+                # same; without this row various preference lookups return
+                # nothing for OIDC-provisioned users)
+                cur.execute(
+                    """INSERT INTO user_preferences (user_id)
+                       VALUES (%s) ON CONFLICT (user_id) DO NOTHING""",
+                    (user_id,),
+                )
+
             if user_id:
                 app_session_token = generate_token(user_id) # Generate app-specific JWT
 
