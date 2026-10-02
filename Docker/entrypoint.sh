@@ -45,6 +45,15 @@ sed "s|__NGINX_MAX_BODY_SIZE_CONFIG_VALUE__|${EFFECTIVE_SIZE}|g" \
     /etc/nginx/conf.d/default.conf.template > /tmp/nginx-default.conf
 
 log "Nginx config prepared (size: ${EFFECTIVE_SIZE})"
+
+# Optional: run gunicorn directly without nginx (issue #190).
+# Set DISABLE_NGINX=true and publish port 5000 to put your own reverse
+# proxy in front of the Flask app.
+if [ "${DISABLE_NGINX:-false}" = "true" ]; then
+    log "DISABLE_NGINX=true: removing nginx from supervisord; gunicorn serves directly on :5000"
+    sed -i '/^\[program:nginx\]/,/^$/d' /etc/supervisor/conf.d/supervisord.conf
+fi
+
 log "Setup completed successfully!"
 
 # Execute the CMD (supervisor) by replacing this shell process

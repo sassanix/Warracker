@@ -177,8 +177,27 @@ def create_app(config_name=None):
         app.register_blueprint(statistics_bp, url_prefix='/api')
         app.register_blueprint(tags_bp, url_prefix='/api')
         app.register_blueprint(file_bp, url_prefix='/api')
-        
+
         logger.info("All blueprints registered successfully")
+
+        # Serve the frontend directly when nginx is disabled (DISABLE_NGINX=true,
+        # issue #190). In the normal setup nginx serves these paths and the
+        # Flask app never sees them, so this is a no-op there.
+        if os.environ.get('DISABLE_NGINX', 'false').lower() == 'true':
+            from flask import send_from_directory
+            frontend_dir = '/var/www/html'
+
+            @app.route('/', defaults={'path': ''})
+            @app.route('/<path:path>')
+            def serve_frontend(path):
+                if path.startswith('api/'):
+                    return jsonify({'error': 'Not found'}), 404
+                full = os.path.join(frontend_dir, path)
+                if path and os.path.isfile(full):
+                    return send_from_directory(frontend_dir, path)
+                return send_from_directory(frontend_dir, 'index.html')
+
+            logger.info("DISABLE_NGINX=true: Flask will serve the frontend directly")
         
         # Initialize OIDC client after extensions and blueprints
         try:
