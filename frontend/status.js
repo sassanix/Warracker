@@ -568,6 +568,9 @@
                 invoice_path: warranty.invoice_path || null,
                 product_url: warranty.product_url,
                 purchase_price: warranty.purchase_price,
+                warranty_duration_years: warranty.warranty_duration_years || 0,
+                warranty_duration_months: warranty.warranty_duration_months || 0,
+                warranty_duration_days: warranty.warranty_duration_days || 0,
                 vendor: warranty.vendor,
                 model_number: warranty.model_number, // include model number for searching
                 serial_numbers: warranty.serial_numbers || [],
@@ -585,21 +588,34 @@
         filterAndSortWarranties(); // This will render the table
     }
 
-    function filterAndSortWarranties() {
-        const tableBody = document.getElementById('recentExpirationsBody');
-        if (!tableBody) { console.warn("recentExpirationsBody not found for rendering warranties."); return; }
-        
+    function getWarrantyStatusInfo(warranty) {
+        const todayForStatus = new Date(); todayForStatus.setHours(0,0,0,0);
+        // Archived takes precedence: show as Archived regardless of expiration
+        if (warranty.is_archived) {
+            return { text: i18next.t('warranties.archived', 'Archived'), className: 'status-archived' };
+        }
+        if (warranty.is_lifetime) {
+            return { text: i18next.t('warranties.lifetime'), className: 'status-lifetime' };
+        }
+        const expirationDate = new Date(warranty.expiration_date);
+        expirationDate.setHours(0,0,0,0);
+        if (expirationDate <= todayForStatus) {
+            return { text: i18next.t('warranties.expired'), className: 'status-expired' };
+        }
+        const timeDiff = expirationDate - todayForStatus;
+        const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+        if (daysDiff <= EXPIRING_SOON_DAYS) {
+            return { text: i18next.t('warranties.expiring_soon'), className: 'status-expiring' };
+        }
+        return { text: i18next.t('warranties.active'), className: 'status-active' };
+    }
+
+    // Returns the filtered + sorted warranty list currently shown in the table (no DOM writes)
+    function getDisplayWarranties() {
         const currentSearchTerm = searchWarranties && searchWarranties.value ? searchWarranties.value.toLowerCase() : '';
         const currentStatusValue = statusFilter && statusFilter.value ? statusFilter.value : 'all';
-        
-        tableBody.innerHTML = ''; 
 
-        if (!allWarranties || allWarranties.length === 0) {
-            const colspan = isGlobalView ? 5 : 4;
-            const noWarrantiesMessage = i18next.t('status.recent_expirations_empty', 'No recently expired or expiring warranties.');
-            tableBody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center; padding: 20px;">${noWarrantiesMessage}</td></tr>`;
-            return;
-        }
+        if (!allWarranties || allWarranties.length === 0) return [];
 
         const today = new Date();
         today.setHours(0,0,0,0); // Normalize today to start of day for consistent comparisons
@@ -669,6 +685,24 @@
             return 0;
         });
 
+        return displayWarranties;
+    }
+
+    function filterAndSortWarranties() {
+        const tableBody = document.getElementById('recentExpirationsBody');
+        if (!tableBody) { console.warn("recentExpirationsBody not found for rendering warranties."); return; }
+
+        tableBody.innerHTML = '';
+
+        if (!allWarranties || allWarranties.length === 0) {
+            const colspan = isGlobalView ? 5 : 4;
+            const noWarrantiesMessage = i18next.t('status.recent_expirations_empty', 'No recently expired or expiring warranties.');
+            tableBody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center; padding: 20px;">${noWarrantiesMessage}</td></tr>`;
+            return;
+        }
+
+        const displayWarranties = getDisplayWarranties();
+
         if (displayWarranties.length === 0) {
             const colspan = isGlobalView ? 5 : 4;
             const noMatchMessage = i18next.t('messages.no_results', 'No results found');
@@ -680,35 +714,10 @@
             const row = tableBody.insertRow();
             row.setAttribute('data-warranty-id', String(warranty.id)); // Ensure ID is string for dataset
             row.style.cursor = 'pointer';
-            
-            let statusText, statusClass;
-            const todayForStatus = new Date(); todayForStatus.setHours(0,0,0,0);
 
-            // Archived takes precedence: show as Archived regardless of expiration
-            if (warranty.is_archived) {
-                statusText = i18next.t('warranties.archived', 'Archived');
-                statusClass = 'status-archived';
-            } else if (warranty.is_lifetime) {
-                statusText = i18next.t('warranties.lifetime');
-                statusClass = 'status-lifetime';
-            } else {
-                const expirationDate = new Date(warranty.expiration_date);
-                expirationDate.setHours(0,0,0,0);
-                if (expirationDate <= todayForStatus) { 
-                    statusText = i18next.t('warranties.expired'); 
-                    statusClass = 'status-expired'; 
-                } else {
-                    const timeDiff = expirationDate - todayForStatus;
-                    const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-                    if (daysDiff <= EXPIRING_SOON_DAYS) { 
-                        statusText = i18next.t('warranties.expiring_soon'); 
-                        statusClass = 'status-expiring'; 
-                    } else { 
-                        statusText = i18next.t('warranties.active'); 
-                        statusClass = 'status-active'; 
-                    }
-                }
-            }
+            const statusInfo = getWarrantyStatusInfo(warranty);
+            const statusText = statusInfo.text;
+            const statusClass = statusInfo.className;
             row.className = statusClass;
 
             // Build row HTML based on current view mode
@@ -732,6 +741,70 @@
         });
     }
     
+    // Export the currently displayed (filtered + sorted) warranties as CSV.
+    // Column layout matches the main page export so the file can be re-imported.
+    function exportStatusCSV() {
+        const displayWarranties = getDisplayWarranties();
+        if (!displayWarranties || displayWarranties.length === 0) {
+            showToast(i18next.t('messages.no_warranties_to_export', 'No warranties to export'), 'info');
+            return;
+        }
+
+        const headers = [
+            'ProductName',
+            'PurchaseDate',
+            'IsLifetime',
+            'WarrantyDurationYears',
+            'WarrantyDurationMonths',
+            'WarrantyDurationDays',
+            'ExpirationDate',
+            'Status',
+            'PurchasePrice',
+            'SerialNumber',
+            'ProductURL',
+            'Tags',
+            'Vendor',
+        ];
+        const escapeField = (field) => `"${String(field).replace(/"/g, '""')}"`;
+        let csv = headers.join(',') + '\n';
+        displayWarranties.forEach((warranty) => {
+            const serials = Array.isArray(warranty.serial_numbers)
+                ? warranty.serial_numbers.map(sn => (sn && sn.serial_number) || sn).filter(Boolean).join(', ')
+                : '';
+            const statusText = getWarrantyStatusInfo(warranty).text;
+            const row = [
+                warranty.product_name || '',
+                warranty.purchase_date ? formatDateYYYYMMDD(new Date(warranty.purchase_date)) : '',
+                warranty.is_lifetime ? 'TRUE' : 'FALSE',
+                warranty.warranty_duration_years || 0,
+                warranty.warranty_duration_months || 0,
+                warranty.warranty_duration_days || 0,
+                (!warranty.is_lifetime && warranty.expiration_date) ? formatDateYYYYMMDD(new Date(warranty.expiration_date)) : '',
+                statusText,
+                (warranty.purchase_price !== null && warranty.purchase_price !== undefined && warranty.purchase_price !== '') ? warranty.purchase_price : '',
+                serials,
+                warranty.product_url || '',
+                '', // Tags are not included in the statistics payload
+                warranty.vendor || '',
+            ];
+            csv += row.map(escapeField).join(',') + '\n';
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.download = `warranties_export_${formatDateYYYYMMDD(new Date())}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showToast(
+            i18next.t('messages.exported_warranties_successfully', { count: displayWarranties.length }, `Exported ${displayWarranties.length} warranties`),
+            'success'
+        );
+    }
+
     function getStatusPriority(expirationDateStr, today, isLifetime = false, isArchived = false) {
         if (isArchived) return -1; // Archived comes first (or last depending on sort direction)
         if (isLifetime) return 0; 
@@ -949,31 +1022,10 @@
                 }
 
                 // --- BEGIN: Expiration Timeline Chart Fix ---
-                // Instead of using only API timeline, generate a comprehensive timeline from all warranties
-                let allWarrantiesForTimeline = [];
-                try {
-                    // Try to fetch all warranties for a complete timeline
-                    const token = window.auth && window.auth.getToken ? window.auth.getToken() : null;
-                    if (token) {
-                        const allWarrantiesResponse = await fetch('/api/warranties', {
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'Content-Type': 'application/json'
-                            }
-                        });
-                        if (allWarrantiesResponse.ok) {
-                            allWarrantiesForTimeline = await allWarrantiesResponse.json();
-                        } else {
-                            console.warn('Could not fetch all warranties for timeline, falling back to data.all_warranties');
-                            allWarrantiesForTimeline = data.all_warranties || [];
-                        }
-                    } else {
-                        allWarrantiesForTimeline = data.all_warranties || [];
-                    }
-                } catch (err) {
-                    console.error('Error fetching all warranties for timeline:', err);
-                    allWarrantiesForTimeline = data.all_warranties || [];
-                }
+                // Build the timeline from the warranties already loaded for the current
+                // view (data.all_warranties). A separate /api/warranties fetch would only
+                // ever return the current user's warranties, breaking the global view.
+                const allWarrantiesForTimeline = data.all_warranties || [];
 
                 // Helper: Extract timeline data from all warranties
                 function extractTimelineData(warranties) {
@@ -1380,11 +1432,10 @@
                 filterAndSortWarranties();
             });
         }
-        if (exportBtn) { 
-            exportBtn.addEventListener('click', function() { 
+        if (exportBtn) {
+            exportBtn.addEventListener('click', function() {
                 console.log("Status page export button clicked (status.js IIFE).");
-                // Placeholder for actual export logic for status page data
-                showToast('Export for status page table not fully implemented yet.', 'info');
+                exportStatusCSV();
             });
         }
         attachSortListeners(); // Call IIFE's attachSortListeners

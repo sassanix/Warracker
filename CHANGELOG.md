@@ -1,6 +1,11 @@
 # Changelog
 ## 1.0.3 - 2026-10-02
 
+- **Status page CSV export:** The Export button on the status dashboard was a placeholder that only showed a "not implemented" toast. It now downloads a CSV of the currently displayed (filtered and sorted) warranties, using the same column layout as the main page export so the file can be re-imported.
+  - _Files: `frontend/status.js`_
+- **Global-view timeline fix:** The expiration timeline chart always fetched `/api/warranties` (current user only), so in global view it silently omitted other users' warranties. It now builds from the already-loaded view data, matching the rest of the dashboard.
+  - _Files: `frontend/status.js`_
+
 ### Fixed
 - **Input validations are now enforced and translated:** three new HTTP 400 validations — product name over 255 chars (was an unhandled DB error → HTTP 500), expiration date before purchase date (was silently accepted), and invalid claim status (was silently coerced) — now return a stable machine-readable `code` (`product_name_too_long`, `expiration_before_purchase`, `invalid_claim_status`; claim-status errors also include `valid_statuses`) alongside the English fallback message. The frontend maps those codes to i18n keys via a new `apiErrorMessage()` helper in `ui.js` (used by the add-warranty form, edit modal, and claims toasts), so error toasts render in the user's language instead of always-English. Two new English keys were added (`messages.product_name_too_long`, `messages.invalid_claim_status`) and machine-translated into all 19 non-English locales with `{{statuses}}` placeholder integrity verified. Also removed the now-unused `safeErrorMessage()` helper from `apiService.js`.
   - _Files: `backend/warranties_routes.py`, `frontend/js/components/ui.js`, `frontend/js/services/apiService.js`, `frontend/js/components/addWarrantyForm.js`, `frontend/js/components/editModal.js`, `frontend/js/components/claims.js`, `locales/*/translation.json`_
