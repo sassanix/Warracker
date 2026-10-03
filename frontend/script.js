@@ -1749,7 +1749,7 @@ async function renderWarranties(warrantiesToRender) {
                         <div><i class="fas fa-calendar"></i> ${window.i18next ? window.i18next.t('warranties.age') : 'Age'}: <span>${productAge}</span></div>
                         <div><i class="fas fa-file-alt"></i> ${window.i18next ? window.i18next.t('warranties.warranty') : 'Warranty'}: <span>${warrantyDurationText}</span></div>
                         <div><i class="fas fa-wrench"></i> ${window.i18next ? window.i18next.t('warranties.warranty_ends') : 'Warranty Ends'}: <span>${expirationDateText}</span></div>
-                        ${warranty.purchase_price ? `<div><i class="fas fa-coins"></i> ${window.i18next ? window.i18next.t('warranties.price') : 'Price'}: <span>${formatCurrencyHTML(warranty.purchase_price, warranty.currency ? getCurrencySymbolByCode(warranty.currency) : getCurrencySymbol(), getCurrencyPosition())}</span></div>` : ''}
+                        ${warranty.purchase_price ? `<div><i class="fas fa-coins"></i> ${window.i18next ? window.i18next.t('warranties.price') : 'Price'}: <span>${formatCurrencyHTML(warranty.purchase_price, getCurrencySymbol(), getCurrencyPosition())}</span></div>` : ''}
                         ${validSerialNumbers.length > 0 ? `
                             <div><i class="fas fa-barcode"></i> ${window.i18next ? window.i18next.t('warranties.serial_number') : 'Serial Number'}: <span>${validSerialNumbers[0]}</span></div>
                             ${validSerialNumbers.length > 1 ? `
@@ -1812,7 +1812,7 @@ async function renderWarranties(warrantiesToRender) {
                         <div><i class="fas fa-calendar"></i> ${window.i18next ? window.i18next.t('warranties.age') : 'Age'}: <span>${productAge}</span></div>
                         <div><i class="fas fa-file-alt"></i> ${window.i18next ? window.i18next.t('warranties.warranty') : 'Warranty'}: <span>${warrantyDurationText}</span></div>
                         <div><i class="fas fa-wrench"></i> ${window.i18next ? window.i18next.t('warranties.warranty_ends') : 'Warranty Ends'}: <span>${expirationDateText}</span></div>
-                        ${warranty.purchase_price ? `<div><i class="fas fa-coins"></i> ${window.i18next ? window.i18next.t('warranties.price') : 'Price'}: <span>${formatCurrencyHTML(warranty.purchase_price, warranty.currency ? getCurrencySymbolByCode(warranty.currency) : getCurrencySymbol(), getCurrencyPosition())}</span></div>` : ''}
+                        ${warranty.purchase_price ? `<div><i class="fas fa-coins"></i> ${window.i18next ? window.i18next.t('warranties.price') : 'Price'}: <span>${formatCurrencyHTML(warranty.purchase_price, getCurrencySymbol(), getCurrencyPosition())}</span></div>` : ''}
                         ${validSerialNumbers.length > 0 ? `
                             <div><i class="fas fa-barcode"></i> ${window.i18next ? window.i18next.t('warranties.serial_number') : 'Serial Number'}: <span>${validSerialNumbers[0]}</span></div>
                             ${validSerialNumbers.length > 1 ? `
@@ -1875,7 +1875,7 @@ async function renderWarranties(warrantiesToRender) {
                         <div><i class="fas fa-calendar"></i> ${window.i18next ? window.i18next.t('warranties.age') : 'Age'}: <span>${productAge}</span></div>
                         <div><i class="fas fa-file-alt"></i> ${window.i18next ? window.i18next.t('warranties.warranty') : 'Warranty'}: <span>${warrantyDurationText}</span></div>
                         <div><i class="fas fa-wrench"></i> ${window.i18next ? window.i18next.t('warranties.warranty_ends') : 'Warranty Ends'}: <span>${expirationDateText}</span></div>
-                        ${warranty.purchase_price ? `<div><i class="fas fa-coins"></i> ${window.i18next ? window.i18next.t('warranties.price') : 'Price'}: <span>${formatCurrencyHTML(warranty.purchase_price, warranty.currency ? getCurrencySymbolByCode(warranty.currency) : getCurrencySymbol(), getCurrencyPosition())}</span></div>` : ''}
+                        ${warranty.purchase_price ? `<div><i class="fas fa-coins"></i> ${window.i18next ? window.i18next.t('warranties.price') : 'Price'}: <span>${formatCurrencyHTML(warranty.purchase_price, getCurrencySymbol(), getCurrencyPosition())}</span></div>` : ''}
                         ${validSerialNumbers.length > 0 ? `
                             <div><i class="fas fa-barcode"></i> ${window.i18next ? window.i18next.t('warranties.serial_number') : 'Serial Number'}: <span>${validSerialNumbers[0]}</span></div>
                             ${validSerialNumbers.length > 1 ? `

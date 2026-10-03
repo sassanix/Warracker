@@ -272,7 +272,9 @@ function generateDocumentLink(warranty, docType) {
 
 function getPriceHtml(warranty) {
 	if (!warranty.purchase_price) return '';
-	const symbol = warranty.currency ? getCurrencySymbolByCode(warranty.currency) : getCurrencySymbol();
+	// The user's currency preference is the display currency for prices
+	// (Settings: "Choose the symbol to display for prices").
+	const symbol = getCurrencySymbol();
 	const position = getCurrencyPosition();
 	const formatted = formatCurrencyHTML(warranty.purchase_price, symbol, position);
 	const label = t('warranties.price', 'Price');

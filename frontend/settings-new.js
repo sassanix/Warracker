@@ -953,10 +953,10 @@ async function loadPreferences() {
             console.log(`Loaded currency symbol from ${prefix}currencySymbol: ${storedCurrency}`);
         }
     } else {
-        // Default to '$' if nothing stored
-        if (currencySymbolSelect) currencySymbolSelect.value = '$';
+        // Default to 'USD' if nothing stored (option values are currency codes)
+        if (currencySymbolSelect) currencySymbolSelect.value = 'USD';
         if (currencySymbolCustom) currencySymbolCustom.style.display = 'none';
-        console.log(`${prefix}currencySymbol not found, defaulting to $`);
+        console.log(`${prefix}currencySymbol not found, defaulting to USD`);
     }
 
     // Currency Position

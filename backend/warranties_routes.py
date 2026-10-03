@@ -33,6 +33,31 @@ logger = logging.getLogger(__name__)
 
 warranties_bp = Blueprint('warranties_bp', __name__)
 
+# Map of currency symbols to ISO codes (mirrors frontend js/lib/currency.js).
+# Used to resolve a user's preferred currency symbol to a code for new warranties.
+SYMBOL_TO_CURRENCY_CODE = {
+    '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY', '₹': 'INR', '₩': 'KRW',
+    'CHF': 'CHF', 'C$': 'CAD', 'A$': 'AUD', 'kr': 'SEK', 'zł': 'PLN',
+    'Kč': 'CZK', 'Ft': 'HUF', '₽': 'RUB', 'R$': 'BRL', '₪': 'ILS',
+    '₺': 'TRY', 'NZ$': 'NZD',
+}
+
+def get_user_currency_code(user_id):
+    """Return the user's preferred currency code, falling back to 'USD'."""
+    try:
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT currency_symbol FROM user_preferences WHERE user_id = %s", (user_id,))
+                row = cur.fetchone()
+                if row and row[0]:
+                    return SYMBOL_TO_CURRENCY_CODE.get(row[0], 'USD')
+        finally:
+            release_db_connection(conn)
+    except Exception as e:
+        logger.warning(f"Could not load preferred currency for user {user_id}: {e}")
+    return 'USD'
+
 
 
 def convert_decimals(obj):
@@ -280,8 +305,8 @@ def add_warranty():
             except ValueError:
                 return jsonify({"error": "Purchase price must be a valid number"}), 400
         
-        # Handle currency (optional, defaults to USD)
-        currency = request.form.get('currency', 'USD')
+        # Handle currency (optional, defaults to the user's preferred currency)
+        currency = request.form.get('currency') or get_user_currency_code(user_id)
         # Validate currency code
         valid_currencies = [
             'USD', 'EUR', 'GBP', 'JPY', 'CNY', 'INR', 'KRW', 'CHF', 'CAD', 'AUD',
@@ -626,12 +651,13 @@ def update_warranty(warranty_id):
         with conn.cursor() as cur:
             # Check if warranty exists and belongs to the user
             if is_admin:
-                cur.execute('SELECT id FROM warranties WHERE id = %s', (warranty_id,))
+                cur.execute('SELECT id, currency FROM warranties WHERE id = %s', (warranty_id,))
             else:
-                cur.execute('SELECT id FROM warranties WHERE id = %s AND user_id = %s', (warranty_id, user_id))
+                cur.execute('SELECT id, currency FROM warranties WHERE id = %s AND user_id = %s', (warranty_id, user_id))
             warranty = cur.fetchone()
             if not warranty:
                 return jsonify({"error": "Warranty not found or you don't have permission to update it"}), 404
+            existing_currency = warranty[1] if len(warranty) > 1 else None
 
             # --- PATCH: Support JSON-only notes update ---
             if request.is_json and 'notes' in request.json and len(request.json) == 1:
@@ -752,8 +778,8 @@ def update_warranty(warranty_id):
                 except ValueError:
                     return jsonify({"error": "Purchase price must be a valid number"}), 400
             
-            # Handle currency (optional, defaults to USD)
-            currency = request.form.get('currency', 'USD')
+            # Handle currency (optional, keep existing, else user's preferred currency)
+            currency = request.form.get('currency') or existing_currency or get_user_currency_code(user_id)
             # Validate currency code
             valid_currencies = [
                 'USD', 'EUR', 'GBP', 'JPY', 'CNY', 'INR', 'KRW', 'CHF', 'CAD', 'AUD',
