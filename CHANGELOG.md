@@ -2,33 +2,24 @@
 ## 1.0.3 - 2026-10-02
 
 ### Fixed
-- **Validation errors are now machine-readable and translated:** the three new HTTP 400 validations (product name > 255 chars, expiration before purchase, invalid claim status) now return a stable `code` (`product_name_too_long`, `expiration_before_purchase`, `invalid_claim_status`; claim-status errors also include `valid_statuses`) alongside the English fallback message. The frontend maps those codes to i18n keys via a new `apiErrorMessage()` helper in `ui.js` (used by the add-warranty form, edit modal, and claims toasts), so error toasts render in the user's language instead of always-English. Two new English keys were added (`messages.product_name_too_long`, `messages.invalid_claim_status`) and machine-translated into all 19 non-English locales with `{{statuses}}` placeholder integrity verified; 100% key coverage vs English and zero placeholder mismatches confirmed. Also removed the now-unused `safeErrorMessage()` helper from `apiService.js`.
+- **Input validations are now enforced and translated:** three new HTTP 400 validations — product name over 255 chars (was an unhandled DB error → HTTP 500), expiration date before purchase date (was silently accepted), and invalid claim status (was silently coerced) — now return a stable machine-readable `code` (`product_name_too_long`, `expiration_before_purchase`, `invalid_claim_status`; claim-status errors also include `valid_statuses`) alongside the English fallback message. The frontend maps those codes to i18n keys via a new `apiErrorMessage()` helper in `ui.js` (used by the add-warranty form, edit modal, and claims toasts), so error toasts render in the user's language instead of always-English. Two new English keys were added (`messages.product_name_too_long`, `messages.invalid_claim_status`) and machine-translated into all 19 non-English locales with `{{statuses}}` placeholder integrity verified. Also removed the now-unused `safeErrorMessage()` helper from `apiService.js`.
   - _Files: `backend/warranties_routes.py`, `frontend/js/components/ui.js`, `frontend/js/services/apiService.js`, `frontend/js/components/addWarrantyForm.js`, `frontend/js/components/editModal.js`, `frontend/js/components/claims.js`, `locales/*/translation.json`_
 - **Expiry-day inconsistency fixed:** a warranty expiring *today* got three different answers — statistics counted it as `expired` (`expiration_date <= today`), the UI showed "expiring" (0 days left), and the notification query excluded it (`expiration_date > today`). All three now agree it is still valid: statistics uses `expiration_date < today` for expired and `>= today` for the active / expiring-soon / timeline buckets, and the expiry notification query includes it (`>= today`).
   - _Files: `backend/statistics_routes.py`, `backend/notifications.py`_
-- **Product name length validated:** a 500-character product name (column is `VARCHAR(255)`) caused an unhandled DB error → HTTP 500. Both the create and update endpoints now return HTTP 400 when the name exceeds 255 characters.
-  - _Files: `backend/warranties_routes.py`_
-- **Expiration-before-purchase rejected:** an exact expiration date earlier than the purchase date was accepted (201). Both the create and update endpoints now return HTTP 400 in that case.
-  - _Files: `backend/warranties_routes.py`_
 - **CSV tag/serial round-trip fixed:** the frontend export joined tags and serial numbers with spaces while the import splits on commas, so re-importing an export merged multi-tag warranties into a single tag. Export now joins with `", "` to match the import.
   - _Files: `frontend/js/components/importExport.js`_
-- **Invalid claim status now rejected:** creating or updating a claim with an invalid status returned 200 and silently coerced it (to `'Submitted'` on create, to the previous value on update). Both endpoints now return HTTP 400 listing the valid statuses.
-  - _Files: `backend/warranties_routes.py`_
-- **All 19 non-English locales now fully translated (machine translation):** Every key in `locales/en/translation.json` (767 keys) was missing from at least one other locale — 2,015 missing keys in total (ru 173, it 150, most others ~95–98) — and a further 1,194 strings existed in 14 locales only as untranslated English. All have now been machine-translated from English (Google Translate), with `{{placeholder}}` integrity verified on every string (22 cases where the engine translated placeholder names like `{{name}}` → `{{nombre}}` were repaired; one Hindi string that dropped `{{count}}` was fixed by hand). Also fixed a pre-existing Hebrew translation that dropped the `{{username}}` placeholder. Short brand/technical terms (Warracker, Paperless-ngx, CSV, OIDC, URLs) were deliberately left as-is. These are machine translations — native-speaker review is recommended before relying on them for customer-facing polish.
-  - _Files: `locales/*/translation.json`_
-- **66 i18n keys referenced by the frontend had no English definition:** Static analysis of every `t('…')` call and `data-i18n` attribute found 66 keys (toast messages, validation errors, claims labels, tag-manager strings, the registration-disabled notice) missing from `locales/en/translation.json`. i18next renders undefined keys as raw key text, so users saw strings like `messages.deleted_successfully` in toasts. All values were taken from the inline English fallbacks already present at the call sites, so default-language UX is unchanged; other languages now fall back to English instead of showing raw keys.
-  - _Files: `locales/en/translation.json`_
+- **Missing English i18n keys added and all 19 non-English locales fully translated:** Static analysis of every `t('…')` call and `data-i18n` attribute found 66 keys (toast messages, validation errors, claims labels, tag-manager strings, the registration-disabled notice, `actions.view`, the `tags.no_selected` placeholder, and 16 `paperless.*` keys) missing from `locales/en/translation.json`. i18next renders undefined keys as raw key text, so users saw strings like `messages.deleted_successfully` in toasts. All values were taken from the inline English fallbacks already present at the call sites (with `defaultValue` fallbacks added at the call sites for graceful degradation), so default-language UX is unchanged; other languages now fall back to English instead of showing raw keys. Every key in `locales/en/translation.json` (767 keys) was then machine-translated from English (Google Translate) into all 19 non-English locales — 2,015 missing keys in total (ru 173, it 150, most others ~95–98) plus 1,194 strings that existed only as untranslated English — with `{{placeholder}}` integrity verified on every string (22 cases where the engine translated placeholder names like `{{name}}` → `{{nombre}}` were repaired; one Hindi string that dropped `{{count}}` was fixed by hand; a pre-existing Hebrew translation that dropped `{{username}}` was fixed). Short brand/technical terms (Warracker, Paperless-ngx, CSV, OIDC, URLs) were deliberately left as-is. These are machine translations — native-speaker review is recommended before relying on them for customer-facing polish.
+  - _Files: `locales/*/translation.json`, `frontend/js/components/editModal.js`, `frontend/js/components/addWarrantyForm.js`, `frontend/js/components/tagManager.js`_
 - **Theme init crash on every page loading the classic script:** `script.js` called `initializeTheme()` unguarded on `DOMContentLoaded`, but `js/lib/theme.js` (the only file defining it) is never included as a classic script — it is an ES module loaded only via `js/index.js`. The call threw `initializeTheme is not defined` on about, status, register, and both reset-password pages (and index), which also silently skipped the rest of that init handler (`setupUIEventListeners()`, `setupModalTriggers()`, form wiring). The call is now guarded with `typeof initializeTheme === 'function'`; the visual theme was and is applied by `theme-loader.js` on all pages.
   - _Files: `frontend/script.js`
 - **Paperless "Test Connection" ignored unsaved form values:** Clicking "Test Connection" on the settings page with a freshly entered URL and API token always reported "Connection Failed!", even when the Paperless-ngx instance was reachable, because `POST /api/paperless/test` ignored the `url`/`api_token` in the request body and only ever tested the saved site settings. The endpoint now tests the provided values directly when both are present, and falls back to the saved settings otherwise.
   - _Files: `backend/file_routes.py`
 - **Font Awesome now served locally (works offline):** The icon font was loaded from the cdnjs CDN, so all UI icons disappeared on offline or restricted networks. Font Awesome Free 7.0.1 (`all.min.css` + webfonts, ~312 KB) is now vendored under `frontend/vendor/fontawesome/` and referenced by all 8 pages; added `font/woff2`, `font/woff`, and `font/ttf` MIME types to `nginx.conf`.
   - _Files: `frontend/vendor/fontawesome/`, `frontend/*.html`, `nginx.conf`_
-- **Expired JWT Broken UI State:** Fixed critical issue where users returning to the app after their JWT expired would see a broken, empty UI instead of being redirected to login.
+- **Expired JWT left a broken UI (#225):** Users returning after their JWT expired saw a broken, empty UI instead of being redirected to login.
   - **Root Cause:** `auth-redirect.js` only checked for the *presence* of `auth_token` in localStorage, not its validity. An expired token was treated as authenticated, causing the UI to render with stale cached data while API calls returned 401.
-  - **Solution:** Updated `auth-redirect.js` to synchronously decode the JWT payload and verify the `exp` claim before allowing protected pages to load. Expired or malformed tokens are automatically cleared from localStorage and the user is redirected to login.
-  - Added OIDC SSO bypass for `auth-redirect.html` to prevent redirect loops during SSO token processing.
-  - _Files: `frontend/auth-redirect.js`, `frontend/sw.js`, `frontend/index.html`, `frontend/status.html`, `frontend/settings-new.html`, `frontend/login.html`, `frontend/register.html`, `frontend/auth-redirect.html`_
+  - **Solution:** Two layers — `auth-redirect.js` now synchronously decodes the JWT payload and verifies the `exp` claim before allowing protected pages to load (expired or malformed tokens are cleared and the user is redirected to login), and the API layer (`apiService.js`) now logs out and redirects on any 401 response instead of leaving an empty authenticated-looking UI. Added OIDC SSO bypass for `auth-redirect.html` to prevent redirect loops during SSO token processing.
+  - _Files: `frontend/auth-redirect.js`, `frontend/js/services/apiService.js`, `frontend/sw.js`, `frontend/index.html`, `frontend/status.html`, `frontend/settings-new.html`, `frontend/login.html`, `frontend/register.html`, `frontend/auth-redirect.html`_
 
 - **Docker Build Failure (Stale Package Versions):** Fixed Dockerfile failing to build due to outdated pinned Debian package versions.
   - **Root Cause:** Exact version pins for Debian Trixie packages became stale after security updates (e.g., `libcurl4` renamed to `libcurl4t64`, versions bumped with `+deb13u3` suffix).
@@ -101,19 +92,6 @@
   - **Solution:** Added fallback to `window.currentWarrantyId` and sync to store in `openDeleteModal`/`openArchiveModal`.
   - _Files: `frontend/js/components/warrantyActions.js`, `frontend/script.js`_
 
-- **No Tags Selected Placeholder:** Fixed raw i18n key `tags.no_selected` displaying instead of translated text when no tags are selected.
-  - **Solution:** Added `defaultValue` option to `window.t()` calls to ensure a human-readable fallback is always displayed.
-  - _Files: `frontend/js/components/addWarrantyForm.js`, `frontend/js/components/tagManager.js`_
-
-- **Missing Translations:** Added missing translation keys to resolve console warnings.
-  - Added keys: `filters.filter`, `filters.filter_by`, `filters.clear`, `filters.apply`, `filters.sort`, `warranties.archived`, `actions.data`, `warranties.or_link_to_invoice_url`, `warranties.or_link_to_manual_url`, `warranties.or_link_to_files_url`, `warranties.enter_serial_number`, `warranties.add_serial_number`.
-  - _Files: `locales/en/translation.json`_
-
-- **Missing `actions.view` Translation Key:** Fixed edit modal showing raw key `actions.view` instead of "View" for document preview links.
-  - **Root Cause:** The `actions.view` key was absent from the `actions` section in all 20 locale files. `editModal.js` called `i18n.t('actions.view')` without a `defaultValue`, so when the key was missing i18next returned the key path string instead of a human-readable fallback.
-  - **Solution:** Added `"view"` to the `actions` section of all 20 locale files with the appropriate native translation for each language. Also updated all 7 call sites in `editModal.js` to use `{ defaultValue: 'View' }` so missing keys always fall back gracefully.
-  - _Files: `frontend/js/components/editModal.js`, `locales/*/translation.json` (all 20 locales)_
-
 - **Service Worker Caching JS Files Indefinitely:** Fixed JS module updates (e.g. `editModal.js`, `warrantyRenderer.js`) not being picked up by returning users even after a Docker rebuild.
   - **Root Cause:** The service worker used a cache-first strategy for all request types including scripts. Once a JS file was stored in the SW cache it was served directly from there, completely bypassing nginx — making nginx cache headers irrelevant and preventing code updates from reaching users until the `CACHE_NAME` was manually bumped.
   - **Solution:** Changed the SW fetch handler to use a **network-first** strategy for all script requests (falling back to cache only when offline) and kept cache-first only for non-code assets (images, fonts, CSS, HTML). Also updated nginx to serve `.js` files with `Cache-Control: no-cache, must-revalidate` so the browser always revalidates JS on each visit.
@@ -128,9 +106,6 @@
   - **Root Cause:** `upload_document()` only polled the Paperless task endpoint when the task UUID came back as plain text; JSON-encoded UUIDs were ignored, leaving `document_id` null.
   - **Solution:** Handle both plain-text and JSON-encoded task UUID shapes and poll the task endpoint in both cases.
   - _Files: `backend/paperless_handler.py`_
-
-- **Missing Paperless UI Translations:** Added the 16 missing `paperless` i18n keys to the English locale — every Paperless UI string was rendering as a raw key (e.g. `paperless.loading_documents`).
-  - _Files: `locales/en/translation.json`_
 
 - **Archived Warranties Counted in Dashboard Statistics:** Fixed dashboard statistics (total/active/expired/expiring-soon) including archived warranties.
   - **Root Cause:** The statistics queries in `statistics_routes.py` never filtered on `archived_at`, so archiving a warranty left all dashboard cards unchanged.
@@ -156,8 +131,6 @@
   - _Files: `backend/db_handler.py`, `backend/migrations/apply_migrations.py`_
 - **Contradictory proxy scheme headers (#97, #190):** Nginx and gunicorn disagreed on `X-Forwarded-Proto` handling. Nginx now forwards a single `X-Forwarded-Proto` and strips alternate scheme headers; `DISABLE_NGINX=true` lets Flask serve frontend+API directly on port 5000.
   - _Files: `nginx.conf`, `backend/__init__.py`, `docker-compose.yml`_
-- **Expired JWT left a broken UI (#225):** API 401s now trigger logout/redirect to login instead of leaving an empty authenticated-looking UI.
-  - _Files: `frontend/js/services/apiService.js`_
 - **Complete Paperless tag pagination (#255):** The tags endpoint returned only the first Paperless page. It now requests `page_size=1000` and follows `next` links.
   - _Files: `backend/paperless_handler.py`_
 - **CSV import rejected BOM/cased/whitespace headers (#236):** The importer now decodes with `utf-8-sig`, trims headers, and matches documented column names case-insensitively.
@@ -172,6 +145,8 @@
   - _Files: `backend/utils.py`, `backend/auth_routes.py`, `backend/notifications.py`_
 - **Invisible toasts blocked clicks (#197):** The fade-out animation set `opacity: 0` at ~3s but the element stayed in the DOM until ~5s, intercepting clicks at `z-index: 1001`. The keyframes now end with `visibility: hidden`, the container is `pointer-events: none`, and the previously undefined `.toast-fade-out` class is now defined.
   - _Files: `frontend/style.css`_
+- **About page loaded without styles:** `about.html` linked `styles.css`, a file that doesn't exist (the stylesheet is `style.css`), so the page rendered unstyled and logged a 404.
+  - _Files: `frontend/about.html`_
 
 ## 1.0.2 - 2025-10-30
 
