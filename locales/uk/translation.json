@@ -687,7 +687,8 @@
     "connected": "Підключено",
     "version": "Версія",
     "uptime": "Час роботи",
-    "archived_warranties": "Архівні гарантії"
+    "archived_warranties": "Архівні гарантії",
+    "total_value": "Загальна вартість"
   },
   "about": {
     "title": "Про Warracker",

@@ -681,7 +681,8 @@
     "database_status": "Database Status",
     "connected": "Connected",
     "version": "Version",
-    "uptime": "Uptime"
+    "uptime": "Uptime",
+    "total_value": "Total Value"
   },
   "about": {
     "title": "About - Warracker",

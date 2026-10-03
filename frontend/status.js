@@ -419,11 +419,16 @@
         const expiringEl = document.getElementById('expiringCount');
         const expiredEl = document.getElementById('expiredCount');
         const archivedEl = document.getElementById('archivedCount');
+        const totalValueEl = document.getElementById('totalValueCount');
         if (totalEl) totalEl.textContent = statusData.total || 0;
         if (activeEl) activeEl.textContent = statusData.active || 0;
         if (expiringEl) expiringEl.textContent = statusData.expiring_soon || 0;
         if (expiredEl) expiredEl.textContent = statusData.expired || 0;
         if (archivedEl) archivedEl.textContent = statusData.archived || 0;
+        if (totalValueEl) {
+            const val = parseFloat(statusData.total_value || 0);
+            totalValueEl.textContent = userCurrencySymbol + val.toFixed(2);
+        }
     }
 
     function createStatusChart(stats) {
@@ -929,7 +934,8 @@
                     expiring_soon: data.expiring_soon || 0,
                     expired: data.expired || 0,
                     total: data.total || 0,
-                    archived: data.archived || 0
+                    archived: data.archived || 0,
+                    total_value: data.total_value || 0
                 };
 
                 if (Object.keys(statusDistributionData).length > 0 && statusDistributionData.total > 0) {

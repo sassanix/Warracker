@@ -681,7 +681,8 @@
     "connected": "已連線",
     "version": "版本",
     "uptime": "正常執行時間",
-    "archived_warranties": "存檔的保固"
+    "archived_warranties": "存檔的保固",
+    "total_value": "總價值"
   },
   "about": {
     "title": "關於Warracker",

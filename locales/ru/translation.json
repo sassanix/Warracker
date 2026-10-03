@@ -731,7 +731,8 @@
     "connected": "Подключено",
     "version": "Версия",
     "uptime": "Время работы",
-    "archived_warranties": "Архивные гарантии"
+    "archived_warranties": "Архивные гарантии",
+    "total_value": "Общая стоимость"
   },
   "about": {
     "title": "О Warracker",

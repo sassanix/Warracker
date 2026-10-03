@@ -688,7 +688,8 @@
     "connected": "Připojeno",
     "version": "Verze",
     "uptime": "Doba provozu",
-    "archived_warranties": "Archivované záruky"
+    "archived_warranties": "Archivované záruky",
+    "total_value": "Celková hodnota"
   },
   "about": {
     "title": "O aplikaci Warracker",

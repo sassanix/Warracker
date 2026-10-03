@@ -681,7 +681,8 @@
     "connected": "接続済み",
     "version": "バージョン",
     "uptime": "稼働時間",
-    "archived_warranties": "アーカイブされた保証"
+    "archived_warranties": "アーカイブされた保証",
+    "total_value": "合計金額"
   },
   "about": {
     "title": "Warrackerについて",

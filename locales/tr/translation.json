@@ -681,7 +681,8 @@
     "connected": "Bağlı",
     "version": "Sürüm",
     "uptime": "Çalışma Süresi",
-    "archived_warranties": "Arşivlenmiş Garantiler"
+    "archived_warranties": "Arşivlenmiş Garantiler",
+    "total_value": "Toplam Değer"
   },
   "about": {
     "title": "Warracker Hakkında",

@@ -89,6 +89,11 @@ def get_statistics():
             cur.execute(f"SELECT COUNT(*) {from_clause} {where_clause} AND w.archived_at IS NOT NULL", params)
             archived_count = cur.fetchone()[0]
             logger.info(f"Archived warranties: {archived_count}")
+
+            # Get total purchase value (excluding archived; issue #192)
+            cur.execute(f"SELECT COALESCE(SUM(w.purchase_price), 0) {from_clause} {where_clause} AND w.archived_at IS NULL", params)
+            total_value = cur.fetchone()[0]
+            logger.info(f"Total purchase value: {total_value}")
             
             # Get active count (includes lifetime, excludes archived)
             cur.execute(f"SELECT COUNT(*) {from_clause} {where_clause} {active_where if where_clause else 'WHERE'} (w.is_lifetime = TRUE OR w.expiration_date >= %s) AND w.archived_at IS NULL", params + [today])
@@ -206,6 +211,7 @@ def get_statistics():
                 'expired': expired_count,
                 'expiring_soon': expiring_soon_count,
                 'archived': archived_count,
+                'total_value': total_value,
                 'timeline': timeline,
                 'recent_warranties': recent_warranties,
                 'all_warranties': all_warranties_list  # <-- Add the new list here
@@ -278,6 +284,10 @@ def get_global_statistics():
             # Get archived count
             cur.execute("SELECT COUNT(*) FROM warranties w WHERE w.archived_at IS NOT NULL")
             archived_count = cur.fetchone()[0]
+
+            # Get total purchase value (excluding archived; issue #192)
+            cur.execute("SELECT COALESCE(SUM(w.purchase_price), 0) FROM warranties w WHERE w.archived_at IS NULL")
+            total_value = cur.fetchone()[0]
             
             # Get active count (includes lifetime, excludes archived)
             cur.execute("SELECT COUNT(*) FROM warranties w WHERE (w.is_lifetime = TRUE OR w.expiration_date >= %s) AND w.archived_at IS NULL", (today,))
@@ -422,6 +432,7 @@ def get_global_statistics():
                 'expired': expired_count,
                 'expiring_soon': expiring_soon_count,
                 'archived': archived_count,
+                'total_value': total_value,
                 'timeline': timeline,
                 'recent_warranties': recent_warranties,
                 'all_warranties': all_warranties_list

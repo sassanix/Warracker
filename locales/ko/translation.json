@@ -681,7 +681,8 @@
     "connected": "연결됨",
     "version": "버전",
     "uptime": "가동 시간",
-    "archived_warranties": "보관된 보증"
+    "archived_warranties": "보관된 보증",
+    "total_value": "총 가치"
   },
   "about": {
     "title": "Warracker 정보",

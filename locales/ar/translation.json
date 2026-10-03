@@ -691,7 +691,8 @@
     "connected": "متصل",
     "version": "الإصدار",
     "uptime": "وقت التشغيل",
-    "archived_warranties": "الضمانات المؤرشفة"
+    "archived_warranties": "الضمانات المؤرشفة",
+    "total_value": "القيمة الإجمالية"
   },
   "about": {
     "title": "حول Warracker",

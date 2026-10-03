@@ -681,7 +681,8 @@
     "connected": "Verbonden",
     "version": "Versie",
     "uptime": "Uptime",
-    "archived_warranties": "Gearchiveerde garanties"
+    "archived_warranties": "Gearchiveerde garanties",
+    "total_value": "Totale waarde"
   },
   "about": {
     "title": "Over Warracker",

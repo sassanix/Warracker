@@ -681,7 +681,8 @@
     "connected": "Połączono",
     "version": "Wersja",
     "uptime": "Czas działania",
-    "archived_warranties": "Archiwizowane gwarancje"
+    "archived_warranties": "Archiwizowane gwarancje",
+    "total_value": "Całkowita wartość"
   },
   "about": {
     "title": "O aplikacji - Warracker",

@@ -691,7 +691,8 @@
     "connected": "מחובר",
     "version": "גרסה",
     "uptime": "זמן פעולה",
-    "archived_warranties": "אחריות בארכיון"
+    "archived_warranties": "אחריות בארכיון",
+    "total_value": "ערך כולל"
   },
   "about": {
     "title": "אודות Warracker",

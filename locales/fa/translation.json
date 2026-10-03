@@ -681,7 +681,8 @@
     "connected": "متصل",
     "version": "نسخه",
     "uptime": "مدت فعالیت",
-    "archived_warranties": "گارانتی های آرشیو شده"
+    "archived_warranties": "گارانتی های آرشیو شده",
+    "total_value": "ارزش کل"
   },
   "about": {
     "title": "درباره Warracker",

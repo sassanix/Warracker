@@ -725,7 +725,8 @@
     "connected": "Conectado",
     "version": "Versão",
     "uptime": "Tempo de Atividade",
-    "archived_warranties": "Garantias arquivadas"
+    "archived_warranties": "Garantias arquivadas",
+    "total_value": "Valor total"
   },
   "about": {
     "title": "Sobre o Warracker",

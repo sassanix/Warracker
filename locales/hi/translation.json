@@ -681,7 +681,8 @@
     "connected": "जुड़ा हुआ",
     "version": "संस्करण",
     "uptime": "अपटाइम",
-    "archived_warranties": "संग्रहीत वारंटी"
+    "archived_warranties": "संग्रहीत वारंटी",
+    "total_value": "कुल मूल्य"
   },
   "about": {
     "title": "Warracker के बारे में",
