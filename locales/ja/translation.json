@@ -682,7 +682,8 @@
     "version": "バージョン",
     "uptime": "稼働時間",
     "archived_warranties": "アーカイブされた保証",
-    "total_value": "合計金額"
+    "total_value": "合計金額",
+    "total_value_tooltip": "アーカイブされていないすべての保証の購入価格の合計。購入価格のない保証は 0 としてカウントされます。"
   },
   "about": {
     "title": "Warrackerについて",

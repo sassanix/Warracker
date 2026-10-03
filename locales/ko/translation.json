@@ -682,7 +682,8 @@
     "version": "버전",
     "uptime": "가동 시간",
     "archived_warranties": "보관된 보증",
-    "total_value": "총 가치"
+    "total_value": "총 가치",
+    "total_value_tooltip": "보관되지 않은 모든 보증의 구매 가격 합계입니다. 구매 가격이 없는 보증은 0으로 계산됩니다."
   },
   "about": {
     "title": "Warracker 정보",

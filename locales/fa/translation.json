@@ -682,7 +682,8 @@
     "version": "نسخه",
     "uptime": "مدت فعالیت",
     "archived_warranties": "گارانتی های آرشیو شده",
-    "total_value": "ارزش کل"
+    "total_value": "ارزش کل",
+    "total_value_tooltip": "مجموع قیمت خرید کلیه ضمانت نامه های بایگانی نشده. گارانتی بدون قیمت خرید 0 محاسبه می شود."
   },
   "about": {
     "title": "درباره Warracker",

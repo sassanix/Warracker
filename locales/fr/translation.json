@@ -682,7 +682,8 @@
     "version": "Version",
     "uptime": "Temps de Fonctionnement",
     "archived_warranties": "Garanties archivées",
-    "total_value": "Valeur totale"
+    "total_value": "Valeur totale",
+    "total_value_tooltip": "Somme des prix d'achat de toutes les garanties non archivées. Les garanties sans prix d’achat comptent pour 0."
   },
   "about": {
     "title": "À Propos de Warracker",

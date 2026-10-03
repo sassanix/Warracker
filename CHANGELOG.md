@@ -149,6 +149,10 @@
   - _Files: `frontend/about.html`_
 - **Total Value dashboard card (#192):** New "Total Value" card on the status dashboard showing the sum of purchase prices across non-archived warranties, formatted with the user's currency symbol. Added `total_value` to both `/api/statistics` and `/api/statistics/global` (`COALESCE` to 0, so empty/null prices are safe); i18n key `status.total_value` added to all 20 locales.
   - _Files: `backend/statistics_routes.py`, `frontend/status.html`, `frontend/status.js`, `locales/*/translation.json`_
+- **Total Value calculation tooltip (#192):** Clicking the Total Value card opens a popover explaining how the figure is calculated (sum of purchase prices of non-archived warranties; missing prices count as 0). New i18n key `status.total_value_tooltip` in all 20 locales; keyboard accessible (Enter/Space toggles, Escape dismisses).
+  - _Files: `frontend/status.html`, `frontend/status.js`, `frontend/style.css`, `locales/*/translation.json`_
+- **Duplicate `status.js` include removed:** `status.html` loaded `status.js` twice (once in `<head>`, once at end of `<body>`), attaching every event listener twice and initializing the dashboard twice.
+  - _Files: `frontend/status.html`_
 
 ## 1.0.2 - 2025-10-30
 

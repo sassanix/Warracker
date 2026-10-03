@@ -38,7 +38,6 @@
     <!-- Load fix for auth buttons -->
     <script src="fix-auth-buttons-loader.js?v=20250119001"></script>
     <script src="script.js?v=20260518002" defer></script> <!-- Added script.js -->
-    <script src="status.js?v=20250119001" defer></script> <!-- Status page specific functionality -->
     <style>
         .user-menu {
             position: relative;
@@ -452,14 +451,15 @@
                         </div>
                     </div>
 
-                    <div class="status-card" data-status="total_value">
+                    <div class="status-card" data-status="total_value" id="totalValueCard" role="button" tabindex="0" aria-label="Total Value details">
                         <div class="card-icon">
                             <i class="fas fa-coins"></i>
                         </div>
                         <div class="card-content">
-                            <h3 data-i18n="status.total_value">Total Value</h3>
+                            <h3><span data-i18n="status.total_value">Total Value</span> <i class="fas fa-circle-info info-hint"></i></h3>
                             <p class="count" id="totalValueCount">-</p>
                         </div>
+                        <div class="info-popover" id="totalValuePopover" data-i18n="status.total_value_tooltip">Sum of the purchase prices of all non-archived warranties. Warranties without a purchase price count as 0.</div>
                     </div>
                 </div>
                 

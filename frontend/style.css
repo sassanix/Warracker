@@ -1644,9 +1644,72 @@ input:checked + .toggle-slider:before {
     color: #9b59b6;
 }
 
+.status-card[data-status="total_value"] {
+    cursor: pointer;
+    position: relative;
+}
+
+.status-card[data-status="total_value"]:focus-visible {
+    outline: 2px solid #9b59b6;
+    outline-offset: 2px;
+}
+
+.status-card[data-status="total_value"] .info-hint {
+    font-size: 0.75rem;
+    color: var(--dark-gray);
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+.status-card[data-status="total_value"] .card-content {
+    min-width: 0;
+}
+
 .status-card[data-status="total_value"] .count {
     font-size: 1.4rem;
     white-space: nowrap;
+}
+
+.info-popover {
+    display: none;
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    min-width: 230px;
+    max-width: 300px;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 0.85rem;
+    font-weight: 400;
+    line-height: 1.5;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    z-index: 60;
+}
+
+.info-popover.show {
+    display: block;
+}
+
+.info-popover::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 28px;
+    border: 8px solid transparent;
+    border-bottom-color: var(--border-color);
+}
+
+.info-popover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 29px;
+    border: 7px solid transparent;
+    border-bottom-color: var(--card-bg);
+    z-index: 1;
 }
 
 .card-icon {

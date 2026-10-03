@@ -682,7 +682,8 @@
     "version": "版本",
     "uptime": "正常執行時間",
     "archived_warranties": "存檔的保固",
-    "total_value": "總價值"
+    "total_value": "總價值",
+    "total_value_tooltip": "所有非存檔保固的購買價格總和。沒有購買價格的保固計為 0。"
   },
   "about": {
     "title": "關於Warracker",

@@ -1344,6 +1344,31 @@
         // Setup event listeners for status page specific controls
         if (refreshDashboardBtn) refreshDashboardBtn.addEventListener('click', refreshDashboard);
         if (searchWarranties) searchWarranties.addEventListener('input', filterAndSortWarranties);
+        // Total Value card: click toggles the "how it's calculated" popover
+        const totalValueCard = document.getElementById('totalValueCard');
+        const totalValuePopover = document.getElementById('totalValuePopover');
+        if (totalValueCard && totalValuePopover) {
+            totalValueCard.addEventListener('click', function(event) {
+                event.stopPropagation();
+                totalValuePopover.classList.toggle('show');
+            });
+            totalValueCard.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    totalValuePopover.classList.toggle('show');
+                }
+            });
+            document.addEventListener('click', function(event) {
+                if (!totalValueCard.contains(event.target)) {
+                    totalValuePopover.classList.remove('show');
+                }
+            });
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    totalValuePopover.classList.remove('show');
+                }
+            });
+        }
         // Restore saved status filter selection on load
         if (statusFilter) {
             const savedStatus = loadStatusFilterPreference();

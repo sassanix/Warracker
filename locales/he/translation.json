@@ -692,7 +692,8 @@
     "version": "גרסה",
     "uptime": "זמן פעולה",
     "archived_warranties": "אחריות בארכיון",
-    "total_value": "ערך כולל"
+    "total_value": "ערך כולל",
+    "total_value_tooltip": "סכום מחירי הרכישה של כל האחריות שאינן מאוחסנות בארכיון. אחריות ללא מחיר רכישה נחשבת כ-0."
   },
   "about": {
     "title": "אודות Warracker",

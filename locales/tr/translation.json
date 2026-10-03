@@ -682,7 +682,8 @@
     "version": "Sürüm",
     "uptime": "Çalışma Süresi",
     "archived_warranties": "Arşivlenmiş Garantiler",
-    "total_value": "Toplam Değer"
+    "total_value": "Toplam Değer",
+    "total_value_tooltip": "Arşivlenmemiş tüm garantilerin satın alma fiyatlarının toplamı. Satın alma fiyatı olmayan garantiler 0 olarak sayılır."
   },
   "about": {
     "title": "Warracker Hakkında",

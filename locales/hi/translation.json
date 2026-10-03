@@ -682,7 +682,8 @@
     "version": "संस्करण",
     "uptime": "अपटाइम",
     "archived_warranties": "संग्रहीत वारंटी",
-    "total_value": "कुल मूल्य"
+    "total_value": "कुल मूल्य",
+    "total_value_tooltip": "सभी गैर-संग्रहीत वारंटी की खरीद कीमतों का योग। खरीद मूल्य के बिना वारंटी की गिनती 0 होती है।"
   },
   "about": {
     "title": "Warracker के बारे में",

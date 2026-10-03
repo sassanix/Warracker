@@ -682,7 +682,8 @@
     "version": "版本",
     "uptime": "正常运行时间",
     "archived_warranties": "存档的保修",
-    "total_value": "总价值"
+    "total_value": "总价值",
+    "total_value_tooltip": "所有非存档保修的购买价格总和。没有购买价格的保修计为 0。"
   },
   "about": {
     "title": "关于 - Warracker",

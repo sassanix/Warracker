@@ -682,7 +682,8 @@
     "version": "Wersja",
     "uptime": "Czas działania",
     "archived_warranties": "Archiwizowane gwarancje",
-    "total_value": "Całkowita wartość"
+    "total_value": "Całkowita wartość",
+    "total_value_tooltip": "Suma cen zakupu wszystkich niezarchiwizowanych gwarancji. Gwarancje bez ceny zakupu liczą się jako 0."
   },
   "about": {
     "title": "O aplikacji - Warracker",

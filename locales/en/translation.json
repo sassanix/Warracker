@@ -682,7 +682,8 @@
     "connected": "Connected",
     "version": "Version",
     "uptime": "Uptime",
-    "total_value": "Total Value"
+    "total_value": "Total Value",
+    "total_value_tooltip": "Sum of the purchase prices of all non-archived warranties. Warranties without a purchase price count as 0."
   },
   "about": {
     "title": "About - Warracker",
