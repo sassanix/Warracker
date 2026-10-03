@@ -120,11 +120,9 @@ function renderDropdownList(container, tags, selected, onSelect, searchTerm = ''
     createOption.addEventListener('click', async () => {
       try {
         const created = await createTag(searchTerm);
-        setSelectedTags([...getSelectedTags(), created]);
-        renderSelectedTags();
-        if (typeof window.updateSummary === 'function') window.updateSummary();
-        // Re-render the dropdown to show the new tag as selected
-        renderDropdownList(container, [...getAllTags()], getSelectedTags(), onSelect, '');
+        // Route through the context-aware onSelect (add form vs edit modal),
+        // so the new tag lands in the correct selection, not always the add form's.
+        onSelect(created, false);
       } finally {
         container.classList.remove('show');
       }
