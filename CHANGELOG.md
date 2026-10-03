@@ -147,6 +147,8 @@
   - _Files: `frontend/style.css`_
 - **About page loaded without styles:** `about.html` linked `styles.css`, a file that doesn't exist (the stylesheet is `style.css`), so the page rendered unstyled and logged a 404.
   - _Files: `frontend/about.html`_
+- **Total Value dashboard card (#192):** New "Total Value" card on the status dashboard showing the sum of purchase prices across non-archived warranties, formatted with the user's currency symbol. Added `total_value` to both `/api/statistics` and `/api/statistics/global` (`COALESCE` to 0, so empty/null prices are safe); i18n key `status.total_value` added to all 20 locales.
+  - _Files: `backend/statistics_routes.py`, `frontend/status.html`, `frontend/status.js`, `locales/*/translation.json`_
 
 ## 1.0.2 - 2025-10-30
 
