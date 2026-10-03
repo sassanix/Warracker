@@ -164,6 +164,8 @@
   - _Files: `frontend/status.html`, `frontend/status.js`, `frontend/style.css`, `locales/*/translation.json`_
 - **Duplicate `status.js` include removed:** `status.html` loaded `status.js` twice (once in `<head>`, once at end of `<body>`), attaching every event listener twice and initializing the dashboard twice.
   - _Files: `frontend/status.html`_
+- **Edit-modal tabs fit on phones:** On a 390px viewport the Warranty/Documents/Tags tab buttons were clipped off the edge of the edit modal with no way to reach them except swiping. Below 480px the tab buttons now use tighter padding and hide their icons so all four tabs are visible and tappable.
+  - _Files: `frontend/style.css`_
 
 ## 1.0.2 - 2025-10-30
 

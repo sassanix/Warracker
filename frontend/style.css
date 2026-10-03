@@ -3949,6 +3949,16 @@ input.invalid {
     margin-right: 0.5rem;
 }
 
+@media (max-width: 480px) {
+    .edit-tab-btn {
+        padding: 0.75rem 0.55rem;
+        font-size: 0.85rem;
+    }
+    .edit-tab-btn i {
+        display: none;
+    }
+}
+
 .edit-tab-content {
     display: none;
 }
