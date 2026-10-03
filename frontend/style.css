@@ -3950,12 +3950,10 @@ input.invalid {
 }
 
 @media (max-width: 480px) {
-    .edit-tab-btn {
-        padding: 0.75rem 0.55rem;
-        font-size: 0.85rem;
-    }
-    .edit-tab-btn i {
-        display: none;
+    /* Tabs stay swipeable on phones; fade the right edge to hint there's more */
+    .edit-tabs-nav {
+        -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent 100%);
+        mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent 100%);
     }
 }
 
