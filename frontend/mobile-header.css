@@ -1252,3 +1252,13 @@
     background-color: var(--hover-bg) !important;
   }
 }
+/* Total Value card spans the full row on phones so the amount
+   always fits on one line and never wraps mid-number. */
+@media (max-width: 480px) {
+  .status-content .status-card[data-status="total_value"],
+  body .status-card[data-status="total_value"],
+  .container .status-card[data-status="total_value"],
+  .status-card[data-status="total_value"] {
+    grid-column: 1 / -1 !important;
+  }
+}

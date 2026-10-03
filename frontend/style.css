@@ -1646,8 +1646,7 @@ input:checked + .toggle-slider:before {
 
 .status-card[data-status="total_value"] .count {
     font-size: 1.4rem;
-    overflow-wrap: break-word;
-    word-break: break-word;
+    white-space: nowrap;
 }
 
 .card-icon {
