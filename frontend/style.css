@@ -1640,6 +1640,16 @@ input:checked + .toggle-slider:before {
     color: #3498db;
 }
 
+.status-card[data-status="total_value"] .card-icon {
+    color: #9b59b6;
+}
+
+.status-card[data-status="total_value"] .count {
+    font-size: 1.4rem;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
 .card-icon {
     font-size: 2.5rem;
     margin-right: 15px;
