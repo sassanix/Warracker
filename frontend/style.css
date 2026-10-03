@@ -1655,10 +1655,13 @@ input:checked + .toggle-slider:before {
 }
 
 .status-card[data-status="total_value"] .info-hint {
-    font-size: 0.75rem;
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    font-size: 0.85rem;
     color: var(--dark-gray);
-    margin-left: 4px;
-    vertical-align: middle;
+    opacity: 0.55;
+    pointer-events: none;
 }
 
 .status-card[data-status="total_value"] .card-content {
