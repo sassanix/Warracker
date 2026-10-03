@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Warracker</Name>
+  <Repository>ghcr.io/sassanix/warracker/main:latest</Repository>
+  <Registry>https://github.com/sassanix/Warracker/pkgs/container/warracker</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/sassanix/Warracker/issues</Support>
+  <Project>https://github.com/sassanix/Warracker</Project>
+  <Overview>Warracker is a self-hosted warranty tracker. Keep track of all your warranties, receipts, and manuals in one place — with expiry notifications, document storage (local or Paperless-ngx), tags, claims, and CSV import/export.
+  &#10;&#10;REQUIRES PostgreSQL: install a PostgreSQL container first (e.g. the official postgres template), create a database and user, then point DB_HOST/DB_NAME/DB_USER/DB_PASSWORD below at it.</Overview>
+  <Category>Tools:System</Category>
+  <WebUI>http://[IP]:[PORT:8005]</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/sassanix/Warracker/main/unraid/warracker.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sassanix/Warracker/main/frontend/img/favicon-512x512.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <Date>2026-10-03</Date>
+  <Changes>Initial Unraid template release.</Changes>
+  <Description>Warracker is a self-hosted warranty tracker. Keep track of all your warranties, receipts, and manuals in one place.</Description>
+
+  <Config Name="WebUI Port" Target="80" Default="8005" Mode="tcp"
+    Description="Port for the Warracker web interface (container listens on 80)." Type="Port"
+    Display="always" Required="true" Mask="false">8005</Config>
+
+  <Config Name="Uploads" Target="/data/uploads" Default="/mnt/user/appdata/warracker/uploads" Mode="rw"
+    Description="Persistent storage for uploaded invoices, manuals, and photos." Type="Path"
+    Display="always" Required="true" Mask="false">/mnt/user/appdata/warracker/uploads</Config>
+
+  <Config Name="DB_HOST" Target="DB_HOST" Default="" Mode=""
+    Description="PostgreSQL host. Install a PostgreSQL container first, then use its IP address (find it under Docker -> container -> IP) or container name." Type="Variable"
+    Display="always" Required="true" Mask="false"></Config>
+
+  <Config Name="DB_PORT" Target="DB_PORT" Default="5432" Mode=""
+    Description="PostgreSQL port." Type="Variable"
+    Display="always" Required="false" Mask="false">5432</Config>
+
+  <Config Name="DB_NAME" Target="DB_NAME" Default="warranty_db" Mode=""
+    Description="PostgreSQL database name." Type="Variable"
+    Display="always" Required="true" Mask="false">warranty_db</Config>
+
+  <Config Name="DB_USER" Target="DB_USER" Default="warracker" Mode=""
+    Description="PostgreSQL username." Type="Variable"
+    Display="always" Required="true" Mask="false">warracker</Config>
+
+  <Config Name="DB_PASSWORD" Target="DB_PASSWORD" Default="" Mode=""
+    Description="PostgreSQL password." Type="Variable"
+    Display="always" Required="true" Mask="true"></Config>
+
+  <Config Name="SECRET_KEY" Target="SECRET_KEY" Default="" Mode=""
+    Description="Secret key for Flask sessions and JWT. Generate a random string (e.g. openssl rand -hex 32)." Type="Variable"
+    Display="always" Required="true" Mask="true"></Config>
+
+  <Config Name="FRONTEND_URL" Target="FRONTEND_URL" Default="http://[IP]:[PORT:8005]" Mode=""
+    Description="Public URL of the frontend (used for redirects)." Type="Variable"
+    Display="advanced" Required="false" Mask="false">http://[IP]:[PORT:8005]</Config>
+
+  <Config Name="APP_BASE_URL" Target="APP_BASE_URL" Default="http://[IP]:[PORT:8005]" Mode=""
+    Description="Public base URL of the application (used in email links)." Type="Variable"
+    Display="advanced" Required="false" Mask="false">http://[IP]:[PORT:8005]</Config>
+
+  <Config Name="SMTP_HOST" Target="SMTP_HOST" Default="localhost" Mode=""
+    Description="SMTP host for password resets and notifications (optional)." Type="Variable"
+    Display="advanced" Required="false" Mask="false">localhost</Config>
+
+  <Config Name="SMTP_PORT" Target="SMTP_PORT" Default="1025" Mode=""
+    Description="SMTP port." Type="Variable"
+    Display="advanced" Required="false" Mask="false">1025</Config>
+
+  <Config Name="SMTP_FROM_ADDRESS" Target="SMTP_FROM_ADDRESS" Default="" Mode=""
+    Description="Sender address for outgoing mail (optional)." Type="Variable"
+    Display="advanced" Required="false" Mask="false"></Config>
+
+  <Config Name="WARRACKER_MEMORY_MODE" Target="WARRACKER_MEMORY_MODE" Default="optimized" Mode=""
+    Description="Memory profile: optimized (default), ultra-light, or performance." Type="Variable"
+    Display="advanced" Required="false" Mask="false">optimized</Config>
+</Container>
