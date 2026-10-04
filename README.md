@@ -209,7 +209,7 @@ Click on **Data** > **Import**
 
 ## 🌐 Localization Support
 
-Warracker offers **full multilingual UI support** with **18 languages**, including **RTL (Right-to-Left) support**, instant language switching, and native name display.
+Warracker offers **full multilingual UI support** with **20 languages**, including **RTL (Right-to-Left) support**, instant language switching, and native name display.
 
 <details>
     
