@@ -166,6 +166,8 @@
   - _Files: `frontend/status.html`_
 - **Edit-modal tabs discoverable on phones:** On a 390px viewport the Warranty/Documents/Tags tab buttons were clipped off the edge of the edit modal with no indication more tabs existed. The tab bar is swipeable, and below 480px its right edge now fades out to hint there's more to swipe to.
   - _Files: `frontend/style.css`_
+- **Status table expiry-day consistency:** The dashboard cards and backend statistics correctly treat a warranty expiring *today* as still valid, but the status table's row label, status filter, and sort priority still used `<= today`, marking today-expiring warranties "Expired" (and the "expiring" filter excluded them, so they fell in a gap). All three now use `< today` for expired / `>= today` for expiring, matching the statistics. Also fixed `PATCH /api/warranties/<id>/archive` returning HTTP 500 on an empty JSON body — it now returns 400 with a clear message.
+  - _Files: `frontend/status.js`, `backend/warranties_routes.py`_
 
 ## 1.0.2 - 2025-10-30
 

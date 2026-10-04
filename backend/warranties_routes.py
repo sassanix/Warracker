@@ -536,7 +536,10 @@ def toggle_archive_warranty(warranty_id):
 
         if not request.is_json:
             return jsonify({"error": "Request must be JSON"}), 400
-        archived_flag = request.json.get('archived')
+        data = request.get_json(silent=True)
+        if not data:
+            return jsonify({"error": "Request body must be valid JSON"}), 400
+        archived_flag = data.get('archived')
         if archived_flag is None:
             return jsonify({"error": "Missing 'archived' boolean in request body"}), 400
 

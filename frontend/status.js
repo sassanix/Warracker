@@ -599,7 +599,7 @@
         }
         const expirationDate = new Date(warranty.expiration_date);
         expirationDate.setHours(0,0,0,0);
-        if (expirationDate <= todayForStatus) {
+        if (expirationDate < todayForStatus) {
             return { text: i18next.t('warranties.expired'), className: 'status-expired' };
         }
         const timeDiff = expirationDate - todayForStatus;
@@ -645,13 +645,13 @@
             expirationDate.setHours(0,0,0,0); // Normalize for comparison
 
             if (currentStatusValue === 'all') return true;
-            if (currentStatusValue === 'expired') return expirationDate <= today;
+            if (currentStatusValue === 'expired') return expirationDate < today;
             
             const timeDiff = expirationDate - today;
             const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
 
-            if (currentStatusValue === 'expiring') return expirationDate > today && daysDiff <= EXPIRING_SOON_DAYS;
-            if (currentStatusValue === 'active') return expirationDate > today && daysDiff > EXPIRING_SOON_DAYS;
+            if (currentStatusValue === 'expiring') return expirationDate >= today && daysDiff <= EXPIRING_SOON_DAYS;
+            if (currentStatusValue === 'active') return expirationDate >= today && daysDiff > EXPIRING_SOON_DAYS;
             
             return true; // Should ideally not be reached if statusValue is one of the handled ones
         });
@@ -815,7 +815,7 @@
         todayNormalized.setHours(0,0,0,0);
 
         if (isNaN(expirationDate.getTime())) return 4;
-        if (expirationDate <= todayNormalized) return 3; 
+        if (expirationDate < todayNormalized) return 3; 
         const timeDiff = expirationDate - todayNormalized;
         const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
         if (daysDiff <= EXPIRING_SOON_DAYS) return 2; 
