@@ -323,7 +323,7 @@ This project is licensed under the GNU Affero General Public License v3.0 - see 
 
 ### Security researchers
 *   [lazymaster101](https://github.com/lazymaster101) and the CSCE 413 (Texas A&M University) vulnerability-research team — Carrigan Royer, Jayani Singh, Seshadithya Saravanan, Aaditya Srinivasan, Miko Quinones — for the responsible disclosure of a stored XSS vulnerability.
-*   Malik Abdullah — for the responsible disclosure of an authorization bypass on the `/api/files/` document-serving route.
+*   [humidnhefty](https://github.com/humidnhefty) (Malik Abdullah, Lupine Security) — for the responsible disclosure of an authorization bypass on the `/api/files/` document-serving route.
 
 
 ## ⭐Star History
