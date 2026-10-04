@@ -25,20 +25,90 @@ file_bp = Blueprint('file_bp', __name__)
 logger = logging.getLogger(__name__)
 
 # ============================
+# Shared file authorization
+# ============================
+
+def _check_file_authorization(cur, db_search_path, user_id, is_admin):
+    """
+    Shared authorization check for serving uploaded files.
+    db_search_path is the path as stored in the DB (e.g. 'uploads/abc.pdf').
+    Returns True when the user may access the file, False otherwise.
+
+    Rules (identical for /files/ and /secure-file/):
+      - admins: always allowed
+      - the owner of the warranty the file is attached to: allowed
+      - anyone else: allowed only for shared document types (product photo,
+        invoice, manual) when the admin setting global_view_enabled is true
+        (and, if global_view_admin_only is true, only admins)
+    Files not linked to any warranty are unauthorized for non-admins.
+    """
+    query = """
+        SELECT w.id, w.user_id
+        FROM warranties w
+        WHERE w.invoice_path = %s OR w.manual_path = %s OR w.other_document_path = %s OR w.product_photo_path = %s
+    """
+    cur.execute(query, (db_search_path, db_search_path, db_search_path, db_search_path))
+    results = cur.fetchall()
+
+    if is_admin:
+        logger.info(f"[FILE_AUTH] Admin access granted for '{db_search_path}'")
+        return True
+
+    # Ownership authorization
+    for warranty_id_db, warranty_user_id_db in (results or []):
+        if warranty_user_id_db == user_id:
+            logger.info(f"[FILE_AUTH] Ownership confirmed for warranty_id={warranty_id_db}")
+            return True
+
+    # Global view permissions for shared documents (photos, invoices, manuals)
+    if results:
+        for warranty_id_db, _warranty_user_id_db in results:
+            cur.execute('SELECT product_photo_path, invoice_path, manual_path FROM warranties WHERE id = %s', (warranty_id_db,))
+            warranty_files = cur.fetchone()
+            # Only shared document types participate in global view (not other_document)
+            if warranty_files and db_search_path in warranty_files:
+                cur.execute("SELECT key, value FROM site_settings WHERE key IN ('global_view_enabled', 'global_view_admin_only')")
+                settings = {row[0]: row[1] for row in cur.fetchall()}
+
+                global_view_enabled = settings.get('global_view_enabled', 'true').lower() == 'true'
+                admin_only = settings.get('global_view_admin_only', 'false').lower() == 'true'
+
+                if global_view_enabled and (not admin_only or is_admin):
+                    logger.info(f"[FILE_AUTH] Global view access granted for shared document: '{db_search_path}'")
+                    return True
+
+    logger.warning(f"[FILE_AUTH] Unauthorized file access attempt: '{db_search_path}' by user {user_id}")
+    return False
+
+
+# ============================
 # Local File Serving Routes
 # ============================
 
 @file_bp.route('/files/<path:filename>', methods=['GET', 'POST'])
 @token_required
 def serve_file(filename):
-    """Basic secure file serving with authentication."""
+    """File serving with the same authorization checks as /secure-file/."""
+    conn = None
     try:
         logger.info(f"File access request for {filename} by user {request.user['id']}")
-        
+
         if not filename.startswith('uploads/'):
             logger.warning(f"Attempted access to non-uploads file: {filename}")
             return jsonify({"message": "Access denied"}), 403
-            
+
+        # Security check for path traversal
+        if '..' in filename or filename.startswith('/'):
+            logger.warning(f"Potential path traversal attempt detected: {filename} by user {request.user['id']}")
+            return jsonify({"message": "Invalid file path"}), 400
+
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            user_id = request.user['id']
+            is_admin = request.user.get('is_admin', False)
+            if not _check_file_authorization(cur, filename, user_id, is_admin):
+                return jsonify({"message": "You are not authorized to access this file"}), 403
+
         # Remove 'uploads/' prefix for send_from_directory
         file_path = filename[8:] if filename.startswith('uploads/') else filename
 
@@ -46,6 +116,9 @@ def serve_file(filename):
     except Exception as e:
         logger.error(f"Error serving file {filename}: {e}")
         return jsonify({"message": "Error accessing file"}), 500
+    finally:
+        if conn:
+            release_db_connection(conn)
 
 @file_bp.route('/secure-file/<path:filename>', methods=['GET', 'POST'])
 @token_required
@@ -75,51 +148,13 @@ def secure_file_access(filename):
         with conn.cursor() as cur:
             db_search_path = f"uploads/{filename}"
             logger.info(f"[SECURE_FILE] Searching DB for paths like: '{db_search_path}' (repr: {repr(db_search_path)})")
-            query = """
-                SELECT w.id, w.user_id
-                FROM warranties w
-                WHERE w.invoice_path = %s OR w.manual_path = %s OR w.other_document_path = %s OR w.product_photo_path = %s
-            """
-            cur.execute(query, (db_search_path, db_search_path, db_search_path, db_search_path))
-            results = cur.fetchall()
-            logger.info(f"[SECURE_FILE] DB query results for '{db_search_path}': {results}")
 
             user_id = request.user['id']
             is_admin = request.user.get('is_admin', False)
-            authorized = is_admin
-            logger.info(f"[SECURE_FILE] Initial authorization (is_admin={is_admin}): {authorized}")
 
-            # Check for ownership authorization
-            if not authorized and results:
-                for warranty_id_db, warranty_user_id_db in results:
-                    logger.info(f"[SECURE_FILE] Checking ownership: warranty_id={warranty_id_db}, owner_id={warranty_user_id_db}, current_user_id={user_id}")
-                    if warranty_user_id_db == user_id:
-                        authorized = True
-                        logger.info(f"[SECURE_FILE] Ownership confirmed for warranty_id={warranty_id_db}")
-                        break
-            
-            # Check global view permissions for shared documents (photos, invoices, manuals)
-            if not authorized and results:
-                for warranty_id_db, warranty_user_id_db in results:
-                    # Check if the requested file is a product photo, invoice, or manual for the given warranty
-                    cur.execute('SELECT product_photo_path, invoice_path, manual_path FROM warranties WHERE id = %s', (warranty_id_db,))
-                    warranty_files = cur.fetchone()
-                    # Check if the file path is one of the globally viewable document types
-                    if warranty_files and db_search_path in warranty_files:
-                        # This is a shared document type - check global view settings
-                        cur.execute("SELECT key, value FROM site_settings WHERE key IN ('global_view_enabled', 'global_view_admin_only')")
-                        settings = {row[0]: row[1] for row in cur.fetchall()}
-                        
-                        global_view_enabled = settings.get('global_view_enabled', 'true').lower() == 'true'
-                        admin_only = settings.get('global_view_admin_only', 'false').lower() == 'true'
-                        
-                        if global_view_enabled and (not admin_only or is_admin):
-                            authorized = True
-                            logger.info(f"[SECURE_FILE] Global view access granted for shared document: {filename}")
-                            break
-            
-            if not authorized:
-                logger.warning(f"[SECURE_FILE] Unauthorized file access attempt: '{filename}' (repr: {repr(filename)}) by user {user_id}. DB results count: {len(results) if results else 'None'}")
+            # Shared authorization (same rules as /files/)
+            if not _check_file_authorization(cur, db_search_path, user_id, is_admin):
+                logger.warning(f"[SECURE_FILE] Unauthorized file access attempt: '{filename}' (repr: {repr(filename)}) by user {user_id}")
                 return jsonify({"message": "You are not authorized to access this file"}), 403
 
             upload_dir = current_app.config['UPLOAD_FOLDER']
