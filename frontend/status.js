@@ -574,6 +574,9 @@
                 vendor: warranty.vendor,
                 model_number: warranty.model_number, // include model number for searching
                 serial_numbers: warranty.serial_numbers || [],
+                tags: warranty.tags || [],
+                currency: warranty.currency || '',
+                warranty_type: warranty.warranty_type || '',
                 notes: warranty.notes,
                 manual_path: warranty.manual_path || null,
                 other_document_path: warranty.other_document_path || null,
@@ -764,13 +767,21 @@
             'ProductURL',
             'Tags',
             'Vendor',
+            'Notes',
+            'Currency',
+            'ModelNumber',
+            'WarrantyType',
         ];
         const escapeField = (field) => `"${String(field).replace(/"/g, '""')}"`;
         let csv = headers.join(',') + '\n';
         displayWarranties.forEach((warranty) => {
+            // JSON-encoded so values containing commas round-trip intact
             const serials = Array.isArray(warranty.serial_numbers)
-                ? warranty.serial_numbers.map(sn => (sn && sn.serial_number) || sn).filter(Boolean).join(', ')
-                : '';
+                ? JSON.stringify(warranty.serial_numbers.map(sn => (sn && sn.serial_number) || sn).filter(Boolean))
+                : '[]';
+            const tags = Array.isArray(warranty.tags)
+                ? JSON.stringify(warranty.tags.map(t => (t && t.name) || t).filter(Boolean))
+                : '[]';
             const statusText = getWarrantyStatusInfo(warranty).text;
             const row = [
                 warranty.product_name || '',
@@ -784,8 +795,12 @@
                 (warranty.purchase_price !== null && warranty.purchase_price !== undefined && warranty.purchase_price !== '') ? warranty.purchase_price : '',
                 serials,
                 warranty.product_url || '',
-                '', // Tags are not included in the statistics payload
+                tags,
                 warranty.vendor || '',
+                warranty.notes || '',
+                warranty.currency || '',
+                warranty.model_number || '',
+                warranty.warranty_type || '',
             ];
             csv += row.map(escapeField).join(',') + '\n';
         });

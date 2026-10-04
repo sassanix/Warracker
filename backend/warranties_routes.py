@@ -1184,8 +1184,24 @@ def import_warranties():
     REQUIRED_CSV_HEADERS = ['ProductName', 'PurchaseDate']
     OPTIONAL_CSV_HEADERS = [
         'ExpirationDate', 'IsLifetime', 'PurchasePrice', 'SerialNumber', 'ProductURL', 'Tags', 'Vendor', 'WarrantyType',
-        'WarrantyDurationYears', 'WarrantyDurationMonths', 'WarrantyDurationDays'
+        'WarrantyDurationYears', 'WarrantyDurationMonths', 'WarrantyDurationDays',
+        'Notes', 'Currency', 'ModelNumber',
     ]
+
+    def _parse_list_field(raw):
+        """Parse a Tags/SerialNumber cell. New exports JSON-encode the list
+        (so values containing commas round-trip); fall back to comma-split
+        for hand-written or legacy files."""
+        raw = (raw or '').strip()
+        if not raw:
+            return []
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, list):
+                return [str(x).strip() for x in parsed if str(x).strip()]
+        except (ValueError, TypeError):
+            pass
+        return [x.strip() for x in raw.split(',') if x.strip()]
 
     try:
         # Read the file content. utf-8-sig strips a BOM, which Excel and
@@ -1243,6 +1259,9 @@ def import_warranties():
                     vendor = row.get('Vendor', '').strip() # Extract Vendor
                     warranty_type = row.get('WarrantyType', '').strip() # Extract Warranty Type
                     expiration_date_str = row.get('ExpirationDate', '').strip()
+                    notes = row.get('Notes', '').strip() or None # Extract Notes
+                    model_number = row.get('ModelNumber', '').strip() or None # Extract Model Number
+                    currency_str = row.get('Currency', '').strip().upper() # Extract Currency
 
                     if not product_name:
                         errors.append("ProductName is required.")
@@ -1328,13 +1347,13 @@ def import_warranties():
                         else:
                             errors.append("Either duration (Years, Months, Days) or an ExpirationDate is required unless IsLifetime is TRUE.")
 
-                    # Split serial numbers
-                    serial_numbers = [sn.strip() for sn in serial_numbers_str.split(',') if sn.strip()] if serial_numbers_str else []
+                    # Split serial numbers (JSON list from new exports, comma-separated legacy)
+                    serial_numbers = _parse_list_field(serial_numbers_str)
 
                     # --- Process Tags --- 
                     tag_ids_to_link = []
                     if tags_str:
-                        tag_names = [name.strip() for name in tags_str.split(',') if name.strip()]
+                        tag_names = _parse_list_field(tags_str)
                         if tag_names:
                             # Find existing tag IDs (case-insensitive) for THIS USER
                             placeholders = ', '.join(['%s'] * len(tag_names))
@@ -1443,19 +1462,40 @@ def import_warranties():
                     except Exception as currency_err:
                         logger.error(f"[Import] Error getting user currency preference: {currency_err}, defaulting to USD")
 
+                    # --- Resolve row currency: explicit Currency column wins when valid ---
+                    row_currency = user_currency_code
+                    if currency_str:
+                        # Validate against the CHECK constraint's code list
+                        if currency_str in (
+                            'USD','EUR','GBP','JPY','CNY','INR','KRW','CHF','CAD','AUD',
+                            'SEK','NOK','DKK','PLN','CZK','HUF','BGN','RON','HRK','RUB',
+                            'BRL','MXN','ARS','CLP','COP','PEN','VES','ZAR','EGP','NGN',
+                            'KES','GHS','MAD','TND','AED','SAR','QAR','KWD','BHD','OMR',
+                            'JOD','LBP','ILS','TRY','IRR','PKR','BDT','LKR','NPR','BTN',
+                            'MMK','THB','VND','LAK','KHR','MYR','SGD','IDR','PHP','TWD',
+                            'HKD','MOP','KPW','MNT','KZT','UZS','KGS','TMT','AFN','AMD',
+                            'AZN','GEL','MDL','UAH','BYN','RSD','MKD','ALL','BAM','ISK',
+                            'FJD','PGK','SBD','TOP','VUV','WST','XPF','NZD'
+                        ):
+                            row_currency = currency_str
+                        else:
+                            logger.warning(f"[Import] Row {row_number}: unknown currency '{currency_str}', using {user_currency_code}")
+
                     # --- Insert into Database --- 
                     cur.execute("""
                         INSERT INTO warranties (
                             product_name, purchase_date, expiration_date, 
                             product_url, purchase_price, user_id, is_lifetime, vendor, warranty_type,
-                            warranty_duration_years, warranty_duration_months, warranty_duration_days, currency
+                            warranty_duration_years, warranty_duration_months, warranty_duration_days, currency,
+                            notes, model_number
                         )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         RETURNING id
                     """, (
                         product_name, purchase_date, expiration_date,
                         product_url, purchase_price, user_id, is_lifetime, vendor, warranty_type,
-                        warranty_duration_years, warranty_duration_months, warranty_duration_days, user_currency_code
+                        warranty_duration_years, warranty_duration_months, warranty_duration_days, row_currency,
+                        notes, model_number
                     ))
                     warranty_id = cur.fetchone()[0]
 

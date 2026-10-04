@@ -178,7 +178,7 @@ def get_statistics():
                     id, product_name, purchase_date, 
                     warranty_duration_years, warranty_duration_months, warranty_duration_days,
                     expiration_date, invoice_path, manual_path, other_document_path, product_url, purchase_price, is_lifetime,
-                    model_number,
+                    model_number, notes, currency, vendor, warranty_type,
                     (archived_at IS NOT NULL) AS is_archived
                 {from_clause}
                 {where_clause}
@@ -200,6 +200,19 @@ def get_statistics():
                 # Convert Decimal objects to float for JSON serialization
                 if warranty.get('purchase_price') and isinstance(warranty['purchase_price'], Decimal):
                     warranty['purchase_price'] = float(warranty['purchase_price'])
+
+                # Serial numbers and tags (needed for the status-page CSV export)
+                wid = warranty['id']
+                cur.execute('SELECT serial_number FROM serial_numbers WHERE warranty_id = %s', (wid,))
+                warranty['serial_numbers'] = [r[0] for r in cur.fetchall()]
+                cur.execute('''
+                    SELECT t.id, t.name, t.color
+                    FROM tags t
+                    JOIN warranty_tags wt ON t.id = wt.tag_id
+                    WHERE wt.warranty_id = %s
+                    ORDER BY t.name
+                ''', (wid,))
+                warranty['tags'] = [{'id': t[0], 'name': t[1], 'color': t[2]} for t in cur.fetchall()]
                     
                 all_warranties_list.append(warranty)
             logger.info(f"Fetched {len(all_warranties_list)} total warranties.")
@@ -385,7 +398,7 @@ def get_global_statistics():
                     w.expiration_date, w.invoice_path, w.manual_path, w.other_document_path, 
                     w.product_url, w.purchase_price, w.is_lifetime,
                     u.username, u.email, u.first_name, u.last_name,
-                    w.model_number,
+                    w.model_number, w.notes, w.currency, w.vendor, w.warranty_type,
                     (w.archived_at IS NOT NULL) AS is_archived
                 FROM warranties w
                 JOIN users u ON w.user_id = u.id
@@ -407,6 +420,19 @@ def get_global_statistics():
                 # Convert Decimal objects to float for JSON serialization
                 if warranty.get('purchase_price') and isinstance(warranty['purchase_price'], Decimal):
                     warranty['purchase_price'] = float(warranty['purchase_price'])
+
+                # Serial numbers and tags (needed for the status-page CSV export)
+                wid = warranty['id']
+                cur.execute('SELECT serial_number FROM serial_numbers WHERE warranty_id = %s', (wid,))
+                warranty['serial_numbers'] = [r[0] for r in cur.fetchall()]
+                cur.execute('''
+                    SELECT t.id, t.name, t.color
+                    FROM tags t
+                    JOIN warranty_tags wt ON t.id = wt.tag_id
+                    WHERE wt.warranty_id = %s
+                    ORDER BY t.name
+                ''', (wid,))
+                warranty['tags'] = [{'id': t[0], 'name': t[1], 'color': t[2]} for t in cur.fetchall()]
                 
                 # Add user display name for better UI
                 first_name = warranty.get('first_name', '').strip() if warranty.get('first_name') else ''

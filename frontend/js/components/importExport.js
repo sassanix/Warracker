@@ -56,15 +56,21 @@ export async function exportWarranties() {
     'ProductURL',
     'Tags',
     'Vendor',
+    'Notes',
+    'Currency',
+    'ModelNumber',
+    'WarrantyType',
   ];
   let csv = `${headers.join(',')}\n`;
   filtered.forEach((warranty) => {
+    // Tags/serials are JSON-encoded so values containing commas round-trip
+    // intact; the importer falls back to comma-splitting for legacy files.
     const serials = Array.isArray(warranty.serial_numbers)
-      ? warranty.serial_numbers.filter(Boolean).join(', ')
-      : '';
+      ? JSON.stringify(warranty.serial_numbers.filter(Boolean))
+      : '[]';
     const tags = Array.isArray(warranty.tags)
-      ? warranty.tags.map((tag) => tag.name).join(', ')
-      : '';
+      ? JSON.stringify(warranty.tags.map((tag) => tag.name))
+      : '[]';
     const row = [
       warranty.product_name || '',
       warranty.purchase_date ? formatDateYYYYMMDD(new Date(warranty.purchase_date)) : '',
@@ -79,6 +85,10 @@ export async function exportWarranties() {
       warranty.product_url || '',
       tags,
       warranty.vendor || '',
+      warranty.notes || '',
+      warranty.currency || '',
+      warranty.model_number || '',
+      warranty.warranty_type || '',
     ];
     csv += `${row.map((field) => `"${String(field).replace(/"/g, '""')}"`).join(',')}\n`;
   });
