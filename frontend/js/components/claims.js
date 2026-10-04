@@ -122,9 +122,9 @@ function updateWarrantyInfo(warranty) {
 	const statusText = warranty.statusText || t('warranties.unknown_status', 'Unknown Status');
 	dom.warrantyClaimInfo.innerHTML = `
 		<div class="warranty-info-card">
-			<h4>${warranty.product_name || t('warranties.unnamed_product', 'Unnamed Product')}</h4>
+			<h4>${escapeHtml(warranty.product_name || t('warranties.unnamed_product', 'Unnamed Product'))}</h4>
 			<div class="warranty-details">
-				<span><i class="fas fa-building"></i> ${vendorLabel}</span>
+				<span><i class="fas fa-building"></i> ${escapeHtml(vendorLabel)}</span>
 				<span><i class="fas fa-calendar"></i> ${expiresLabel}</span>
 				<span class="warranty-status status-${statusClass}">
 					${statusText}

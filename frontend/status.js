@@ -909,7 +909,7 @@
 
             let dHtml = '<div class="warranty-details-content" style="display: flex; flex-wrap: wrap; gap: 20px;">';
             dHtml += '<div style="flex: 1 1 300px;"><h4>Core Information</h4>';
-            dHtml += `<p><strong>Product URL:</strong> ${warrantyDetails.product_url ? `<a href="${warrantyDetails.product_url}" target="_blank" rel="noopener noreferrer">${escapeHTML(warrantyDetails.product_url)}</a>` : 'N/A'}</p>`;
+            dHtml += `<p><strong>Product URL:</strong> ${warrantyDetails.product_url ? `<a href="${escapeHTML(String(warrantyDetails.product_url).trim().replace(/^\s*(javascript|data|vbscript)\s*:/i, '#'))}" target="_blank" rel="noopener noreferrer">${escapeHTML(warrantyDetails.product_url)}</a>` : 'N/A'}</p>`;
             dHtml += `<p><strong>Purchase Price:</strong> ${warrantyDetails.purchase_price !== null && warrantyDetails.purchase_price !== undefined ? escapeHTML(userCurrencySymbol) + parseFloat(warrantyDetails.purchase_price).toFixed(2) : 'N/A'}</p>`;
             dHtml += `<p><strong>Vendor:</strong> ${escapeHTML(warrantyDetails.vendor || '') || 'N/A'}</p>`;
             dHtml += `<p><strong>Warranty Type:</strong> ${escapeHTML(warrantyDetails.warranty_type || '') || 'N/A'}</p></div>`;

@@ -38,6 +38,22 @@ const t = (key, fallback, options) => {
 	}
 };
 
+// Escape user-controlled strings before injecting into innerHTML templates
+// (stored-XSS defense; safe for both element content and attribute contexts).
+const escapeHtml = (text) => {
+	if (text === null || text === undefined) return '';
+	return String(text).replace(/[&<>"']/g, (s) => ({
+		'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+	}[s]));
+};
+
+// Block javascript:/data:/vbscript: URLs in href attributes.
+const sanitizeUrl = (url) => {
+	const s = String(url || '').trim();
+	if (/^\s*(javascript|data|vbscript)\s*:/i.test(s)) return '#';
+	return s;
+};
+
 function getContrastColor(hexColor) {
 	if (!hexColor) return '#ffffff';
 	const hex = hexColor.replace('#', '');
@@ -152,8 +168,8 @@ function buildTagsHtml(tags = []) {
 	return `
 		<div class="tags-row">
 			${tags.map((tag) => `
-				<span class="tag" style="background-color: ${tag.color}; color: ${getContrastColor(tag.color)}">
-					${tag.name}
+				<span class="tag" style="background-color: ${escapeHtml(tag.color)}; color: ${getContrastColor(tag.color)}">
+					${escapeHtml(tag.name)}
 				</span>
 			`).join('')}
 		</div>
@@ -174,7 +190,7 @@ function buildDocumentLinks(warranty, notesLinkHtml) {
 	const links = [];
 	if (warranty.product_url) {
 		links.push(`
-			<a href="${warranty.product_url}" class="product-link" target="_blank">
+			<a href="${escapeHtml(sanitizeUrl(warranty.product_url))}" class="product-link" target="_blank" rel="noopener noreferrer">
 				<i class="fas fa-globe"></i> ${t('warranties.product_website', 'Product Website')}
 			</a>
 		`);
@@ -289,13 +305,13 @@ function buildSerialNumberHtml(serialNumbers = []) {
 		? `
 			<div style="margin-left: 28px;">
 				<ul style="margin-top: 5px;">
-					${rest.map((sn) => `<li>${sn}</li>`).join('')}
+					${rest.map((sn) => `<li>${escapeHtml(sn)}</li>`).join('')}
 				</ul>
 			</div>
 		`
 		: '';
 	return `
-		<div><i class="fas fa-barcode"></i> ${label}: <span>${first}</span></div>
+		<div><i class="fas fa-barcode"></i> ${label}: <span>${escapeHtml(first)}</span></div>
 		${extra}
 	`;
 }
@@ -303,7 +319,7 @@ function buildSerialNumberHtml(serialNumbers = []) {
 function buildUserInfo(warranty, isGlobalView) {
 	if (!isGlobalView || !warranty.user_display_name) return '';
 	const ownerLabel = t('warranties.owner', 'Owner');
-	return `<div><strong>${ownerLabel}:</strong> <span>${warranty.user_display_name}</span></div>`;
+	return `<div><strong>${ownerLabel}:</strong> <span>${escapeHtml(warranty.user_display_name)}</span></div>`;
 }
 
 function resolveCanEdit(warranty, isGlobalView) {
@@ -396,9 +412,9 @@ function buildInfoBlock(warranty, { userInfoHtml, productAge, warrantyDurationTe
 		`<div><i class="fas fa-wrench"></i> ${t('warranties.warranty_ends', 'Warranty Ends')}: <span>${expirationDateText}</span></div>`,
 		priceHtml,
 		serialsHtml,
-		warranty.model_number ? `<div><i class="fas fa-tag"></i> ${t('warranties.model_number', 'Model Number')}: <span>${warranty.model_number}</span></div>` : '',
-		warranty.vendor ? `<div><i class="fas fa-store"></i> ${t('warranties.vendor', 'Vendor')}: <span>${warranty.vendor}</span></div>` : '',
-		warranty.warranty_type ? `<div><i class="fas fa-shield-alt"></i> ${t('warranties.type', 'Type')}: <span>${warranty.warranty_type}</span></div>` : '',
+		warranty.model_number ? `<div><i class="fas fa-tag"></i> ${t('warranties.model_number', 'Model Number')}: <span>${escapeHtml(warranty.model_number)}</span></div>` : '',
+		warranty.vendor ? `<div><i class="fas fa-store"></i> ${t('warranties.vendor', 'Vendor')}: <span>${escapeHtml(warranty.vendor)}</span></div>` : '',
+		warranty.warranty_type ? `<div><i class="fas fa-shield-alt"></i> ${t('warranties.type', 'Type')}: <span>${escapeHtml(warranty.warranty_type)}</span></div>` : '',
 	];
 	return pieces.filter(Boolean).join('');
 }
@@ -413,7 +429,7 @@ function buildCardInnerHtml(view, warranty, derived) {
 	`;
 	const base = `
 		<div class="product-name-header">
-			<h3 class="warranty-title" title="${warranty.product_name || 'Unnamed Product'}">${warranty.product_name || 'Unnamed Product'}</h3>
+			<h3 class="warranty-title" title="${escapeHtml(warranty.product_name || 'Unnamed Product')}">${escapeHtml(warranty.product_name || 'Unnamed Product')}</h3>
 			<div class="warranty-actions">
 				${derived.actionButtons}
 			</div>
