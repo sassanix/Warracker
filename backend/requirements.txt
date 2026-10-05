@@ -5,7 +5,7 @@ Werkzeug==3.1.9
 flask-cors==4.0.2
 Flask-Login==0.6.3
 Flask-Bcrypt==1.0.1
-PyJWT==2.15.0
+PyJWT==2.15.1
 email-validator==2.3.0
 APScheduler==3.11.3
 python-dateutil==2.9.0.post0
