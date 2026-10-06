@@ -136,4 +136,10 @@ def is_valid_password(password):
         return False
     return True
 
+
+def is_password_too_long(password):
+    """bcrypt rejects passwords longer than 72 bytes with ValueError — check
+    up front so callers can return 400 instead of surfacing a 500."""
+    return len(password.encode('utf-8')) > 72
+
  

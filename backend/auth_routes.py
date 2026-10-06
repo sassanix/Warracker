@@ -14,12 +14,12 @@ from psycopg2.extras import Json
 # Use relative imports for project modules
 try:
     from . import db_handler, notifications
-    from .auth_utils import generate_token, token_required, is_valid_email, is_valid_password
+    from .auth_utils import generate_token, token_required, is_valid_email, is_valid_password, is_password_too_long
     from .localization import SUPPORTED_LANGUAGES
 except ImportError:
     # Fallback for development environment
     import db_handler, notifications
-    from auth_utils import generate_token, token_required, is_valid_email, is_valid_password
+    from auth_utils import generate_token, token_required, is_valid_email, is_valid_password, is_password_too_long
     from localization import SUPPORTED_LANGUAGES
 
 # Import bcrypt from extensions since it's initialized with the app
@@ -85,7 +85,11 @@ def register():
         # Validate password strength
         if not is_valid_password(password):
             return jsonify({'message': 'Password must be at least 8 characters and include uppercase, lowercase, and numbers!'}), 400
-        
+
+        # bcrypt rejects passwords longer than 72 bytes — fail fast with 400
+        if is_password_too_long(password):
+            return jsonify({'message': 'Password must not exceed 72 characters!'}), 400
+
         # Hash the password
         password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
         
@@ -161,10 +165,14 @@ def login():
         # Validate required fields
         if not data.get('username') or not data.get('password'):
             return jsonify({'message': 'Username and password are required!'}), 400
-        
+
         username = data['username']
         password = data['password']
-        
+
+        # bcrypt rejects passwords longer than 72 bytes — fail fast with 400
+        if is_password_too_long(password):
+            return jsonify({'message': 'Password must not exceed 72 characters!'}), 400
+
         conn = db_handler.get_db_connection()
         with conn.cursor() as cur:
             # Check if user exists - include is_admin in the query
@@ -655,7 +663,11 @@ def reset_password():
         # Validate password strength
         if not is_valid_password(password):
             return jsonify({'message': 'Password must be at least 8 characters and include uppercase, lowercase, and numbers!'}), 400
-        
+
+        # bcrypt rejects passwords longer than 72 bytes — fail fast with 400
+        if is_password_too_long(password):
+            return jsonify({'message': 'Password must not exceed 72 characters!'}), 400
+
         conn = db_handler.get_db_connection()
         with conn.cursor() as cur:
             # Check if token exists and is valid
@@ -716,7 +728,11 @@ def change_password():
         # Validate new password strength
         if not is_valid_password(new_password):
             return jsonify({'message': 'New password must be at least 8 characters and include uppercase, lowercase, and numbers!'}), 400
-        
+
+        # bcrypt rejects passwords longer than 72 bytes — fail fast with 400
+        if is_password_too_long(new_password):
+            return jsonify({'message': 'New password must not exceed 72 characters!'}), 400
+
         conn = db_handler.get_db_connection()
         with conn.cursor() as cur:
             # Get the user's current password hash
