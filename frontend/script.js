@@ -6785,8 +6785,12 @@ async function loadAndApplyUserPreferences(isAuthenticated) { // Added isAuthent
                 // Apply theme from API and sync to localStorage
                 if (apiPrefs.theme) {
                     const isDark = apiPrefs.theme === 'dark';
-                    // Apply without triggering API save to avoid loops
-                    await saveThemePreference(isDark, false);
+                    // Apply without triggering API save to avoid loops.
+                    // theme.js (which defines saveThemePreference) only loads on
+                    // index.html, so guard for other pages like status.html.
+                    if (typeof saveThemePreference === 'function') {
+                        await saveThemePreference(isDark, false);
+                    }
                     console.log(`[Prefs Loader] Applied theme from API: ${apiPrefs.theme}`);
                 }
                 // Save filter preferences from API to localStorage
