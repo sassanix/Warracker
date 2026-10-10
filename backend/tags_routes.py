@@ -74,7 +74,11 @@ def create_tag():
         
         if not name:
             return jsonify({"error": "Tag name cannot be empty"}), 400
-            
+
+        # tags.name is varchar(50) — validate up front instead of surfacing a 500
+        if len(name) > 50:
+            return jsonify({"error": "Tag name must not exceed 50 characters"}), 400
+
         # Validate color format (should be a hex color)
         if not re.match(r'^#[0-9A-Fa-f]{6}$', color):
             return jsonify({"error": "Invalid color format. Use hex format (e.g., #FF5733)"}), 400
@@ -123,7 +127,11 @@ def update_tag(tag_id):
     
     if not new_name:
         return jsonify({"error": "Tag name cannot be empty"}), 400
-        
+
+    # tags.name is varchar(50) — validate up front instead of surfacing a 500
+    if len(new_name) > 50:
+        return jsonify({"error": "Tag name must not exceed 50 characters"}), 400
+
     # Validate color format (basic check)
     if new_color and not re.match(r'^#[0-9a-fA-F]{6}$', new_color):
         return jsonify({"error": "Invalid color format. Use hex (e.g., #RRGGBB)"}), 400

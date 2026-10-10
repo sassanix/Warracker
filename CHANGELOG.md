@@ -13,6 +13,8 @@
   - _Files: `frontend/js/components/tagManager.js`_
 
 ### Fixed
+- **Tag create/rename 500 on names over 50 characters fixed:** `tags.name` is `varchar(50)`, but neither `POST /api/tags` nor `PUT /api/tags/<id>` validated length, so a 51+ character name escaped as HTTP 500. Both endpoints now return HTTP 400 up front. Found by the daily QA sweep.
+  - _Files: `backend/tags_routes.py`
 - **`saveThemePreference is not defined` ReferenceError on status.html fixed:** the prefs loader in `script.js` called the global `saveThemePreference()`, which is only defined by the `js/lib/theme.js` ES module loaded on index.html. Every status-page load logged a console error and aborted the prefs sync, so saved filters, expiring-soon days, and date format were never written to localStorage there. The call is now guarded with a `typeof` check. Found by the daily QA sweep.
   - _Files: `frontend/script.js`
 - **Login/registration/password-change 500 on passwords over 72 bytes fixed:** bcrypt rejects passwords longer than 72 bytes with `ValueError`, which escaped as HTTP 500 on `/api/auth/login` (and latently on register and the password reset/change endpoints for strong long passwords). All four endpoints now check the byte length up front via a new `is_password_too_long()` helper and return HTTP 400. Found by the daily QA sweep.
