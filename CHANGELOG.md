@@ -13,6 +13,10 @@
   - _Files: `frontend/js/components/tagManager.js`_
 
 ### Fixed
+- **Same-second file-upload collision fixed:** stored upload filenames used a second-resolution timestamp only, so two uploads of the same filename within one second shared a storage path and the second overwrote the first. Filenames now include a random suffix (`unique_upload_filename()` helper, applied to invoice/manual/photo/other-document uploads in both add and update). Found by the daily QA sweep.
+  - _Files: `backend/warranties_routes.py`
+- **Oversized uploads now return HTTP 413 instead of 500/dropped connection:** files over `MAX_CONTENT_LENGTH` raised `RequestEntityTooLarge`, which was swallowed into 500s by the generic `except` blocks in the warranty write endpoints and the `token_required` decorator. Added an app-wide 413 handler returning a JSON error naming the configured limit, and both layers now let HTTP exceptions propagate. Found by the daily QA sweep.
+  - _Files: `backend/__init__.py`, `backend/auth_utils.py`, `backend/warranties_routes.py`
 - **Tag create/rename 500 on names over 50 characters fixed:** `tags.name` is `varchar(50)`, but neither `POST /api/tags` nor `PUT /api/tags/<id>` validated length, so a 51+ character name escaped as HTTP 500. Both endpoints now return HTTP 400 up front. Found by the daily QA sweep.
   - _Files: `backend/tags_routes.py`
 - **`saveThemePreference is not defined` ReferenceError on status.html fixed:** the prefs loader in `script.js` called the global `saveThemePreference()`, which is only defined by the `js/lib/theme.js` ES module loaded on index.html. Every status-page load logged a console error and aborted the prefs sync, so saved filters, expiring-soon days, and date format were never written to localStorage there. The call is now guarded with a `typeof` check. Found by the daily QA sweep.

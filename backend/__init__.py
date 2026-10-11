@@ -2,7 +2,7 @@
 import os
 import logging
 import psycopg2.errors
-from flask import Flask, jsonify
+from flask import Flask, jsonify, current_app
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 logger = logging.getLogger(__name__)
@@ -234,6 +234,16 @@ def create_app(config_name=None):
             # Continue without notifications - the app can still function
         
         logger.info("Application factory completed successfully")
+
+    @app.errorhandler(413)
+    def request_entity_too_large(e):
+        """Return a JSON 413 when an upload exceeds MAX_CONTENT_LENGTH.
+
+        Without this, oversized uploads surface as HTML error pages or get
+        swallowed into 500s by routes with generic except blocks.
+        """
+        limit_mb = current_app.config.get('MAX_CONTENT_LENGTH', 0) // (1024 * 1024)
+        return jsonify({"error": f"File too large. Maximum upload size is {limit_mb}MB."}), 413
 
     @app.route('/api/health', methods=['GET'])
     def health_check():

@@ -3,6 +3,7 @@ import jwt
 from datetime import datetime, UTC, timedelta
 from flask import current_app, request, jsonify
 from functools import wraps
+from werkzeug.exceptions import HTTPException
 import re
 
 # IMPORTANT: We need to import db_handler here for the decorators
@@ -96,6 +97,10 @@ def token_required(f):
                     })
                 
                 return f(*args, **kwargs)
+        except HTTPException:
+            # Let HTTP errors (e.g. 413 from oversized uploads) propagate to
+            # the app's error handlers instead of being masked as a 500 here.
+            raise
         except Exception as e:
             current_app.logger.error(f"Authentication error: {e}")
             return jsonify({'message': 'Authentication error!'}), 500

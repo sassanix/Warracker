@@ -11,6 +11,8 @@ from dateutil.relativedelta import relativedelta
 from dateutil.parser import parse as date_parse
 import mimetypes
 from flask import Response
+import uuid
+from werkzeug.exceptions import RequestEntityTooLarge
 
 # Add pytz import for timezone functionality
 import pytz
@@ -32,6 +34,17 @@ import logging
 logger = logging.getLogger(__name__)
 
 warranties_bp = Blueprint('warranties_bp', __name__)
+
+def unique_upload_filename(original_name, infix=""):
+    """Build a collision-proof stored filename.
+
+    The old scheme used a second-resolution timestamp only, so two uploads of
+    the same filename within one second overwrote each other. A random suffix
+    closes that window.
+    """
+    safe = secure_filename(original_name)
+    stamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    return f"{stamp}_{uuid.uuid4().hex[:8]}_{infix}{safe}"
 
 # Map of currency symbols to ISO codes (mirrors frontend js/lib/currency.js).
 # Used to resolve a user's preferred currency symbol to a code for new warranties.
@@ -380,8 +393,7 @@ def add_warranty():
                 if not allowed_file(invoice.filename):
                     return jsonify({"error": "File type not allowed. Use PDF, PNG, JPG, or JPEG"}), 400
                     
-                filename = secure_filename(invoice.filename)
-                filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
+                filename = unique_upload_filename(invoice.filename)
                 invoice_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                 
                 logger.info(f"Attempting to save invoice to: {invoice_path}")
@@ -404,8 +416,7 @@ def add_warranty():
                 if not allowed_file(manual.filename):
                     return jsonify({"error": "File type not allowed. Use PDF, PNG, JPG, or JPEG"}), 400
                     
-                filename = secure_filename(manual.filename)
-                filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_manual_{filename}"
+                filename = unique_upload_filename(manual.filename, "manual_")
                 manual_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                 logger.info(f"Attempting to save manual to: {manual_path}")
                 try:
@@ -426,8 +437,7 @@ def add_warranty():
                 if not allowed_file(other_document.filename):
                     return jsonify({"error": "File type not allowed for other document. Use PDF, PNG, JPG, JPEG, ZIP, or RAR"}), 400
                     
-                filename = secure_filename(other_document.filename)
-                filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_other_{filename}"
+                filename = unique_upload_filename(other_document.filename, "other_")
                 other_document_path_on_disk = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                 logger.info(f"Attempting to save other_document to: {other_document_path_on_disk}")
                 try:
@@ -449,8 +459,7 @@ def add_warranty():
                 if not (product_photo.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.gif'))):
                     return jsonify({"error": "Product photo must be an image file (PNG, JPG, JPEG, WEBP, GIF)"}), 400
                     
-                filename = secure_filename(product_photo.filename)
-                filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_photo_{filename}"
+                filename = unique_upload_filename(product_photo.filename, "photo_")
                 product_photo_path_on_disk = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                 logger.info(f"Attempting to save product_photo to: {product_photo_path_on_disk}")
                 try:
@@ -517,6 +526,9 @@ def add_warranty():
             'id': warranty_id
         }), 201
         
+    except RequestEntityTooLarge:
+        # Let the app-wide 413 handler produce the JSON response
+        raise
     except Exception as e:
         logger.error(f"Error adding warranty: {e}")
         if conn:
@@ -831,8 +843,7 @@ def update_warranty(warranty_id):
                                 logger.info(f"Deleted old invoice: {full_path}")
                             except Exception as e:
                                 logger.error(f"Error deleting old invoice: {e}")
-                    filename = secure_filename(invoice.filename)
-                    filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
+                    filename = unique_upload_filename(invoice.filename)
                     invoice_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                     logger.info(f"Attempting to save updated invoice to: {invoice_path}")
                     try:
@@ -886,8 +897,7 @@ def update_warranty(warranty_id):
                                 logger.info(f"Deleted old manual: {full_path}")
                             except Exception as e:
                                 logger.error(f"Error deleting old manual: {e}")
-                    filename = secure_filename(manual.filename)
-                    filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_manual_{filename}"
+                    filename = unique_upload_filename(manual.filename, "manual_")
                     manual_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                     logger.info(f"Attempting to save updated manual to: {manual_path}")
                     try:
@@ -941,8 +951,7 @@ def update_warranty(warranty_id):
                                 logger.info(f"Deleted old other_document: {full_path}")
                             except Exception as e:
                                 logger.error(f"Error deleting old other_document: {e}")
-                    filename = secure_filename(other_document.filename)
-                    filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_other_{filename}"
+                    filename = unique_upload_filename(other_document.filename, "other_")
                     other_document_path_on_disk = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                     logger.info(f"Attempting to save updated other_document to: {other_document_path_on_disk}")
                     try:
@@ -1000,8 +1009,7 @@ def update_warranty(warranty_id):
                             except Exception as e:
                                 logger.error(f"Error deleting old product_photo: {e}")
                     
-                    filename = secure_filename(product_photo.filename)
-                    filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_photo_{filename}"
+                    filename = unique_upload_filename(product_photo.filename, "photo_")
                     product_photo_path_on_disk = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                     logger.info(f"Attempting to save updated product_photo to: {product_photo_path_on_disk}")
                     try:
@@ -1150,6 +1158,9 @@ def update_warranty(warranty_id):
             
             return jsonify({"message": "Warranty updated successfully"}), 200
             
+    except RequestEntityTooLarge:
+        # Let the app-wide 413 handler produce the JSON response
+        raise
     except Exception as e:
         logger.error(f"Error updating warranty: {e}")
         if conn:
