@@ -13,6 +13,8 @@
   - _Files: `frontend/js/components/tagManager.js`_
 
 ### Fixed
+- **Missing file download 500 fixed:** `GET /api/files/<missing>` returned HTTP 500 because `serve_file` let `send_from_directory`'s NotFound fall into the generic 500 handler. It now checks existence up front and returns a JSON 404 ("File not found"), matching the `/secure-file/` route. Non-owners still get 403 without leaking file existence. Found by the daily QA sweep.
+  - _Files: `backend/file_routes.py`
 - **Same-second file-upload collision fixed:** stored upload filenames used a second-resolution timestamp only, so two uploads of the same filename within one second shared a storage path and the second overwrote the first. Filenames now include a random suffix (`unique_upload_filename()` helper, applied to invoice/manual/photo/other-document uploads in both add and update). Found by the daily QA sweep.
   - _Files: `backend/warranties_routes.py`
 - **Oversized uploads now return HTTP 413 instead of 500/dropped connection:** files over `MAX_CONTENT_LENGTH` raised `RequestEntityTooLarge`, which was swallowed into 500s by the generic `except` blocks in the warranty write endpoints and the `token_required` decorator. Added an app-wide 413 handler returning a JSON error naming the configured limit, and both layers now let HTTP exceptions propagate. Found by the daily QA sweep.

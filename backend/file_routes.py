@@ -112,6 +112,10 @@ def serve_file(filename):
         # Remove 'uploads/' prefix for send_from_directory
         file_path = filename[8:] if filename.startswith('uploads/') else filename
 
+        full_path = os.path.join(current_app.config['UPLOAD_FOLDER'], file_path)
+        if not os.path.isfile(full_path):
+            return jsonify({"message": "File not found"}), 404
+
         return send_from_directory(current_app.config['UPLOAD_FOLDER'], file_path)
     except Exception as e:
         logger.error(f"Error serving file {filename}: {e}")
