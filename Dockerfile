@@ -27,6 +27,13 @@ FROM python:3.13-slim-trixie@sha256:7c61056e61ac89e852de05f3dc6fa51a6dd2181797bc
 LABEL org.opencontainers.image.source="https://github.com/sassanix/Warracker"
 LABEL org.opencontainers.image.description="Warracker - Warranty Tracker"
 
+# Create the non-root user before installing packages. Runtime packages pull in
+# systemd, and its systemd-journal group takes the first free system GID (999)
+# on Debian Trixie. Upload volumes are owned by uid/gid 999, so warracker must
+# claim that ID first.
+RUN groupadd -r -g 999 warracker && \
+    useradd -r -g warracker -u 999 -d /home/warracker -m -s /bin/bash warracker
+
 # Install runtime dependencies only
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -43,10 +50,6 @@ RUN apt-get update && \
         libssl3t64 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# Create non-root user with home directory
-RUN groupadd -r -g 999 warracker && \
-    useradd -r -g warracker -u 999 -d /home/warracker -m -s /bin/bash warracker
 
 # Copy Python dependencies from builder (copy entire /usr/local for version-agnostic)
 COPY --from=builder /usr/local /usr/local
