@@ -71,3 +71,6 @@ ehthumbs_vista.db
 # --- Log files ---
 *.log
 logs/
+
+# --- Locally generated secrets (never commit) ---
+secret_key
