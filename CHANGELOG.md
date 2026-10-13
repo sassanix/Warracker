@@ -13,6 +13,8 @@
   - _Files: `frontend/js/components/tagManager.js`_
 
 ### Fixed
+- **Dead mobile menu button on most pages fixed:** every page renders the hamburger `.mobile-menu-toggle` button and the `#mobileMenuPanel` markup, but only settings-new.html loaded `mobile-menu.js` — tapping the menu on index, status, register, about, and the password-reset pages did nothing. The script is now included on all pages that render the toggle. Found by a dedicated mobile QA pass (390px viewport, touch): menu opens/closes via button, overlay, and Escape on every page; nav links navigate; no horizontal overflow; no new JS errors.
+  - _Files: `frontend/index.html`, `frontend/status.html`, `frontend/register.html`, `frontend/about.html`, `frontend/reset-password.html`, `frontend/reset-password-request.html`
 - **Missing file download 500 fixed:** `GET /api/files/<missing>` returned HTTP 500 because `serve_file` let `send_from_directory`'s NotFound fall into the generic 500 handler. It now checks existence up front and returns a JSON 404 ("File not found"), matching the `/secure-file/` route. Non-owners still get 403 without leaking file existence. Found by the daily QA sweep.
   - _Files: `backend/file_routes.py`
 - **Same-second file-upload collision fixed:** stored upload filenames used a second-resolution timestamp only, so two uploads of the same filename within one second shared a storage path and the second overwrote the first. Filenames now include a random suffix (`unique_upload_filename()` helper, applied to invoice/manual/photo/other-document uploads in both add and update). Found by the daily QA sweep.
