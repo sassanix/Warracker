@@ -1254,28 +1254,30 @@ def import_warranties():
 
                 try:
                     # --- Data Extraction and Basic Validation ---
-                    product_name = row.get('ProductName', '').strip()
-                    purchase_date_str = row.get('PurchaseDate', '').strip()
-                    is_lifetime_str = row.get('IsLifetime', 'false').strip().lower()
+                    product_name = (row.get('ProductName') or '').strip()
+                    purchase_date_str = (row.get('PurchaseDate') or '').strip()
+                    is_lifetime_str = (row.get('IsLifetime') or 'false').strip().lower()
                     
                     # New duration fields
-                    warranty_duration_years_str = row.get('WarrantyDurationYears', '0').strip()
-                    warranty_duration_months_str = row.get('WarrantyDurationMonths', '0').strip()
-                    warranty_duration_days_str = row.get('WarrantyDurationDays', '0').strip()
+                    warranty_duration_years_str = (row.get('WarrantyDurationYears') or '0').strip()
+                    warranty_duration_months_str = (row.get('WarrantyDurationMonths') or '0').strip()
+                    warranty_duration_days_str = (row.get('WarrantyDurationDays') or '0').strip()
                     
-                    purchase_price_str = row.get('PurchasePrice', '').strip()
-                    serial_numbers_str = row.get('SerialNumber', '').strip()
-                    product_url = row.get('ProductURL', '').strip()
-                    tags_str = row.get('Tags', '').strip() # Get Tags string
-                    vendor = row.get('Vendor', '').strip() # Extract Vendor
-                    warranty_type = row.get('WarrantyType', '').strip() # Extract Warranty Type
-                    expiration_date_str = row.get('ExpirationDate', '').strip()
-                    notes = row.get('Notes', '').strip() or None # Extract Notes
-                    model_number = row.get('ModelNumber', '').strip() or None # Extract Model Number
-                    currency_str = row.get('Currency', '').strip().upper() # Extract Currency
+                    purchase_price_str = (row.get('PurchasePrice') or '').strip()
+                    serial_numbers_str = (row.get('SerialNumber') or '').strip()
+                    product_url = (row.get('ProductURL') or '').strip()
+                    tags_str = (row.get('Tags') or '').strip() # Get Tags string
+                    vendor = (row.get('Vendor') or '').strip() # Extract Vendor
+                    warranty_type = (row.get('WarrantyType') or '').strip() # Extract Warranty Type
+                    expiration_date_str = (row.get('ExpirationDate') or '').strip()
+                    notes = (row.get('Notes') or '').strip() or None # Extract Notes
+                    model_number = (row.get('ModelNumber') or '').strip() or None # Extract Model Number
+                    currency_str = (row.get('Currency') or '').strip().upper() # Extract Currency
 
                     if not product_name:
                         errors.append("ProductName is required.")
+                    if len(product_name) > 255:
+                        errors.append("ProductName must be 255 characters or less.")
                     if not purchase_date_str:
                         errors.append("PurchaseDate is required.")
 
@@ -1324,7 +1326,7 @@ def import_warranties():
 
                     # Calculate expiration date if valid
                     if not errors and not is_lifetime and purchase_date:
-                        expiration_date_str = row.get('ExpirationDate', '').strip()
+                        expiration_date_str = (row.get('ExpirationDate') or '').strip()
                         # Check if duration is zero and an exact expiration date is provided
                         if (
                             warranty_duration_years == 0 and
