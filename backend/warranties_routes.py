@@ -234,6 +234,11 @@ def add_warranty():
         if len(request.form.get('product_name')) > 255:
             return jsonify({"error": "Product name must be 255 characters or less",
                             "code": "product_name_too_long"}), 400
+
+        for serial_number in request.form.getlist('serial_numbers[]'):
+            if len(serial_number) > 255:
+                return jsonify({"error": "Serial number must be 255 characters or less",
+                                "code": "serial_number_too_long"}), 400
             
         if not request.form.get('purchase_date'):
             return jsonify({"error": "Purchase date is required"}), 400
@@ -688,6 +693,10 @@ def update_warranty(warranty_id):
             if len(request.form.get('product_name')) > 255:
                 return jsonify({"error": "Product name must be 255 characters or less",
                                 "code": "product_name_too_long"}), 400
+            for serial_number in request.form.getlist('serial_numbers[]'):
+                if len(serial_number) > 255:
+                    return jsonify({"error": "Serial number must be 255 characters or less",
+                                    "code": "serial_number_too_long"}), 400
             if not request.form.get('purchase_date'):
                 return jsonify({"error": "Purchase date is required"}), 400
             logger.info(f"Received update request for warranty {warranty_id}")

@@ -19,6 +19,27 @@ statistics_bp = Blueprint('statistics_bp', __name__)
 # Set up logging
 logger = logging.getLogger(__name__)
 
+# Maps the user's currency_symbol preference to the ISO code stored on
+# warranties. Mirrors getCurrencyCode() in frontend/js/lib/currency.js.
+# Issue #192: the Total Value card sums only the default currency.
+CURRENCY_SYMBOL_TO_CODE = {
+    '$': 'USD', '\u20ac': 'EUR', '\u00a3': 'GBP', '\u00a5': 'JPY',
+    '\u20b9': 'INR', '\u20a9': 'KRW', 'CHF': 'CHF', 'C$': 'CAD', 'A$': 'AUD',
+    'kr': 'SEK', 'z\u0142': 'PLN', 'K\u010d': 'CZK', 'Ft': 'HUF',
+    '\u20bd': 'RUB', 'R$': 'BRL', '\u20aa': 'ILS', '\u20ba': 'TRY',
+    'NZ$': 'NZD',
+}
+
+def get_user_currency_code(cur, user_id):
+    """Return the ISO currency code for the user's default currency_symbol."""
+    try:
+        cur.execute("SELECT currency_symbol FROM user_preferences WHERE user_id = %s", (user_id,))
+        row = cur.fetchone()
+        symbol = (row[0] if row and row[0] else '$')
+    except Exception:
+        symbol = '$'
+    return CURRENCY_SYMBOL_TO_CODE.get(symbol, 'USD')
+
 # Helper function
 def convert_decimals(obj):
     """Recursively convert Decimal objects to float in dicts/lists for JSON serialization."""
@@ -90,10 +111,12 @@ def get_statistics():
             archived_count = cur.fetchone()[0]
             logger.info(f"Archived warranties: {archived_count}")
 
-            # Get total purchase value (excluding archived; issue #192)
-            cur.execute(f"SELECT COALESCE(SUM(w.purchase_price), 0) {from_clause} {where_clause} AND w.archived_at IS NULL", params)
+            # Get total purchase value (excluding archived; issue #192:
+            # only the user's default currency, not a cross-currency sum)
+            user_currency = get_user_currency_code(cur, user_id)
+            cur.execute(f"SELECT COALESCE(SUM(w.purchase_price), 0) {from_clause} {where_clause} AND w.archived_at IS NULL AND w.currency = %s", params + [user_currency])
             total_value = cur.fetchone()[0]
-            logger.info(f"Total purchase value: {total_value}")
+            logger.info(f"Total purchase value ({user_currency}): {total_value}")
             
             # Get active count (includes lifetime, excludes archived)
             cur.execute(f"SELECT COUNT(*) {from_clause} {where_clause} {active_where if where_clause else 'WHERE'} (w.is_lifetime = TRUE OR w.expiration_date >= %s) AND w.archived_at IS NULL", params + [today])
@@ -298,9 +321,12 @@ def get_global_statistics():
             cur.execute("SELECT COUNT(*) FROM warranties w WHERE w.archived_at IS NOT NULL")
             archived_count = cur.fetchone()[0]
 
-            # Get total purchase value (excluding archived; issue #192)
-            cur.execute("SELECT COALESCE(SUM(w.purchase_price), 0) FROM warranties w WHERE w.archived_at IS NULL")
+            # Get total purchase value (excluding archived; issue #192:
+            # only the requesting user's default currency, not a cross-currency sum)
+            user_currency = get_user_currency_code(cur, request.user['id'])
+            cur.execute("SELECT COALESCE(SUM(w.purchase_price), 0) FROM warranties w WHERE w.archived_at IS NULL AND w.currency = %s", (user_currency,))
             total_value = cur.fetchone()[0]
+            logger.info(f"Global total purchase value ({user_currency}): {total_value}")
             
             # Get active count (includes lifetime, excludes archived)
             cur.execute("SELECT COUNT(*) FROM warranties w WHERE (w.is_lifetime = TRUE OR w.expiration_date >= %s) AND w.archived_at IS NULL", (today,))

@@ -13,6 +13,10 @@
   - _Files: `frontend/js/components/tagManager.js`_
 
 ### Fixed
+- **Total Value card no longer sums across currencies (issue #192):** the `/statistics` and `/statistics/global` endpoints summed `purchase_price` across all currencies into one number while the card displays the user's default-currency symbol. Both now filter to the requesting user's default currency (via a backend symbol→code map mirroring the frontend's `getCurrencyCode()`).
+  - _Files: `backend/statistics_routes.py`
+- **Overlong serial numbers now return 400 instead of 500:** serials over 255 characters crashed with an unhandled DB error on warranty create and update; both now validate and return `serial_number_too_long`.
+  - _Files: `backend/warranties_routes.py`
 - **CSV import now validates overlong product names and tolerates short rows:** importing a CSV with a product name over 255 characters previously leaked the raw Postgres error (`value too long for type character varying(255)`); the row is now rejected with the clean `ProductName must be 255 characters or less.` message matching the REST API validation. Rows with fewer cells than headers previously crashed with `Internal processing error: 'NoneType' object has no attribute 'strip'` (DictReader fills missing cells with `None`); all field extractions now guard against `None`.
   - _Files: `backend/warranties_routes.py`
 - **Dead mobile menu button on most pages fixed:** every page renders the hamburger `.mobile-menu-toggle` button and the `#mobileMenuPanel` markup, but only settings-new.html loaded `mobile-menu.js` — tapping the menu on index, status, register, about, and the password-reset pages did nothing. The script is now included on all pages that render the toggle. Found by a dedicated mobile QA pass (390px viewport, touch): menu opens/closes via button, overlay, and Escape on every page; nav links navigate; no horizontal overflow; no new JS errors.
