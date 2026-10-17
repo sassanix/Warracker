@@ -1584,6 +1584,12 @@ def import_warranties():
             "errors": failed_rows
         }), 200
 
+    except csv.Error as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"CSV parsing error during import: {e}")
+        return jsonify({"error": "CSV file could not be parsed: a field exceeds the maximum allowed size.",
+                        "code": "csv_field_too_large"}), 400
     except Exception as e:
         if conn:
             conn.rollback() # Rollback on general error
