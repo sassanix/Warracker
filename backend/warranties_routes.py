@@ -228,7 +228,7 @@ def add_warranty():
     conn = None
     try:
         # Validate input data
-        if not request.form.get('product_name'):
+        if not request.form.get('product_name', '').strip():
             return jsonify({"error": "Product name is required"}), 400
 
         if len(request.form.get('product_name')) > 255:
@@ -688,7 +688,7 @@ def update_warranty(warranty_id):
 
             # --- Otherwise, continue with the original (form-based) update logic ---
             # Validate input data similar to the add_warranty route
-            if not request.form.get('product_name'):
+            if not request.form.get('product_name', '').strip():
                 return jsonify({"error": "Product name is required"}), 400
             if len(request.form.get('product_name')) > 255:
                 return jsonify({"error": "Product name must be 255 characters or less",

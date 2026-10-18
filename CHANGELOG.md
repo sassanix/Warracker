@@ -13,6 +13,8 @@
   - _Files: `frontend/js/components/tagManager.js`_
 
 ### Fixed
+- **Whitespace-only product names now rejected:** a name of only spaces passed the "required" check and was stored verbatim; create and update now validate the stripped value.
+  - _Files: `backend/warranties_routes.py`
 - **Oversized CSV fields now return 400 instead of 500:** a single CSV cell over 128KB raised `csv.Error: field larger than field limit`, which fell into the generic import handler as HTTP 500. CSV parse errors now return a clean 400 (`csv_field_too_large`).
   - _Files: `backend/warranties_routes.py`
 - **Total Value card no longer sums across currencies (issue #192):** the `/statistics` and `/statistics/global` endpoints summed `purchase_price` across all currencies into one number while the card displays the user's default-currency symbol. Both now filter to the requesting user's default currency (via a backend symbol→code map mirroring the frontend's `getCurrencyCode()`).
