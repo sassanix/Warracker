@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommunityApplications>
+  <Profile>
+    Warracker is a self-hosted warranty tracker. Keep track of all your warranties, receipts, and manuals in one place — with expiry notifications, document storage (local or Paperless-ngx), tags, claims, and CSV import/export.
+
+    This repository contains the Warracker application and its Unraid Docker template (unraid/warracker.xml). A PostgreSQL database is required: install a PostgreSQL container first, create a database and user, then install Warracker and point it at that database.
+
+    Support: GitHub Issues at https://github.com/sassanix/Warracker/issues
+  </Profile>
+  <Icon>https://raw.githubusercontent.com/sassanix/Warracker/main/frontend/img/favicon-512x512.png</Icon>
+  <WebPage>https://github.com/sassanix/Warracker</WebPage>
+</CommunityApplications>
