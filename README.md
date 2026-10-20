@@ -43,19 +43,19 @@ The easiest way to organize product warranties, monitor expiration dates, and st
 | 🧾 **Detailed Records**          | Store purchase dates, durations, notes, and product photos with thumbnail previews                       |
 | 📄 **Document Storage**          | Upload receipts, invoices, and manuals securely                                                          |
 | 📝 **Warranty Claims**           | Manage warranty claims end-to-end with statuses, dates, resolutions, and full lifecycle visibility       |
-| 🔔 **Proactive Alerts**          | Get alerts for upcoming expirations via email or 100+ push services (Discord, Slack, etc.) using Apprise |
+| 🔔 **Proactive Alerts**          | Get alerts for upcoming expirations via email or 100+ push services (Discord, Slack, etc.) using Apprise — each threshold notifies once, never daily repeats |
 | 🔍 **Quick Search and Filter**   | Search by product name, serial number, vendor, tags, and more with real-time filtering                   |
 | #️⃣ **Multiple Serial Numbers**  | Add and manage multiple serial numbers per product                                                       |
 | 🌍 **Global Warranty View**      | Authenticated users can view global warranty data with role-based permissions                            |
 | 👥 **Multi-User Support**        | Manage multiple accounts with admin controls and global access toggles                                   |
-| 📤 **Data Export/Import**        | Import/export warranty data via CSV                                                                      |
+| 📤 **Data Export/Import**        | Import/export warranty data via CSV — exports include every field (notes, currency, model, warranty type), so a re-import restores your data exactly |
 | ⚙️ **Customizable Settings**     | Configure currency, date formats, notification timing, and branding                                      |
 | 🌐 **Internationalization Support** | Support for multiple currencies and date formats tailored to regional preferences, enabling a seamless global user experience |
 | 🏷️ **Tagging**                  | Organize warranties using custom tags                                                                    |
 | 📦 **Archiving**                 | Archive expired or unused warranties for better organization, while keeping records accessible when needed |
 | 🔐 **Password Reset**            | Token-based, secure account recovery system                                                              |
 | 🔑 **OIDC SSO**                  | Single sign-on with providers like Google, GitHub, and Keycloak                                          |
-| 📊 **Status Dashboard**          | Visual analytics and stats with charts, tables, and global/user views                                    |
+| 📊 **Status Dashboard**          | Visual analytics and stats with charts, tables, and global/user views — including Total Value (in your default currency) and Archived summary cards, plus CSV export of the filtered view |
 | 📱 **Responsive UI**             | Mobile-friendly interface with admin tools and improved UX                                               |
 | 📦 **Paperless-ngx Integration** | Store/manage documents directly in Paperless-ngx with file-level control                                 |
 | 📖 **Localization Support**      | [Full multilingual UI with 20 languages](https://github.com/sassanix/Warracker?tab=readme-ov-file#-localization-support), RTL support, instant language switching, and native name display |
@@ -186,6 +186,7 @@ volumes:
 - Use the search box to filter warranties.  
 - Click the edit icon to modify warranty details.  
 - Click the delete icon to remove a warranty.  
+- A warranty that expires today is still counted as active (not expired) across the dashboard, warranty lists, and expiry notifications.  
 
 
 <details>
@@ -203,10 +204,14 @@ Click on **Data** > **Import**
 | **ExpirationDate** | Date (`YYYY-MM-DD`, e.g., `2031-10-08`)   | ❌ No (Optional)                                        | Use this if duration fields are 0 and `IsLifetime` is `FALSE`.       |
 | **IsLifetime**  | `TRUE` or `FALSE` (case-insensitive)       | ❌ No (Optional)                                        | If omitted, defaults to `FALSE`. If `TRUE`, duration fields are ignored. |
 | **PurchasePrice** | Number (`199.99`, `50`)                  | ❌ No (Optional)                                        | Cannot be negative if provided.                                      |
-| **SerialNumber** | Text (`SN123`, `SN123,SN456`)             | ❌ No (Optional)                                        | For multiple values, separate with commas.                           |
+| **SerialNumber** | Text (`SN123`, `SN123,SN456`)             | ❌ No (Optional)                                        | For multiple values, separate with commas. Exports use JSON encoding when a value itself contains a comma; the importer accepts both formats. |
 | **ProductURL**   | Text (URL format)                         | ❌ No (Optional)                                        | Full URL to product page (optional field). https://producturl.com                           |
 | **Vendor**       | Text                                      | ❌ No (Optional)                                        | Name of the vendor or seller where the product was purchased.        |
-| **Tags**         | Text (`tag1,tag2`)                        | ❌ No (Optional)                                        | Use comma-separated values for multiple tags.                        |
+| **Tags**         | Text (`tag1,tag2`)                        | ❌ No (Optional)                                        | Use comma-separated values for multiple tags. Exports use JSON encoding when a tag itself contains a comma; the importer accepts both formats. |
+| **Notes**        | Text                                      | ❌ No (Optional)                                        | Free-text notes stored with the warranty. Included in CSV exports, so re-importing an export restores them. |
+| **Currency**     | Currency code (`USD`, `EUR`, `CAD`)       | ❌ No (Optional)                                        | Must be a supported currency code; unknown codes fall back to your preferred currency. Included in CSV exports. |
+| **ModelNumber**  | Text                                      | ❌ No (Optional)                                        | Product model number. Included in CSV exports.                       |
+| **WarrantyType** | Text                                      | ❌ No (Optional)                                        | Warranty type (e.g. manufacturer, extended). Included in CSV exports. |
 </details>
 
 ---
