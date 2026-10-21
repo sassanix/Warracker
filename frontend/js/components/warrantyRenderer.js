@@ -373,6 +373,17 @@ function buildActionButtons(warranty, { canEdit, isArchivedView, claimsMeta }) {
 				<button class="action-btn archive-btn" title="Archive" data-id="${warranty.id}">
 					<i class="fas fa-archive"></i>
 				</button>
+				${warranty.is_voided
+				? `
+				<button class="action-btn unvoid-btn" title="${t('warranties.unvoid_warranty', 'Unvoid warranty')}" data-id="${warranty.id}">
+					<i class="fas fa-undo"></i>
+				</button>
+				`
+				: `
+				<button class="action-btn void-btn" title="${t('warranties.void_warranty', 'Void warranty')}" data-id="${warranty.id}">
+					<i class="fas fa-ban"></i>
+				</button>
+				`}
 			`}
 		<button class="action-btn delete-btn" title="Delete" data-id="${warranty.id}">
 			<i class="fas fa-trash"></i>
@@ -383,6 +394,7 @@ function buildActionButtons(warranty, { canEdit, isArchivedView, claimsMeta }) {
 function cardClassName(warranty, view, statusClass) {
 	const isArchived = warranty.is_archived || warranty.viewFlags?.isArchivedView;
 	if (isArchived) return 'warranty-card archived';
+	if (warranty.is_voided) return 'warranty-card voided';
 	if (view === 'table') return `warranty-card status-${statusClass}`;
 	if (statusClass === 'expired') return 'warranty-card expired';
 	if (statusClass === 'expiring') return 'warranty-card expiring-soon';
@@ -525,8 +537,14 @@ export function renderWarrantiesList(warranties, options = {}) {
 	sorted.forEach((warranty) => {
 		const statusText = (isArchivedView || warranty.is_archived)
 			? t('warranties.archived', 'Archived')
-			: warranty.statusText || t('warranties.unknown_status', 'Unknown Status');
-		const statusClass = (isArchivedView || warranty.is_archived) ? 'archived' : (warranty.status || 'unknown');
+			: warranty.is_voided
+				? t('warranties.void', 'Void')
+				: warranty.statusText || t('warranties.unknown_status', 'Unknown Status');
+		const statusClass = (isArchivedView || warranty.is_archived)
+			? 'archived'
+			: warranty.is_voided
+				? 'void'
+				: (warranty.status || 'unknown');
 		const notesLink = buildNotesLink(warranty);
 		const documentLinks = buildDocumentLinks(warranty, notesLink.html);
 		const tagsHtml = buildTagsHtml(warranty.tags);

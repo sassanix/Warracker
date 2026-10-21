@@ -103,7 +103,7 @@ def get_warranties():
                     w.purchase_price, w.user_id, w.created_at, w.updated_at, w.is_lifetime, w.vendor, w.warranty_type,
                     w.warranty_duration_years, w.warranty_duration_months, w.warranty_duration_days, w.product_photo_path, w.currency,
                     w.paperless_invoice_id, w.paperless_manual_id, w.paperless_photo_id, w.paperless_other_id,
-                    w.invoice_url, w.manual_url, w.other_document_url, w.model_number,
+                    w.invoice_url, w.manual_url, w.other_document_url, w.model_number, w.voided_at,
                     CASE
                         WHEN COUNT(c.id) = 0 THEN 'NO_CLAIMS'
                         WHEN BOOL_OR(c.status IN ('Submitted', 'In Progress')) THEN 'OPEN'
@@ -172,7 +172,7 @@ def get_archived_warranties():
                     w.purchase_price, w.user_id, w.created_at, w.updated_at, w.is_lifetime, w.vendor, w.warranty_type,
                     w.warranty_duration_years, w.warranty_duration_months, w.warranty_duration_days, w.product_photo_path, w.currency,
                     w.paperless_invoice_id, w.paperless_manual_id, w.paperless_photo_id, w.paperless_other_id,
-                    w.invoice_url, w.manual_url, w.other_document_url, w.model_number,
+                    w.invoice_url, w.manual_url, w.other_document_url, w.model_number, w.voided_at,
                     CASE
                         WHEN COUNT(c.id) = 0 THEN 'NO_CLAIMS'
                         WHEN BOOL_OR(c.status IN ('Submitted', 'In Progress')) THEN 'OPEN'
@@ -584,6 +584,57 @@ def toggle_archive_warranty(warranty_id):
         if conn:
             conn.rollback()
         return jsonify({"error": "Failed to update archive status"}), 500
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+@warranties_bp.route('/warranties/<int:warranty_id>/void', methods=['PATCH'])
+@token_required
+def toggle_void_warranty(warranty_id):
+    """Manually terminate (void) or restore a warranty (issue #250).
+
+    Voiding marks the warranty inactive without deleting it or changing its
+    expiration date. Voided warranties stay in the list with a Void status,
+    and are excluded from totals, active counts, and expiry notifications.
+    """
+    conn = None
+    try:
+        user_id = request.user['id']
+        is_admin = request.user.get('is_admin', False)
+
+        if not request.is_json:
+            return jsonify({"error": "Request must be JSON"}), 400
+        data = request.get_json(silent=True)
+        if not data:
+            return jsonify({"error": "Request body must be valid JSON"}), 400
+        voided_flag = data.get('voided')
+        if voided_flag is None:
+            return jsonify({"error": "Missing 'voided' boolean in request body"}), 400
+
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            # Ensure warranty exists and belongs to user unless admin
+            if is_admin:
+                cur.execute('SELECT id FROM warranties WHERE id = %s', (warranty_id,))
+            else:
+                cur.execute('SELECT id FROM warranties WHERE id = %s AND user_id = %s', (warranty_id, user_id))
+            row = cur.fetchone()
+            if not row:
+                return jsonify({"error": "Warranty not found or permission denied"}), 404
+
+            if voided_flag is True:
+                cur.execute('UPDATE warranties SET voided_at = NOW(), updated_at = NOW() WHERE id = %s', (warranty_id,))
+            else:
+                cur.execute('UPDATE warranties SET voided_at = NULL, updated_at = NOW() WHERE id = %s', (warranty_id,))
+
+            conn.commit()
+
+        return jsonify({"message": "Void status updated", "voided": bool(voided_flag)})
+    except Exception as e:
+        current_app.logger.error(f"Error toggling void status: {e}")
+        if conn:
+            conn.rollback()
+        return jsonify({"error": "Failed to update void status"}), 500
     finally:
         if conn:
             release_db_connection(conn)
@@ -1738,7 +1789,7 @@ def get_global_warranties():
                     w.product_url, w.notes, w.purchase_price, w.user_id, w.created_at, w.updated_at, w.is_lifetime, 
                     w.vendor, w.warranty_type, w.warranty_duration_years, w.warranty_duration_months, w.warranty_duration_days, w.product_photo_path, w.currency,
                     w.paperless_invoice_id, w.paperless_manual_id, w.paperless_photo_id, w.paperless_other_id,
-                    w.invoice_url, w.manual_url, w.other_document_url, w.model_number,
+                    w.invoice_url, w.manual_url, w.other_document_url, w.model_number, w.voided_at,
                     u.username, u.email, u.first_name, u.last_name,
                     CASE
                         WHEN EXISTS (
@@ -1851,7 +1902,7 @@ def get_global_warranties_archived():
                     w.product_url, w.notes, w.purchase_price, w.user_id, w.created_at, w.updated_at, w.is_lifetime, 
                     w.vendor, w.warranty_type, w.warranty_duration_years, w.warranty_duration_months, w.warranty_duration_days, w.product_photo_path, w.currency,
                     w.paperless_invoice_id, w.paperless_manual_id, w.paperless_photo_id, w.paperless_other_id,
-                    w.invoice_url, w.manual_url, w.other_document_url, w.model_number,
+                    w.invoice_url, w.manual_url, w.other_document_url, w.model_number, w.voided_at,
                     u.username, u.email, u.first_name, u.last_name,
                     CASE
                         WHEN EXISTS (

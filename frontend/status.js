@@ -419,12 +419,14 @@
         const expiringEl = document.getElementById('expiringCount');
         const expiredEl = document.getElementById('expiredCount');
         const archivedEl = document.getElementById('archivedCount');
+        const voidedEl = document.getElementById('voidedCount');
         const totalValueEl = document.getElementById('totalValueCount');
         if (totalEl) totalEl.textContent = statusData.total || 0;
         if (activeEl) activeEl.textContent = statusData.active || 0;
         if (expiringEl) expiringEl.textContent = statusData.expiring_soon || 0;
         if (expiredEl) expiredEl.textContent = statusData.expired || 0;
         if (archivedEl) archivedEl.textContent = statusData.archived || 0;
+        if (voidedEl) voidedEl.textContent = statusData.voided || 0;
         if (totalValueEl) {
             const val = parseFloat(statusData.total_value || 0);
             totalValueEl.textContent = userCurrencySymbol + val.toFixed(2);
@@ -581,6 +583,7 @@
                 manual_path: warranty.manual_path || null,
                 other_document_path: warranty.other_document_path || null,
                 is_archived: !!warranty.is_archived,
+                is_voided: !!warranty.is_voided,
                 // Add user fields for global view
                 user_display_name: warranty.user_display_name,
                 username: warranty.username,
@@ -596,6 +599,10 @@
         // Archived takes precedence: show as Archived regardless of expiration
         if (warranty.is_archived) {
             return { text: i18next.t('warranties.archived', 'Archived'), className: 'status-archived' };
+        }
+        // Void (issue #250) takes precedence over the date-derived status
+        if (warranty.is_voided) {
+            return { text: i18next.t('warranties.void', 'Void'), className: 'status-void' };
         }
         if (warranty.is_lifetime) {
             return { text: i18next.t('warranties.lifetime'), className: 'status-lifetime' };
@@ -635,6 +642,16 @@
 
             // Exclude archived from other filters
             if (w.is_archived) {
+                return currentStatusValue === 'all';
+            }
+
+            // Explicit void filter (issue #250)
+            if (currentStatusValue === 'void') {
+                return !!w.is_voided;
+            }
+
+            // Exclude voided from the other specific filters
+            if (w.is_voided) {
                 return currentStatusValue === 'all';
             }
 
@@ -1028,7 +1045,7 @@
 
                 if (Object.keys(statusDistributionData).length > 0 && statusDistributionData.total > 0) {
                     currentStatusData = statusDistributionData;
-                    updateSummaryCounts(statusDistributionData);
+                    updateSummaryCounts({ ...statusDistributionData, voided: data.voided || 0 });
                     createStatusChart(statusDistributionData);
                 } else {
                     console.warn("Status distribution data from API is incomplete or zero. Displaying empty/default chart/summary.");

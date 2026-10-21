@@ -452,6 +452,16 @@
                         </div>
                     </div>
 
+                    <div class="status-card" data-status="void">
+                        <div class="card-icon">
+                            <i class="fas fa-ban"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 data-i18n="status.void_warranties">Void</h3>
+                            <p class="count" id="voidedCount">0</p>
+                        </div>
+                    </div>
+
                     <div class="status-card" data-status="total_value" id="totalValueCard" role="button" tabindex="0" aria-label="Total Value details">
                         <div class="card-icon">
                             <i class="fas fa-coins"></i>
@@ -497,6 +507,7 @@
                                     <option value="active" data-i18n="warranties.active">Active</option>
                                     <option value="expiring" data-i18n="warranties.expiring_soon">Expiring Soon</option>
                                     <option value="expired" data-i18n="warranties.expired">Expired</option>
+                                    <option value="void" data-i18n="warranties.void">Void</option>
                                     <option value="archived" data-i18n="warranties.archived">Archived</option>
                                 </select>
                             </div>

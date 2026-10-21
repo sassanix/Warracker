@@ -28,7 +28,7 @@ import { loadTags as loadTagsModule, openTagManagementModal } from '../component
 import { renderWarrantiesList } from '../components/warrantyRenderer.js';
 import { processWarrantyData } from '../lib/warrantyProcessing.js';
 import { exportWarranties, handleImport as importCsv } from '../components/importExport.js';
-import { deleteWarranty as deleteWarrantyAction, toggleArchiveStatus as toggleArchive, confirmArchive as confirmArchiveAction } from '../components/warrantyActions.js';
+import { deleteWarranty as deleteWarrantyAction, toggleArchiveStatus as toggleArchive, toggleVoidStatus as toggleVoid, confirmArchive as confirmArchiveAction } from '../components/warrantyActions.js';
 import { openEditModal, saveWarranty as saveEditedWarranty } from '../components/editModal.js';
 import { preloadWarrantyImages } from '../components/paperless.js';
 
@@ -829,6 +829,21 @@ export function initEventListeners() {
 				e.preventDefault();
 				const id = parseInt(e.target.closest('.unarchive-btn')?.dataset?.id);
 				if (Number.isFinite(id)) toggleArchive(id, false);
+				return;
+			}
+			if (e.target.closest('.void-btn')) {
+				e.preventDefault();
+				const id = parseInt(e.target.closest('.void-btn')?.dataset?.id);
+				const confirmMessage = window.i18next
+					? window.i18next.t('messages.confirm_void_warranty')
+					: 'Void this warranty? It will be marked inactive and excluded from totals and notifications. You can restore it later.';
+				if (Number.isFinite(id) && window.confirm(confirmMessage)) toggleVoid(id, true);
+				return;
+			}
+			if (e.target.closest('.unvoid-btn')) {
+				e.preventDefault();
+				const id = parseInt(e.target.closest('.unvoid-btn')?.dataset?.id);
+				if (Number.isFinite(id)) toggleVoid(id, false);
 				return;
 			}
 		});

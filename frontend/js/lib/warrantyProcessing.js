@@ -12,6 +12,7 @@ export function processWarrantyData(warranty) {
   if (!warranty || typeof warranty !== 'object') return warranty;
   const processed = { ...warranty };
   processed.is_archived = Boolean(warranty.__isArchived || warranty.is_archived);
+  processed.is_voided = Boolean(warranty.is_voided || warranty.voided_at);
   processed.product_name = processed.product_name || 'Unnamed Product';
 
   const today = new Date();
@@ -31,6 +32,10 @@ export function processWarrantyData(warranty) {
     processed.display_duration_months = 0;
     processed.display_duration_days = 0;
     processed.original_input_method = 'duration';
+    if (processed.is_voided) {
+      processed.status = 'void';
+      processed.statusText = translate('warranties.void', 'Void');
+    }
     return processed;
   }
 
@@ -88,6 +93,12 @@ export function processWarrantyData(warranty) {
     processed.status = 'unknown';
     processed.statusText = translate('warranties.unknown_status', 'Unknown Status');
     processed.daysRemaining = null;
+  }
+
+  // Void (issue #250) takes precedence over the date-derived status
+  if (processed.is_voided) {
+    processed.status = 'void';
+    processed.statusText = translate('warranties.void', 'Void');
   }
 
   return processed;

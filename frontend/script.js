@@ -1088,6 +1088,7 @@ function processWarrantyData(warranty) {
     const processedWarranty = { ...warranty };
     // Flag archived items when merged into All view
     processedWarranty.is_archived = !!(warranty.__isArchived || warranty.is_archived);
+    processedWarranty.is_voided = !!(warranty.is_voided || warranty.voided_at);
     
     // Ensure product_name exists
     if (!processedWarranty.product_name) {
@@ -1219,6 +1220,12 @@ function processWarrantyData(warranty) {
         processedWarranty.status = 'unknown';
         processedWarranty.statusText = window.i18next ? window.i18next.t('warranties.unknown_status') : 'Unknown Status';
         processedWarranty.daysRemaining = null;
+    }
+
+    // Void (issue #250) takes precedence over the date-derived status
+    if (processedWarranty.is_voided) {
+        processedWarranty.status = 'void';
+        processedWarranty.statusText = window.i18next ? window.i18next.t('warranties.void') : 'Void';
     }
 
     console.log('Processed warranty data result:', processedWarranty);

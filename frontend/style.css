@@ -917,10 +917,28 @@ input.invalid {
   color: #f39c12;
 }
 
+.status-void {
+  background-color: rgba(142, 68, 173, 0.15);
+  color: #7d3c98;
+}
+
+/* Voided warranty cards (issue #250): purple accent, distinct from
+   active (green), expiring (amber), expired (red), and archived (grey) */
+.warranty-card.voided {
+  border-left: 4px solid #8e44ad;
+  opacity: 0.9;
+}
+
+.table-view .warranty-card.voided {
+  border-left: none;
+  background-color: rgba(142, 68, 173, 0.05);
+}
+
 /* Ensure all status badges share the same shape/spacing */
 .status-active,
 .status-expired,
 .status-expiring,
+.status-void,
 .status-archived {
   display: inline-block;
   padding: 4px 10px;
@@ -3545,6 +3563,11 @@ input.invalid {
 /* Color for expired warranties */
 .warranty-card.expired .product-name-header {
   background-color: var(--danger-color);
+}
+
+/* Color for voided warranties (issue #250) */
+.warranty-card.voided .product-name-header {
+  background-color: #8e44ad;
 }
 
 /* Neutralize top header bar in archived view (all layouts) */

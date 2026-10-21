@@ -34,6 +34,37 @@ async function toggleArchiveStatus(warrantyId, shouldArchive) {
 	}
 }
 
+async function toggleVoidStatus(warrantyId, shouldVoid) {
+	if (!warrantyId) {
+		showToast(window.i18next ? window.i18next.t('messages.no_warranty_selected') : 'No warranty selected', 'error');
+		return;
+	}
+	try {
+		showLoadingSpinner();
+		await request(`/api/warranties/${warrantyId}/void`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ voided: !!shouldVoid }),
+		});
+		hideLoadingSpinner();
+		showToast(
+			shouldVoid
+				? window.i18next ? window.i18next.t('messages.voided_success') : 'Warranty voided'
+				: window.i18next ? window.i18next.t('messages.unvoided_success') : 'Warranty restored from void',
+			'success',
+		);
+		await loadWarranties(true);
+		applyFilters();
+	} catch (error) {
+		hideLoadingSpinner();
+		console.error('[warrantyActions] Failed to toggle void', error);
+		showToast(
+			window.i18next ? window.i18next.t('messages.error_updating_void_status') : 'Failed to update void status',
+			'error',
+		);
+	}
+}
+
 async function deleteWarranty() {
 	let warrantyId = getCurrentWarrantyId();
 	// Fallback to global variable (script.js compatibility)
@@ -87,10 +118,11 @@ function closeModals() {
 	document.querySelectorAll('.modal-backdrop').forEach((modal) => modal.classList.remove('active'));
 }
 
-export { toggleArchiveStatus, deleteWarranty, confirmArchive, closeModals };
+export { toggleArchiveStatus, toggleVoidStatus, deleteWarranty, confirmArchive, closeModals };
 
 if (typeof window !== 'undefined') {
 	window.toggleArchiveStatus = toggleArchiveStatus;
+	window.toggleVoidStatus = toggleVoidStatus;
 	window.deleteWarranty = deleteWarranty;
 	window.confirmArchive = confirmArchive;
 	window.closeModals = closeModals;

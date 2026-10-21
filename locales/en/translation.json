@@ -223,7 +223,10 @@
     "none": "None",
     "not_specified": "Not specified",
     "notes_title": "Warranty Notes",
-    "unnamed_product": "Unnamed Product"
+    "unnamed_product": "Unnamed Product",
+    "void": "Void",
+    "void_warranty": "Void warranty",
+    "unvoid_warranty": "Unvoid warranty"
   },
   "settings": {
     "title": "Warracker - Settings",
@@ -637,7 +640,11 @@
     "unarchived_success": "Warranty unarchived",
     "warranty_duration_required": "Warranty duration is required",
     "warranty_not_found_refresh": "Warranty not found. Please refresh and try again.",
-    "import_success": "{{success}} warranties imported. {{failure}} failed."
+    "import_success": "{{success}} warranties imported. {{failure}} failed.",
+    "voided_success": "Warranty voided",
+    "unvoided_success": "Warranty restored from void",
+    "error_updating_void_status": "Failed to update void status",
+    "confirm_void_warranty": "Void this warranty? It will be marked inactive and excluded from totals and notifications. You can restore it later."
   },
   "languages": {
     "en": "English",
@@ -683,7 +690,8 @@
     "version": "Version",
     "uptime": "Uptime",
     "total_value": "Total Value",
-    "total_value_tooltip": "Sum of the purchase prices of all non-archived warranties. Warranties without a purchase price count as 0."
+    "total_value_tooltip": "Sum of the purchase prices of all non-archived warranties. Warranties without a purchase price count as 0.",
+    "void_warranties": "Void Warranties"
   },
   "about": {
     "title": "About - Warracker",

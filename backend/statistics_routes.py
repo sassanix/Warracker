@@ -111,26 +111,32 @@ def get_statistics():
             archived_count = cur.fetchone()[0]
             logger.info(f"Archived warranties: {archived_count}")
 
+            # Get voided count (issue #250; warranties that are also
+            # archived count as archived, matching the list views)
+            cur.execute(f"SELECT COUNT(*) {from_clause} {where_clause} AND w.archived_at IS NULL AND w.voided_at IS NOT NULL", params)
+            voided_count = cur.fetchone()[0]
+            logger.info(f"Voided warranties: {voided_count}")
+
             # Get total purchase value (excluding archived; issue #192:
             # only the user's default currency, not a cross-currency sum)
             user_currency = get_user_currency_code(cur, user_id)
-            cur.execute(f"SELECT COALESCE(SUM(w.purchase_price), 0) {from_clause} {where_clause} AND w.archived_at IS NULL AND w.currency = %s", params + [user_currency])
+            cur.execute(f"SELECT COALESCE(SUM(w.purchase_price), 0) {from_clause} {where_clause} AND w.archived_at IS NULL AND w.voided_at IS NULL AND w.currency = %s", params + [user_currency])
             total_value = cur.fetchone()[0]
             logger.info(f"Total purchase value ({user_currency}): {total_value}")
             
             # Get active count (includes lifetime, excludes archived)
-            cur.execute(f"SELECT COUNT(*) {from_clause} {where_clause} {active_where if where_clause else 'WHERE'} (w.is_lifetime = TRUE OR w.expiration_date >= %s) AND w.archived_at IS NULL", params + [today])
+            cur.execute(f"SELECT COUNT(*) {from_clause} {where_clause} {active_where if where_clause else 'WHERE'} (w.is_lifetime = TRUE OR w.expiration_date >= %s) AND w.archived_at IS NULL AND w.voided_at IS NULL", params + [today])
             active_count = cur.fetchone()[0]
             logger.info(f"Active warranties: {active_count}")
             
             # Get expired count (excludes lifetime and archived)
-            cur.execute(f"SELECT COUNT(*) {from_clause} {where_clause} {active_where if where_clause else 'WHERE'} w.is_lifetime = FALSE AND w.expiration_date < %s AND w.archived_at IS NULL", params + [today])
+            cur.execute(f"SELECT COUNT(*) {from_clause} {where_clause} {active_where if where_clause else 'WHERE'} w.is_lifetime = FALSE AND w.expiration_date < %s AND w.archived_at IS NULL AND w.voided_at IS NULL", params + [today])
             expired_count = cur.fetchone()[0]
             logger.info(f"Expired warranties: {expired_count}")
             
             # Get expiring soon count (excludes lifetime and archived) using user preference
             cur.execute(f"""SELECT COUNT(*) {from_clause} {where_clause} {active_where if where_clause else 'WHERE'}
-                          w.is_lifetime = FALSE AND w.expiration_date >= %s AND w.expiration_date <= %s AND w.archived_at IS NULL""",
+                          w.is_lifetime = FALSE AND w.expiration_date >= %s AND w.expiration_date <= %s AND w.archived_at IS NULL AND w.voided_at IS NULL""",
                       params + [today, expiring_soon_date])
             expiring_soon_count = cur.fetchone()[0]
             logger.info(f"Expiring soon ({expiring_soon_days} days) warranties: {expiring_soon_count}")
@@ -143,7 +149,7 @@ def get_statistics():
                     COUNT(*) as count
                 {from_clause} 
                 {where_clause} {active_where if where_clause else 'WHERE'} 
-                w.is_lifetime = FALSE AND w.expiration_date >= %s AND w.expiration_date <= %s AND w.archived_at IS NULL
+                w.is_lifetime = FALSE AND w.expiration_date >= %s AND w.expiration_date <= %s AND w.archived_at IS NULL AND w.voided_at IS NULL
                 GROUP BY EXTRACT(YEAR FROM expiration_date), EXTRACT(MONTH FROM expiration_date)
                 ORDER BY year, month
             """, params + [today, ninety_days_later])
@@ -171,7 +177,7 @@ def get_statistics():
                     expiration_date, invoice_path, manual_path, other_document_path, product_url, purchase_price, is_lifetime
                 {from_clause}
                 {where_clause} {active_where if where_clause else 'WHERE'}
-                w.is_lifetime = FALSE AND w.expiration_date >= %s AND w.expiration_date <= %s AND w.archived_at IS NULL
+                w.is_lifetime = FALSE AND w.expiration_date >= %s AND w.expiration_date <= %s AND w.archived_at IS NULL AND w.voided_at IS NULL
                 ORDER BY expiration_date
                 LIMIT 10
             """, params + [days_ago_for_recent, days_later_for_recent])
@@ -202,7 +208,8 @@ def get_statistics():
                     warranty_duration_years, warranty_duration_months, warranty_duration_days,
                     expiration_date, invoice_path, manual_path, other_document_path, product_url, purchase_price, is_lifetime,
                     model_number, notes, currency, vendor, warranty_type,
-                    (archived_at IS NOT NULL) AS is_archived
+                    (archived_at IS NOT NULL) AS is_archived,
+                    (voided_at IS NOT NULL) AS is_voided
                 {from_clause}
                 {where_clause}
                 ORDER BY expiration_date DESC
@@ -247,6 +254,7 @@ def get_statistics():
                 'expired': expired_count,
                 'expiring_soon': expiring_soon_count,
                 'archived': archived_count,
+                'voided': voided_count,
                 'total_value': total_value,
                 'timeline': timeline,
                 'recent_warranties': recent_warranties,
@@ -321,24 +329,28 @@ def get_global_statistics():
             cur.execute("SELECT COUNT(*) FROM warranties w WHERE w.archived_at IS NOT NULL")
             archived_count = cur.fetchone()[0]
 
+            # Get voided count (issue #250)
+            cur.execute("SELECT COUNT(*) FROM warranties w WHERE w.archived_at IS NULL AND w.voided_at IS NOT NULL")
+            voided_count = cur.fetchone()[0]
+
             # Get total purchase value (excluding archived; issue #192:
             # only the requesting user's default currency, not a cross-currency sum)
             user_currency = get_user_currency_code(cur, request.user['id'])
-            cur.execute("SELECT COALESCE(SUM(w.purchase_price), 0) FROM warranties w WHERE w.archived_at IS NULL AND w.currency = %s", (user_currency,))
+            cur.execute("SELECT COALESCE(SUM(w.purchase_price), 0) FROM warranties w WHERE w.archived_at IS NULL AND w.voided_at IS NULL AND w.currency = %s", (user_currency,))
             total_value = cur.fetchone()[0]
             logger.info(f"Global total purchase value ({user_currency}): {total_value}")
             
             # Get active count (includes lifetime, excludes archived)
-            cur.execute("SELECT COUNT(*) FROM warranties w WHERE (w.is_lifetime = TRUE OR w.expiration_date >= %s) AND w.archived_at IS NULL", (today,))
+            cur.execute("SELECT COUNT(*) FROM warranties w WHERE (w.is_lifetime = TRUE OR w.expiration_date >= %s) AND w.archived_at IS NULL AND w.voided_at IS NULL", (today,))
             active_count = cur.fetchone()[0]
             
             # Get expired count (excludes lifetime and archived)
-            cur.execute("SELECT COUNT(*) FROM warranties w WHERE w.is_lifetime = FALSE AND w.expiration_date < %s AND w.archived_at IS NULL", (today,))
+            cur.execute("SELECT COUNT(*) FROM warranties w WHERE w.is_lifetime = FALSE AND w.expiration_date < %s AND w.archived_at IS NULL AND w.voided_at IS NULL", (today,))
             expired_count = cur.fetchone()[0]
             
             # Get expiring soon count (excludes lifetime and archived)
             cur.execute("""SELECT COUNT(*) FROM warranties w WHERE
-                          w.is_lifetime = FALSE AND w.expiration_date >= %s AND w.expiration_date <= %s AND w.archived_at IS NULL""",
+                          w.is_lifetime = FALSE AND w.expiration_date >= %s AND w.expiration_date <= %s AND w.archived_at IS NULL AND w.voided_at IS NULL""",
                       (today, expiring_soon_date))
             expiring_soon_count = cur.fetchone()[0]
             
@@ -349,7 +361,7 @@ def get_global_statistics():
                     EXTRACT(MONTH FROM expiration_date) as month,
                     COUNT(*) as count
                 FROM warranties w 
-                WHERE w.is_lifetime = FALSE AND w.expiration_date >= %s AND w.expiration_date <= %s AND w.archived_at IS NULL
+                WHERE w.is_lifetime = FALSE AND w.expiration_date >= %s AND w.expiration_date <= %s AND w.archived_at IS NULL AND w.voided_at IS NULL
                 GROUP BY EXTRACT(YEAR FROM expiration_date), EXTRACT(MONTH FROM expiration_date)
                 ORDER BY year, month
             """, (today, ninety_days_later))
@@ -377,7 +389,7 @@ def get_global_statistics():
                     u.username, u.email, u.first_name, u.last_name
                 FROM warranties w
                 JOIN users u ON w.user_id = u.id
-                WHERE w.is_lifetime = FALSE AND w.expiration_date >= %s AND w.expiration_date <= %s AND w.archived_at IS NULL
+                WHERE w.is_lifetime = FALSE AND w.expiration_date >= %s AND w.expiration_date <= %s AND w.archived_at IS NULL AND w.voided_at IS NULL
                 ORDER BY w.expiration_date
                 LIMIT 10
             """, (days_ago_for_recent, days_later_for_recent))
@@ -425,7 +437,8 @@ def get_global_statistics():
                     w.product_url, w.purchase_price, w.is_lifetime,
                     u.username, u.email, u.first_name, u.last_name,
                     w.model_number, w.notes, w.currency, w.vendor, w.warranty_type,
-                    (w.archived_at IS NOT NULL) AS is_archived
+                    (w.archived_at IS NOT NULL) AS is_archived,
+                    (w.voided_at IS NOT NULL) AS is_voided
                 FROM warranties w
                 JOIN users u ON w.user_id = u.id
                 ORDER BY w.expiration_date DESC
@@ -484,6 +497,7 @@ def get_global_statistics():
                 'expired': expired_count,
                 'expiring_soon': expiring_soon_count,
                 'archived': archived_count,
+                'voided': voided_count,
                 'total_value': total_value,
                 'timeline': timeline,
                 'recent_warranties': recent_warranties,
