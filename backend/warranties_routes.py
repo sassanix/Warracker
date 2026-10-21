@@ -617,7 +617,16 @@ def delete_warranty(warranty_id):
             manual_path = result[1]
             other_document_path = result[2]
             product_photo_path = result[3]
-            
+
+            # Claim document files (issue #148) — the rows cascade on delete,
+            # so collect their paths first
+            cur.execute('''
+                SELECT d.file_path FROM claim_documents d
+                JOIN warranty_claims c ON d.claim_id = c.id
+                WHERE c.warranty_id = %s AND d.file_path IS NOT NULL
+            ''', (warranty_id,))
+            claim_document_paths = [row[0] for row in cur.fetchall()]
+
             # Delete the warranty from database
             cur.execute('DELETE FROM warranties WHERE id = %s', (warranty_id,))
             deleted_rows = cur.rowcount
@@ -644,6 +653,12 @@ def delete_warranty(warranty_id):
             # Delete the product photo file if it exists
             if product_photo_path:
                 full_path = os.path.join('/data', product_photo_path)
+                if os.path.exists(full_path):
+                    os.remove(full_path)
+
+            # Delete claim document files (rows already cascaded)
+            for claim_doc_path in claim_document_paths:
+                full_path = os.path.join('/data', claim_doc_path)
                 if os.path.exists(full_path):
                     os.remove(full_path)
 
@@ -2322,7 +2337,8 @@ def create_claim(warranty_id):
             'resolution': resolution,
             'resolution_date': parsed_resolution_date.isoformat() if parsed_resolution_date else None,
             'created_at': created_at.isoformat() if created_at else None,
-            'updated_at': updated_at.isoformat() if updated_at else None
+            'updated_at': updated_at.isoformat() if updated_at else None,
+            'documents': []
         }
         
         logger.info(f"Created claim {claim_id} for warranty {warranty_id} by user {user_id}")
@@ -2409,7 +2425,30 @@ def get_claims(warranty_id):
                 'updated_at': row[9].isoformat() if row[9] else None
             }
             claims.append(claim)
-        
+
+        # Embed each claim's documents (issue #148) in one extra query
+        if claims:
+            claim_ids = [c['id'] for c in claims]
+            cur.execute("""
+                SELECT id, claim_id, original_filename, file_path, paperless_document_id, created_at
+                FROM claim_documents
+                WHERE claim_id = ANY(%s)
+                ORDER BY created_at, id
+            """, (claim_ids,))
+            docs_by_claim = {}
+            for drow in cur.fetchall():
+                doc = {
+                    'id': drow[0],
+                    'claim_id': drow[1],
+                    'original_filename': drow[2],
+                    'file_path': drow[3],
+                    'paperless_document_id': drow[4],
+                    'created_at': drow[5].isoformat() if drow[5] else None
+                }
+                docs_by_claim.setdefault(drow[1], []).append(doc)
+            for claim in claims:
+                claim['documents'] = docs_by_claim.get(claim['id'], [])
+
         return jsonify(claims), 200
         
     except Exception as e:
@@ -2562,17 +2601,28 @@ def delete_claim(warranty_id, claim_id):
         result = cur.fetchone()
         if not result:
             return jsonify({'error': 'Warranty or claim not found or access denied'}), 404
-        
+
+        # Remember attached local files so they can be removed with the claim
+        # (the claim_documents rows themselves cascade on delete)
+        cur.execute("""
+            SELECT file_path FROM claim_documents
+            WHERE claim_id = %s AND file_path IS NOT NULL
+        """, (claim_id,))
+        document_files = [row[0] for row in cur.fetchall()]
+
         # Delete the claim
         cur.execute("""
-            DELETE FROM warranty_claims 
+            DELETE FROM warranty_claims
             WHERE id = %s AND warranty_id = %s
         """, (claim_id, warranty_id))
-        
+
         if cur.rowcount == 0:
             return jsonify({'error': 'Claim not found'}), 404
-        
+
         conn.commit()
+
+        for doc_file in document_files:
+            _remove_claim_document_file(doc_file)
         
         logger.info(f"Deleted claim {claim_id} for warranty {warranty_id} by user {user_id}")
         return jsonify({'message': 'Claim deleted successfully'}), 200
@@ -2590,3 +2640,218 @@ def delete_claim(warranty_id, claim_id):
             release_db_connection(conn)
 
  
+
+# ============================
+# Claim Documents (issue #148)
+# ============================
+
+def _serialize_claim_document(row):
+    """Serialize a claim_documents row (id, claim_id, original_filename,
+    file_path, paperless_document_id, created_at)."""
+    return {
+        'id': row[0],
+        'claim_id': row[1],
+        'original_filename': row[2],
+        'file_path': row[3],
+        'paperless_document_id': row[4],
+        'created_at': row[5].isoformat() if row[5] else None
+    }
+
+
+def _verify_claim_ownership(cur, warranty_id, claim_id, user_id):
+    """True when the user owns the warranty the claim belongs to."""
+    cur.execute("""
+        SELECT w.id
+        FROM warranties w
+        JOIN warranty_claims c ON w.id = c.warranty_id
+        WHERE w.id = %s AND c.id = %s AND w.user_id = %s
+    """, (warranty_id, claim_id, user_id))
+    return cur.fetchone() is not None
+
+
+def _remove_claim_document_file(file_path):
+    """Best-effort removal of a locally stored claim document file."""
+    if not file_path:
+        return
+    try:
+        full_path = os.path.join(current_app.config['UPLOAD_FOLDER'], os.path.basename(file_path))
+        if os.path.exists(full_path):
+            os.remove(full_path)
+    except OSError as e:
+        logger.warning(f"Could not remove claim document file {file_path}: {e}")
+
+
+@warranties_bp.route('/warranties/<int:warranty_id>/claims/<int:claim_id>/documents', methods=['POST'])
+@token_required
+def add_claim_document(warranty_id, claim_id):
+    """Attach a document to a claim: a local file upload, or a link to an
+    existing Paperless-ngx document (paperless_document_id form field)."""
+    conn = None
+    cur = None
+
+    try:
+        user_id = request.user['id']
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        if not _verify_claim_ownership(cur, warranty_id, claim_id, user_id):
+            return jsonify({'error': 'Warranty or claim not found or access denied'}), 404
+
+        paperless_document_id = None
+        raw_pid = request.form.get('paperless_document_id')
+        if raw_pid:
+            try:
+                paperless_document_id = int(raw_pid)
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Invalid paperless_document_id'}), 400
+
+        db_file_path = None
+        original_filename = None
+
+        if paperless_document_id is not None:
+            # Link an existing Paperless document; the local file input is ignored.
+            original_filename = (request.form.get('original_filename') or '').strip() \
+                or f'Paperless document {paperless_document_id}'
+        elif 'file' in request.files and request.files['file'].filename:
+            upload = request.files['file']
+            if not allowed_file(upload.filename):
+                return jsonify({'error': 'File type not allowed',
+                                'code': 'file_type_not_allowed'}), 400
+            filename = unique_upload_filename(upload.filename, infix="claim_")
+            full_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+            try:
+                upload.save(full_path)
+            except OSError as e:
+                logger.error(f"Error saving claim document {filename}: {e}")
+                return jsonify({'error': 'Could not save the uploaded file'}), 500
+            db_file_path = os.path.join('uploads', filename)
+            original_filename = upload.filename
+        else:
+            return jsonify({'error': 'No file or paperless_document_id provided'}), 400
+
+        if len(original_filename) > 255:
+            original_filename = original_filename[:255]
+
+        cur.execute("""
+            INSERT INTO claim_documents
+            (claim_id, original_filename, file_path, paperless_document_id)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id, claim_id, original_filename, file_path, paperless_document_id, created_at
+        """, (claim_id, original_filename, db_file_path, paperless_document_id))
+
+        document = _serialize_claim_document(cur.fetchone())
+        conn.commit()
+
+        logger.info(f"Added document {document['id']} to claim {claim_id} by user {user_id}")
+        return jsonify(document), 201
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Error adding claim document: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            release_db_connection(conn)
+
+
+@warranties_bp.route('/warranties/<int:warranty_id>/claims/<int:claim_id>/documents', methods=['GET'])
+@token_required
+def get_claim_documents(warranty_id, claim_id):
+    """List a claim's documents. Read access follows the claims list:
+    the warranty owner, admins, and global-view users may read."""
+    conn = None
+    cur = None
+
+    try:
+        user_id = request.user['id']
+        is_admin = request.user.get('is_admin', False)
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # The claim must exist under this warranty
+        cur.execute("""
+            SELECT w.user_id FROM warranties w
+            JOIN warranty_claims c ON w.id = c.warranty_id
+            WHERE w.id = %s AND c.id = %s
+        """, (warranty_id, claim_id))
+        owner_row = cur.fetchone()
+        if not owner_row:
+            return jsonify({'error': 'Warranty or claim not found'}), 404
+
+        if owner_row[0] != user_id and not is_admin:
+            cur.execute("SELECT key, value FROM site_settings WHERE key IN ('global_view_enabled', 'global_view_admin_only')")
+            settings = {row[0]: row[1] for row in cur.fetchall()}
+            global_view_enabled = settings.get('global_view_enabled', 'true').lower() == 'true'
+            admin_only = settings.get('global_view_admin_only', 'false').lower() == 'true'
+            if not global_view_enabled or admin_only:
+                return jsonify({'error': 'Warranty or claim not found or access denied'}), 404
+
+        cur.execute("""
+            SELECT id, claim_id, original_filename, file_path, paperless_document_id, created_at
+            FROM claim_documents
+            WHERE claim_id = %s
+            ORDER BY created_at, id
+        """, (claim_id,))
+
+        return jsonify([_serialize_claim_document(row) for row in cur.fetchall()]), 200
+
+    except Exception as e:
+        logger.error(f"Error getting claim documents: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            release_db_connection(conn)
+
+
+@warranties_bp.route('/warranties/<int:warranty_id>/claims/<int:claim_id>/documents/<int:document_id>', methods=['DELETE'])
+@token_required
+def delete_claim_document(warranty_id, claim_id, document_id):
+    """Remove a document from a claim. Local files are deleted from disk;
+    Paperless documents are only unlinked (never deleted from Paperless)."""
+    conn = None
+    cur = None
+
+    try:
+        user_id = request.user['id']
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        if not _verify_claim_ownership(cur, warranty_id, claim_id, user_id):
+            return jsonify({'error': 'Warranty or claim not found or access denied'}), 404
+
+        cur.execute("""
+            SELECT file_path FROM claim_documents
+            WHERE id = %s AND claim_id = %s
+        """, (document_id, claim_id))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'error': 'Document not found'}), 404
+        file_path = row[0]
+
+        cur.execute("DELETE FROM claim_documents WHERE id = %s AND claim_id = %s",
+                    (document_id, claim_id))
+        conn.commit()
+
+        _remove_claim_document_file(file_path)
+
+        logger.info(f"Deleted document {document_id} from claim {claim_id} by user {user_id}")
+        return jsonify({'message': 'Document deleted successfully'}), 200
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Error deleting claim document: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            release_db_connection(conn)

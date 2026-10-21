@@ -766,7 +766,17 @@
     "resolved_label": "Resolved",
     "status_unknown": "Unknown",
     "unknown_vendor": "Unknown Vendor",
-    "view_only": "View Only"
+    "view_only": "View Only",
+    "documents": "Documents",
+    "attach_document": "Attach document",
+    "document_added": "Document attached",
+    "document_deleted": "Document removed",
+    "document_add_failed": "Failed to attach document",
+    "document_delete_failed": "Failed to remove document",
+    "confirm_delete_document": "Remove this document from the claim?",
+    "storage_local": "Upload file",
+    "storage_paperless": "Upload to Paperless",
+    "document_open_failed": "Failed to open document"
   },
   "paperless": {
     "uploading_documents": "Uploading documents...",

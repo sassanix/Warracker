@@ -83,6 +83,16 @@ function bindClaimsListDelegation() {
 function bindClaimsListBodyActions() {
 	if (!dom.claimsListBody || dom.claimsListBody._claimsActionsBound) return;
 	dom.claimsListBody.addEventListener('click', (event) => {
+		// Viewing a document is allowed for read-only (global view) users too
+		const viewBtn = event.target.closest('.claim-doc-view');
+		if (viewBtn) {
+			const claimId = parseInt(viewBtn.dataset.claimId, 10);
+			const docId = parseInt(viewBtn.dataset.docId, 10);
+			const claim = state.claims.find((c) => c.id === claimId);
+			const doc = claim?.documents?.find((d) => d.id === docId);
+			if (doc) openClaimDocument(doc);
+			return;
+		}
 		if (!state.canEdit) return;
 		const editBtn = event.target.closest('.edit-claim-btn');
 		if (editBtn) {
@@ -99,6 +109,25 @@ function bindClaimsListBodyActions() {
 			if (window.confirm(confirmMessage)) {
 				deleteClaim(claimId);
 			}
+			return;
+		}
+		const docDeleteBtn = event.target.closest('.claim-doc-delete');
+		if (docDeleteBtn) {
+			const claimId = parseInt(docDeleteBtn.dataset.claimId, 10);
+			const docId = parseInt(docDeleteBtn.dataset.docId, 10);
+			const confirmMessage = t('claims.confirm_delete_document', 'Remove this document from the claim?');
+			if (window.confirm(confirmMessage)) {
+				deleteClaimDocument(claimId, docId);
+			}
+			return;
+		}
+		const attachBtn = event.target.closest('.claim-doc-attach');
+		if (attachBtn) {
+			const claimId = parseInt(attachBtn.dataset.claimId, 10);
+			const item = attachBtn.closest('.claim-item');
+			const storageSelect = item?.querySelector('.claim-doc-storage');
+			pendingAttach = { claimId, storage: storageSelect?.value || 'local' };
+			getClaimDocFileInput().click();
 		}
 	});
 	dom.claimsListBody._claimsActionsBound = true;
@@ -144,6 +173,36 @@ function ensureAddClaimHandler() {
 	if (!dom.addClaimBtn || dom.addClaimBtn._claimsAddBound) return;
 	dom.addClaimBtn.addEventListener('click', () => openClaimFormModal());
 	dom.addClaimBtn._claimsAddBound = true;
+}
+
+function documentsSectionHtml(claim, canEdit) {
+	const docs = Array.isArray(claim.documents) ? claim.documents : [];
+	const rows = docs
+		.map((doc) => {
+			const icon = doc.paperless_document_id ? 'fas fa-cloud' : 'fas fa-file-alt';
+			const del = canEdit
+				? `<button type="button" class="claim-doc-delete" data-claim-id="${claim.id}" data-doc-id="${doc.id}" title="${t('actions.delete', 'Delete')}"><i class="fas fa-times"></i></button>`
+				: '';
+			return `<div class="claim-document">
+				<button type="button" class="claim-doc-view" data-claim-id="${claim.id}" data-doc-id="${doc.id}"><i class="${icon}"></i> ${escapeHtml(doc.original_filename || 'Document')}</button>
+				${del}
+			</div>`;
+		})
+		.join('');
+	const addRow = canEdit
+		? `<div class="claim-documents-add">
+				<select class="claim-doc-storage">
+					<option value="local">${t('claims.storage_local', 'Upload file')}</option>
+					<option value="paperless">${t('claims.storage_paperless', 'Upload to Paperless')}</option>
+				</select>
+				<button type="button" class="btn btn-sm btn-secondary claim-doc-attach" data-claim-id="${claim.id}"><i class="fas fa-paperclip"></i> ${t('claims.attach_document', 'Attach document')}</button>
+			</div>`
+		: '';
+	return `<div class="claim-documents">
+		<div class="claim-documents-header"><i class="fas fa-paperclip"></i> ${t('claims.documents', 'Documents')} (${docs.length})</div>
+		${rows ? `<div class="claim-documents-list">${rows}</div>` : ''}
+		${addRow}
+	</div>`;
 }
 
 function renderClaims() {
@@ -203,6 +262,7 @@ function renderClaims() {
 					</div>
 					${claim.description ? `<div class="claim-description">${escapeHtml(claim.description)}</div>` : ''}
 					${claim.resolution ? `<div class="claim-resolution"><strong>${t('claims.resolution_label', 'Resolution')}:</strong> ${escapeHtml(claim.resolution)}</div>` : ''}
+					${documentsSectionHtml(claim, state.canEdit)}
 				</div>
 			`;
 		})
@@ -333,6 +393,190 @@ async function deleteClaim(claimId) {
 		console.error('[claims] delete failed', error);
 		showToast(error.message || t('claims.failed_to_delete', 'Failed to delete claim'), 'error');
 	}
+}
+
+// ============================
+// Claim documents (issue #148)
+// ============================
+
+let pendingAttach = null;
+let claimDocFileInput = null;
+
+function getClaimDocFileInput() {
+	if (!claimDocFileInput) {
+		claimDocFileInput = document.createElement('input');
+		claimDocFileInput.type = 'file';
+		claimDocFileInput.accept = '.pdf,.png,.jpg,.jpeg,.zip,.rar,.webp,.gif';
+		claimDocFileInput.style.display = 'none';
+		claimDocFileInput.addEventListener('change', () => {
+			const file = claimDocFileInput.files?.[0];
+			const pending = pendingAttach;
+			pendingAttach = null;
+			claimDocFileInput.value = '';
+			if (file && pending) {
+				uploadClaimDocument(pending.claimId, file, pending.storage);
+			}
+		});
+		document.body.appendChild(claimDocFileInput);
+	}
+	return claimDocFileInput;
+}
+
+async function openClaimDocument(doc) {
+	if (doc.paperless_document_id) {
+		const token = getToken();
+		if (!token) {
+			showToast(t('messages.authentication_required', 'Authentication required'), 'error');
+			return;
+		}
+		try {
+			const response = await fetch(`/api/paperless-file/${doc.paperless_document_id}`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			if (!response.ok) throw new Error('download failed');
+			const blob = await response.blob();
+			const blobUrl = window.URL.createObjectURL(blob);
+			window.open(blobUrl, '_blank');
+			setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+		} catch (error) {
+			console.error('[claims] paperless document open failed', error);
+			showToast(t('claims.document_open_failed', 'Failed to open document'), 'error');
+		}
+		return;
+	}
+	if (doc.file_path && window.openSecureFile) {
+		window.openSecureFile(doc.file_path);
+	}
+}
+
+async function uploadClaimDocument(claimId, file, storage) {
+	if (!state.currentWarrantyId) return;
+	try {
+		const token = getToken();
+		if (!token) throw new Error(t('messages.authentication_required', 'Authentication required'));
+
+		const formData = new FormData();
+		if (storage === 'paperless') {
+			// Upload to Paperless first, then link the returned document ID
+			const paperlessForm = new FormData();
+			paperlessForm.append('file', file);
+			paperlessForm.append('document_type', 'claim_document');
+			paperlessForm.append('title', `Warracker claim document - ${file.name}`);
+			paperlessForm.append('tags', 'warracker,claim');
+			const uploadResponse = await fetch('/api/paperless/upload', {
+				method: 'POST',
+				headers: { Authorization: `Bearer ${token}` },
+				body: paperlessForm,
+			});
+			const uploadResult = await uploadResponse.json().catch(() => ({}));
+			if (!uploadResponse.ok || !uploadResult.document_id) {
+				throw new Error(uploadResult.error || t('claims.document_add_failed', 'Failed to attach document'));
+			}
+			formData.append('paperless_document_id', String(uploadResult.document_id));
+			formData.append('original_filename', file.name);
+		} else {
+			formData.append('file', file);
+		}
+
+		const response = await fetch(
+			`/api/warranties/${state.currentWarrantyId}/claims/${claimId}/documents`,
+			{
+				method: 'POST',
+				headers: { Authorization: `Bearer ${token}` },
+				body: formData,
+			}
+		);
+		if (!response.ok) {
+			const error = await response.json().catch(() => ({}));
+			throw new Error(error.error || t('claims.document_add_failed', 'Failed to attach document'));
+		}
+		showToast(t('claims.document_added', 'Document attached'), 'success');
+		await loadClaims(state.currentWarrantyId);
+	} catch (error) {
+		console.error('[claims] document upload failed', error);
+		showToast(error.message || t('claims.document_add_failed', 'Failed to attach document'), 'error');
+	}
+}
+
+async function deleteClaimDocument(claimId, docId) {
+	if (!state.currentWarrantyId) return;
+	try {
+		const token = getToken();
+		if (!token) throw new Error(t('messages.authentication_required', 'Authentication required'));
+		const response = await fetch(
+			`/api/warranties/${state.currentWarrantyId}/claims/${claimId}/documents/${docId}`,
+			{
+				method: 'DELETE',
+				headers: { Authorization: `Bearer ${token}` },
+			}
+		);
+		if (!response.ok) {
+			const error = await response.json().catch(() => ({}));
+			throw new Error(error.error || t('claims.document_delete_failed', 'Failed to remove document'));
+		}
+		showToast(t('claims.document_deleted', 'Document removed'), 'success');
+		await loadClaims(state.currentWarrantyId);
+	} catch (error) {
+		console.error('[claims] document delete failed', error);
+		showToast(error.message || t('claims.document_delete_failed', 'Failed to remove document'), 'error');
+	}
+}
+
+function createDocumentsSection(claim, canEdit) {
+	const section = el('div', 'claim-documents');
+	const header = el('div', 'claim-documents-header');
+	const clip = el('i', 'fas fa-paperclip');
+	header.appendChild(clip);
+	const docs = Array.isArray(claim.documents) ? claim.documents : [];
+	header.appendChild(document.createTextNode(' ' + t('claims.documents', 'Documents') + ` (${docs.length})`));
+	section.appendChild(header);
+
+	if (docs.length) {
+		const list = el('div', 'claim-documents-list');
+		docs.forEach((doc) => {
+			const row = el('div', 'claim-document');
+			const viewBtn = el('button', 'claim-doc-view');
+			viewBtn.type = 'button';
+			viewBtn.dataset.claimId = String(claim.id);
+			viewBtn.dataset.docId = String(doc.id);
+			const icon = el('i', doc.paperless_document_id ? 'fas fa-cloud' : 'fas fa-file-alt');
+			viewBtn.appendChild(icon);
+			viewBtn.appendChild(document.createTextNode(' ' + (doc.original_filename || 'Document')));
+			row.appendChild(viewBtn);
+			if (canEdit) {
+				const delBtn = el('button', 'claim-doc-delete');
+				delBtn.type = 'button';
+				delBtn.title = t('actions.delete', 'Delete');
+				delBtn.dataset.claimId = String(claim.id);
+				delBtn.dataset.docId = String(doc.id);
+				delBtn.appendChild(el('i', 'fas fa-times'));
+				row.appendChild(delBtn);
+			}
+			list.appendChild(row);
+		});
+		section.appendChild(list);
+	}
+
+	if (canEdit) {
+		const addRow = el('div', 'claim-documents-add');
+		const storageSelect = el('select', 'claim-doc-storage');
+		const optLocal = el('option', null, t('claims.storage_local', 'Upload file'));
+		optLocal.value = 'local';
+		const optPaperless = el('option', null, t('claims.storage_paperless', 'Upload to Paperless'));
+		optPaperless.value = 'paperless';
+		storageSelect.appendChild(optLocal);
+		storageSelect.appendChild(optPaperless);
+		const attachBtn = el('button', 'btn btn-sm btn-secondary claim-doc-attach');
+		attachBtn.type = 'button';
+		attachBtn.dataset.claimId = String(claim.id);
+		attachBtn.appendChild(el('i', 'fas fa-paperclip'));
+		attachBtn.appendChild(document.createTextNode(' ' + t('claims.attach_document', 'Attach document')));
+		addRow.appendChild(storageSelect);
+		addRow.appendChild(attachBtn);
+		section.appendChild(addRow);
+	}
+
+	return section;
 }
 
 export function closeClaimsModal() {
@@ -511,6 +755,8 @@ function createClaimItem(claim, canEdit, formatDateFn) {
     res.appendChild(document.createTextNode(claim.resolution));
     item.appendChild(res);
   }
+
+  item.appendChild(createDocumentsSection(claim, canEdit));
 
   return item;
 }

@@ -5420,6 +5420,72 @@ html.dark-mode .warracker-footer a:hover {
   border-left: 4px solid var(--secondary-color);
 }
 
+/* Claim documents (issue #148) */
+.claim-documents {
+  margin-top: 10px;
+  padding: 10px;
+  background: var(--light-gray);
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.claim-documents-header {
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 6px;
+}
+
+.claim-documents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.claim-document {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.claim-doc-view {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  color: var(--primary-color);
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+.claim-doc-view:hover {
+  text-decoration: underline;
+}
+
+.claim-doc-delete {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  color: var(--danger-color);
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.claim-documents-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.claim-doc-storage {
+  padding: 4px 6px;
+  font-size: 0.85rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--card-bg);
+  color: var(--text-color);
+}
+
 /* Status badges */
 .claim-status-badge {
   padding: 3px 8px;

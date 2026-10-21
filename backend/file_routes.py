@@ -54,6 +54,23 @@ def _check_file_authorization(cur, db_search_path, user_id, is_admin):
         logger.info(f"[FILE_AUTH] Admin access granted for '{db_search_path}'")
         return True
 
+    # Claim documents (issue #148): owner-only, like warranty "other
+    # documents" they never participate in global view.
+    if not results:
+        cur.execute("""
+            SELECT w.user_id
+            FROM claim_documents d
+            JOIN warranty_claims c ON d.claim_id = c.id
+            JOIN warranties w ON c.warranty_id = w.id
+            WHERE d.file_path = %s
+        """, (db_search_path,))
+        for (claim_owner_id,) in (cur.fetchall() or []):
+            if claim_owner_id == user_id:
+                logger.info(f"[FILE_AUTH] Claim document ownership confirmed for '{db_search_path}'")
+                return True
+        logger.warning(f"[FILE_AUTH] Unauthorized file access attempt: '{db_search_path}' by user {user_id}")
+        return False
+
     # Ownership authorization
     for warranty_id_db, warranty_user_id_db in (results or []):
         if warranty_user_id_db == user_id:
@@ -275,7 +292,20 @@ def serve_paperless_document(paperless_id: int):
             """, (paperless_id, paperless_id, paperless_id, paperless_id))
             
             results = cur.fetchall()
-            
+
+            # Claim documents (issue #148) link Paperless documents too;
+            # they resolve to the owning warranty's user and stay
+            # owner/admin-only (no global-view sharing, like claims).
+            if not results:
+                cur.execute("""
+                    SELECT w.id, w.user_id
+                    FROM claim_documents d
+                    JOIN warranty_claims c ON d.claim_id = c.id
+                    JOIN warranties w ON c.warranty_id = w.id
+                    WHERE d.paperless_document_id = %s
+                """, (paperless_id,))
+                results = cur.fetchall()
+
             if not results:
                 logger.warning(f"[PAPERLESS_FILE] No warranty found with Paperless document ID {paperless_id}")
                 return jsonify({"message": "Document not found"}), 404
