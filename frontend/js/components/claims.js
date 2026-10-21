@@ -461,7 +461,10 @@ async function uploadClaimDocument(claimId, file, storage) {
 			const paperlessForm = new FormData();
 			paperlessForm.append('file', file);
 			paperlessForm.append('document_type', 'claim_document');
-			paperlessForm.append('title', `Warracker claim document - ${file.name}`);
+			// Issue #147: title the Paperless document after the product
+			const warranty = (getWarranties() || []).find((w) => w.id === state.currentWarrantyId);
+			const productName = warranty?.product_name;
+			paperlessForm.append('title', productName ? `${productName} - Claim document` : `Warracker claim document - ${file.name}`);
 			paperlessForm.append('tags', 'warracker,claim');
 			const uploadResponse = await fetch('/api/paperless/upload', {
 				method: 'POST',

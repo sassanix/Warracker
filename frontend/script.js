@@ -7158,7 +7158,7 @@ function getStorageOption(documentType, isEdit = false) {
  * @param {string} documentType - The type of document for tagging
  * @returns {Promise<Object>} - Upload result with document ID
  */
-async function uploadToPaperlessNgx(file, documentType) {
+async function uploadToPaperlessNgx(file, documentType, productName) {
     try {
         const token = localStorage.getItem('auth_token');
         if (!token) {
@@ -7171,7 +7171,11 @@ async function uploadToPaperlessNgx(file, documentType) {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('document_type', documentType);
-        formData.append('title', `Warracker ${documentType} - ${file.name}`);
+        // Issue #147: title the Paperless document after the product, not the
+        // generated "Warracker ..." filename-style title
+        const typeLabel = documentType.charAt(0).toUpperCase() + documentType.slice(1);
+        const title = productName ? `${productName} - ${typeLabel}` : `Warracker ${documentType} - ${file.name}`;
+        formData.append('title', title);
         
         // Add tags for organization
         const tags = ['warracker', documentType];
@@ -7180,7 +7184,7 @@ async function uploadToPaperlessNgx(file, documentType) {
         console.log('[Paperless-ngx] Upload FormData contents:');
         console.log('  - file:', file.name, '(' + file.size + ' bytes, ' + file.type + ')');
         console.log('  - document_type:', documentType);
-        console.log('  - title:', `Warracker ${documentType} - ${file.name}`);
+        console.log('  - title:', title);
         console.log('  - tags:', tags.join(','));
 
         updatePaperlessUploadStatus('Uploading file to Paperless-ngx...');
@@ -7258,7 +7262,7 @@ async function processPaperlessNgxUploads(formData) {
             if (file) {
                 console.log(`[Paperless-ngx] Uploading ${docType} to Paperless-ngx`);
                 // Upload to Paperless-ngx
-                const uploadResult = await uploadToPaperlessNgx(file, docType);
+                const uploadResult = await uploadToPaperlessNgx(file, docType, formData.get('product_name'));
                 console.log(`[DEBUG][processPaperlessNgxUploads] uploadResult for ${docType}:`, uploadResult);
                 if (uploadResult.success || (uploadResult.error && uploadResult.error.includes("duplicate") && uploadResult.document_id)) {
                     // Map frontend document types to database column names
@@ -7327,7 +7331,7 @@ async function processEditPaperlessNgxUploads(formData) {
                 console.log(`[Paperless-ngx] Uploading ${docType} to Paperless-ngx (edit mode)`);
                 
                 // Upload to Paperless-ngx
-                const uploadResult = await uploadToPaperlessNgx(file, docType);
+                const uploadResult = await uploadToPaperlessNgx(file, docType, formData.get('product_name'));
                 
                 if (uploadResult.success || (uploadResult.error && uploadResult.error.includes("duplicate") && uploadResult.document_id)) {
                     // Map frontend document types to database column names

@@ -133,7 +133,7 @@ export function getStorageOption(documentType, isEdit = false) {
 	return radio ? radio.value : 'local';
 }
 
-async function uploadToPaperlessNgx(file, documentType) {
+async function uploadToPaperlessNgx(file, documentType, productName) {
 	try {
 		const token = getAuthToken();
 		if (!token) throw new Error('Authentication token not available');
@@ -142,7 +142,11 @@ async function uploadToPaperlessNgx(file, documentType) {
 		const formData = new FormData();
 		formData.append('file', file);
 		formData.append('document_type', documentType);
-		formData.append('title', `Warracker ${documentType} - ${file.name}`);
+		// Issue #147: title the Paperless document after the product, not the
+		// generated "Warracker ..." filename-style title
+		const typeLabel = documentType.charAt(0).toUpperCase() + documentType.slice(1);
+		const title = productName ? `${productName} - ${typeLabel}` : `Warracker ${documentType} - ${file.name}`;
+		formData.append('title', title);
 		formData.append('tags', ['warracker', documentType].join(','));
 
 		updatePaperlessUploadStatus(window.t ? window.t('paperless.uploading_to_server') : 'Uploading file to Paperless-ngx...');
@@ -190,7 +194,7 @@ export async function processPaperlessUploads(formData) {
 		const input = document.getElementById(docType);
 		const file = input?.files[0];
 		if (storage === 'paperless' && file) {
-			const uploadResult = await uploadToPaperlessNgx(file, docType);
+			const uploadResult = await uploadToPaperlessNgx(file, docType, formData.get('product_name'));
 			if (uploadResult.success || (uploadResult.error?.includes('duplicate') && uploadResult.document_id)) {
 				const mapping = {
 					productPhoto: 'paperless_photo_id',
@@ -227,7 +231,7 @@ export async function processEditPaperlessUploads(formData) {
 		const input = document.getElementById(`edit${capitalize(docType)}`);
 		const file = input?.files[0];
 		if (!file) continue;
-		const uploadResult = await uploadToPaperlessNgx(file, docType);
+		const uploadResult = await uploadToPaperlessNgx(file, docType, formData.get('product_name'));
 		if (uploadResult.success || (uploadResult.error?.includes('duplicate') && uploadResult.document_id)) {
 			const mapping = {
 				productPhoto: 'paperless_photo_id',
