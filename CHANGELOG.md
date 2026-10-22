@@ -17,8 +17,8 @@
   - _Files: `frontend/js/components/paperless.js`_
 - **Known default JWT secret removed from the compose files (security):** both shipped docker-compose files defaulted `SECRET_KEY` to a fixed value printed in this public repository, so an install that never set its own key signed its login tokens with a secret anyone could read — enough to forge an admin session. The compose default is now empty, which activates the backend's existing behavior of generating a random key and persisting it to a file; setting `SECRET_KEY` explicitly still takes precedence.
   - _Files: `docker-compose.yml`, `Docker/docker-compose.yml`, `Docker/.env.example`_
-- **Total Value card undercounted warranties with no currency set:** since 1.0.3 the dashboard total has only summed warranties whose stored currency exactly matches the user's default currency (issue #192), which silently dropped every warranty with no currency recorded — older entries and imports without a currency column — so the card could show a single product's price instead of the total. Warranties with no currency set now count as the user's default currency in both the personal and global statistics; warranties priced in a different explicit currency are still excluded, as #192 intended.
-  - _Files: `backend/statistics_routes.py`_
+- **Total Value card undercounted warranties with no currency set:** since 1.0.3 the dashboard total has only summed warranties whose stored currency exactly matches the user's default currency (issue #192), which silently dropped every warranty with no currency recorded — older entries and imports without a currency column — so the card could show a single product's price instead of the total. Warranties with no currency set now count as the user's default currency in both the personal and global statistics; warranties priced in a different explicit currency are still excluded, as #192 intended. The card's tooltip now spells out exactly how the total is counted (updated in all 20 locales).
+  - _Files: `backend/statistics_routes.py`, `frontend/status.html`, `locales/*/translation.json`_
 
 ## 1.0.3 - 2026-10-02
 

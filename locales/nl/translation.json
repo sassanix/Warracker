@@ -683,7 +683,7 @@
     "uptime": "Uptime",
     "archived_warranties": "Gearchiveerde garanties",
     "total_value": "Totale waarde",
-    "total_value_tooltip": "Som van de aankoopprijzen van alle niet-gearchiveerde garanties. Garanties zonder aankoopprijs tellen voor 0."
+    "total_value_tooltip": "Som van de aankoopprijzen van alle garanties die niet zijn gearchiveerd of ongeldig verklaard, gerekend in uw standaardvaluta. Garanties zonder valuta gebruiken uw standaardvaluta; garanties in een andere valuta tellen niet mee. Garanties zonder aankoopprijs tellen als 0."
   },
   "about": {
     "title": "Over Warracker",

@@ -690,7 +690,7 @@
     "uptime": "Doba provozu",
     "archived_warranties": "Archivované záruky",
     "total_value": "Celková hodnota",
-    "total_value_tooltip": "Součet nákupních cen všech nearchivovaných záruk. Záruky bez kupní ceny se počítají jako 0."
+    "total_value_tooltip": "Součet pořizovacích cen všech záruk, které nejsou archivované ani zneplatněné, počítaný ve vaší výchozí měně. Záruky bez nastavené měny používají vaši výchozí měnu; záruky v jiné měně nejsou zahrnuty. Záruky bez pořizovací ceny se počítají jako 0."
   },
   "about": {
     "title": "O aplikaci Warracker",

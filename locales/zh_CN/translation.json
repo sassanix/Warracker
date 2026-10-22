@@ -683,7 +683,7 @@
     "uptime": "正常运行时间",
     "archived_warranties": "存档的保修",
     "total_value": "总价值",
-    "total_value_tooltip": "所有非存档保修的购买价格总和。没有购买价格的保修计为 0。"
+    "total_value_tooltip": "所有未归档、未作废保修的购买价格总和，按您的默认货币计算。未设置货币的保修使用您的默认货币；以其他货币标价的保修不计入。没有购买价格的保修按 0 计算。"
   },
   "about": {
     "title": "关于 - Warracker",

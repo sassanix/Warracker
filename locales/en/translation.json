@@ -692,7 +692,7 @@
     "version": "Version",
     "uptime": "Uptime",
     "total_value": "Total Value",
-    "total_value_tooltip": "Sum of the purchase prices of all non-archived warranties. Warranties without a purchase price count as 0.",
+    "total_value_tooltip": "Total of the purchase prices of all warranties that aren't archived or voided, counted in your default currency. Warranties with no currency set use your default currency; warranties priced in a different currency aren't included. Warranties without a purchase price count as 0.",
     "void_warranties": "Void Warranties"
   },
   "about": {

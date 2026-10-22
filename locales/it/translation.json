@@ -95,7 +95,7 @@
     "uptime": "Tempo di Attività",
     "archived_warranties": "Garanzie archiviate",
     "total_value": "Valore totale",
-    "total_value_tooltip": "Somma dei prezzi di acquisto di tutte le garanzie non archiviate. Le garanzie senza prezzo di acquisto contano come 0."
+    "total_value_tooltip": "Somma dei prezzi di acquisto di tutte le garanzie non archiviate e non annullate, calcolata nella valuta predefinita. Le garanzie senza valuta usano quella predefinita; quelle con una valuta diversa non sono incluse. Le garanzie senza prezzo di acquisto contano come 0."
   },
   "about": {
     "title": "Informazioni su Warracker",

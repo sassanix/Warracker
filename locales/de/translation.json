@@ -683,7 +683,7 @@
     "uptime": "Betriebszeit",
     "archived_warranties": "Archivierte Garantien",
     "total_value": "Gesamtwert",
-    "total_value_tooltip": "Summe der Kaufpreise aller nicht archivierten Garantien. Garantien ohne Kaufpreis zählen als 0."
+    "total_value_tooltip": "Summe der Kaufpreise aller Garantien, die weder archiviert noch für ungültig erklärt sind, gerechnet in Ihrer Standardwährung. Garantien ohne Währungsangabe zählen in Ihrer Standardwährung; Garantien mit einer anderen Währung sind nicht enthalten. Garantien ohne Kaufpreis zählen als 0."
   },
   "about": {
     "title": "Über Warracker",
