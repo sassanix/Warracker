@@ -118,9 +118,12 @@ def get_statistics():
             logger.info(f"Voided warranties: {voided_count}")
 
             # Get total purchase value (excluding archived; issue #192:
-            # only the user's default currency, not a cross-currency sum)
+            # only the user's default currency, not a cross-currency sum.
+            # Rows with no currency recorded (legacy data, imports without
+            # a currency column) count as the user's default currency —
+            # the exact-match filter used to drop them silently.)
             user_currency = get_user_currency_code(cur, user_id)
-            cur.execute(f"SELECT COALESCE(SUM(w.purchase_price), 0) {from_clause} {where_clause} AND w.archived_at IS NULL AND w.voided_at IS NULL AND w.currency = %s", params + [user_currency])
+            cur.execute(f"SELECT COALESCE(SUM(w.purchase_price), 0) {from_clause} {where_clause} AND w.archived_at IS NULL AND w.voided_at IS NULL AND (w.currency = %s OR w.currency IS NULL)", params + [user_currency])
             total_value = cur.fetchone()[0]
             logger.info(f"Total purchase value ({user_currency}): {total_value}")
             
@@ -334,9 +337,11 @@ def get_global_statistics():
             voided_count = cur.fetchone()[0]
 
             # Get total purchase value (excluding archived; issue #192:
-            # only the requesting user's default currency, not a cross-currency sum)
+            # only the requesting user's default currency, not a cross-currency sum.
+            # Rows with no currency recorded count as that default currency,
+            # matching the per-user statistics above.)
             user_currency = get_user_currency_code(cur, request.user['id'])
-            cur.execute("SELECT COALESCE(SUM(w.purchase_price), 0) FROM warranties w WHERE w.archived_at IS NULL AND w.voided_at IS NULL AND w.currency = %s", (user_currency,))
+            cur.execute("SELECT COALESCE(SUM(w.purchase_price), 0) FROM warranties w WHERE w.archived_at IS NULL AND w.voided_at IS NULL AND (w.currency = %s OR w.currency IS NULL)", (user_currency,))
             total_value = cur.fetchone()[0]
             logger.info(f"Global total purchase value ({user_currency}): {total_value}")
             
