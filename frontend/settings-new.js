@@ -60,6 +60,7 @@ const emailBaseUrlInput = document.getElementById('emailBaseUrl'); // Added for 
 // OIDC Settings DOM Elements
 const oidcEnabledToggle = document.getElementById('oidcEnabled');
 const oidcOnlyModeToggle = document.getElementById('oidcOnlyMode');
+const oidcSkipLoginToggle = document.getElementById('oidcSkipLoginScreen');
 const oidcProviderNameInput = document.getElementById('oidcProviderName');
 const oidcClientIdInput = document.getElementById('oidcClientId');
 const oidcClientSecretInput = document.getElementById('oidcClientSecret');
@@ -3420,6 +3421,7 @@ async function loadSiteSettings() {
     const globalViewAdminOnlyToggleElem = document.getElementById('globalViewAdminOnly');
     const oidcEnabledToggleElem = document.getElementById('oidcEnabled');
     const oidcOnlyModeToggleElem = document.getElementById('oidcOnlyMode');
+    const oidcSkipLoginToggleElem = document.getElementById('oidcSkipLoginScreen');
     const oidcProviderNameInputElem = document.getElementById('oidcProviderName');
     const oidcClientIdInputElem = document.getElementById('oidcClientId');
     const oidcClientSecretInputElem = document.getElementById('oidcClientSecret');
@@ -3492,6 +3494,10 @@ async function loadSiteSettings() {
             oidcOnlyModeToggleElem.checked = settings.oidc_only_mode === 'true';
         } else {
             console.error('[OIDC Settings] oidcOnlyModeToggleElem element NOT FOUND locally.');
+        }
+
+        if (oidcSkipLoginToggleElem) {
+            oidcSkipLoginToggleElem.checked = settings.oidc_skip_login_screen === 'true';
         }
 
         if (oidcProviderNameInputElem) {
@@ -3629,6 +3635,7 @@ async function saveOidcSettings() {
     const oidcSettingsPayload = {
         oidc_enabled: oidcEnabledToggle ? oidcEnabledToggle.checked : false,
         oidc_only_mode: oidcOnlyModeToggle ? oidcOnlyModeToggle.checked : false,
+        oidc_skip_login_screen: oidcSkipLoginToggle ? oidcSkipLoginToggle.checked : false,
         oidc_provider_name: oidcProviderNameInput ? oidcProviderNameInput.value.trim() : 'oidc',
         oidc_client_id: oidcClientIdInput ? oidcClientIdInput.value.trim() : '',
         oidc_issuer_url: oidcIssuerUrlInput ? oidcIssuerUrlInput.value.trim() : '',

@@ -356,7 +356,7 @@ def get_oidc_status_route():
         conn = get_db_connection()
         with conn.cursor() as cur:
             # Get OIDC settings including the new oidc_only_mode
-            cur.execute("SELECT key, value FROM site_settings WHERE key IN ('oidc_enabled', 'oidc_only_mode', 'oidc_provider_name')")
+            cur.execute("SELECT key, value FROM site_settings WHERE key IN ('oidc_enabled', 'oidc_only_mode', 'oidc_skip_login_screen', 'oidc_provider_name')")
             settings = {row[0]: row[1] for row in cur.fetchall()}
 
             # Apply same precedence logic as init_oidc_client()
@@ -376,6 +376,13 @@ def get_oidc_status_route():
             else:
                 oidc_only_mode = settings.get('oidc_only_mode', 'false').lower() == 'true'
 
+            # Check skip-login-screen (issue #186) with correct precedence
+            oidc_skip_from_env = os.environ.get('OIDC_SKIP_LOGIN_SCREEN')
+            if oidc_skip_from_env is not None:
+                oidc_skip_login_screen = oidc_skip_from_env.lower() == 'true'
+            else:
+                oidc_skip_login_screen = settings.get('oidc_skip_login_screen', 'false').lower() == 'true'
+
             # Check provider name with correct precedence
             oidc_provider_name_from_env = os.environ.get('OIDC_PROVIDER_NAME')
             if oidc_provider_name_from_env is not None:
@@ -387,6 +394,7 @@ def get_oidc_status_route():
             return jsonify({
                 "oidc_enabled": oidc_is_enabled,
                 "oidc_only_mode": oidc_only_mode,
+                "oidc_skip_login_screen": oidc_skip_login_screen,
                 "oidc_provider_display_name": oidc_provider_name
             }), 200
     except Exception as e:
@@ -394,11 +402,13 @@ def get_oidc_status_route():
         # On error, check environment variables as fallback
         oidc_enabled_from_env = os.environ.get('OIDC_ENABLED')
         oidc_only_mode_from_env = os.environ.get('OIDC_ONLY_MODE')
+        oidc_skip_from_env = os.environ.get('OIDC_SKIP_LOGIN_SCREEN')
         oidc_provider_name_from_env = os.environ.get('OIDC_PROVIDER_NAME')
 
         return jsonify({
             "oidc_enabled": oidc_enabled_from_env.lower() == 'true' if oidc_enabled_from_env else False,
             "oidc_only_mode": oidc_only_mode_from_env.lower() == 'true' if oidc_only_mode_from_env else False,
+            "oidc_skip_login_screen": oidc_skip_from_env.lower() == 'true' if oidc_skip_from_env else False,
             "oidc_provider_display_name": oidc_provider_name_from_env.capitalize() if oidc_provider_name_from_env else "SSO Provider"
         }), 200
     finally:

@@ -172,6 +172,22 @@
                     
                     // OIDC is enabled: show the SSO section
                     if (ssoSection) ssoSection.style.display = 'block';
+
+                    // Skip the login screen (issue #186): in OIDC-only mode
+                    // with the skip setting on, go straight to the identity
+                    // provider instead of showing the SSO button. Never
+                    // redirect when we just came back with an OIDC error,
+                    // and guard against redirect loops with a short-lived
+                    // attempt marker (a bounced attempt suppresses the
+                    // redirect for 30 seconds).
+                    if (data.oidc_only_mode && data.oidc_skip_login_screen && !oidcError) {
+                        const lastAttempt = parseInt(sessionStorage.getItem('oidcSkipAttempt') || '0', 10);
+                        if (Date.now() - lastAttempt > 30000) {
+                            sessionStorage.setItem('oidcSkipAttempt', String(Date.now()));
+                            window.location.replace('/api/oidc/login');
+                            return;
+                        }
+                    }
                     
                     // Handle OIDC-only mode
                     if (data.oidc_only_mode) {

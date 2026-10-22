@@ -396,7 +396,9 @@
     "transfer_ownership_consequence_1": "You will become a regular admin",
     "transfer_ownership_consequence_2": "The new owner will have ultimate control over the application",
     "transfer_ownership_consequence_3": "Only the new owner can transfer ownership again",
-    "transfer_ownership_type_to_confirm": "To confirm, please type \"TRANSFER\" in the field below:"
+    "transfer_ownership_type_to_confirm": "To confirm, please type \"TRANSFER\" in the field below:",
+    "oidc_skip_login_screen": "Skip Login Screen",
+    "oidc_skip_login_screen_desc": "In OIDC-Only mode, skip the login screen and redirect users straight to the SSO provider. If the SSO login fails, the login screen is shown with the error."
   },
   "actions": {
     "save": "Save",

@@ -611,6 +611,19 @@
                             </div>
 
                             <div class="form-group">
+                                <div class="preference-item">
+                                    <div>
+                                        <label for="oidcSkipLoginScreen" data-i18n="settings.oidc_skip_login_screen">Skip Login Screen</label>
+                                        <p class="text-muted" data-i18n="settings.oidc_skip_login_screen_desc">In OIDC-Only mode, skip the login screen and redirect users straight to the SSO provider. If the SSO login fails, the login screen is shown with the error.</p>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="oidcSkipLoginScreen">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
                                 <label for="oidcProviderName" data-i18n="settings.oidc_provider_name">OIDC Provider Name</label>
                                 <input type="text" id="oidcProviderName" class="form-control" placeholder="e.g., oidc, keycloak, google">
                                 <small class="text-muted" data-i18n="settings.oidc_provider_name_desc">Internal name for the OIDC client (e.g., 'oidc').</small>

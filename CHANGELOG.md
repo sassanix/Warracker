@@ -7,6 +7,8 @@
   - _Files: `backend/migrations/053_add_voided_at_to_warranties.sql`, `backend/warranties_routes.py`, `backend/statistics_routes.py`, `backend/notifications.py`, `frontend/js/components/warrantyActions.js`, `frontend/js/components/warrantyRenderer.js`, `frontend/js/controllers/warrantyListController.js`, `frontend/js/lib/warrantyProcessing.js`, `frontend/script.js`, `frontend/index.html`, `frontend/status.js`, `frontend/status.html`, `frontend/style.css`, `locales/en/translation.json`_
 - **Paperless document titles use the product name (issue #147):** documents uploaded to Paperless-ngx were titled "Warracker invoice - <filename>", which says nothing about the product. They are now titled after the warranty's product name — "<Product> - Invoice", "<Product> - Manual", and "<Product> - Claim document" for claim attachments. The old title format remains only as a fallback when no product name is available.
   - _Files: `frontend/script.js`, `frontend/js/components/paperless.js`, `frontend/js/components/claims.js`_
+- **Skip the login screen in OIDC-only mode (issue #186):** a new "Skip Login Screen" setting (admin settings, or the `OIDC_SKIP_LOGIN_SCREEN` environment variable) makes the login page redirect straight to the identity provider when OIDC-only mode is on, instead of showing the "Login with SSO" button screen. If the provider sends the user back with an error, the login screen is shown with the error and the button for a manual retry — the redirect never loops.
+  - _Files: `backend/oidc_handler.py`, `backend/admin_routes.py`, `frontend/login.html`, `frontend/settings-new.html`, `frontend/settings-new.js`, `locales/en/translation.json`, `Docker/.env.example`_
 
 ## 1.0.3 - 2026-10-02
 

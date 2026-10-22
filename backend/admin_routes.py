@@ -379,6 +379,7 @@ def get_site_settings():
                 'global_view_admin_only': 'false',  # Restrict global view to admins only
                 'oidc_enabled': 'false',
                 'oidc_only_mode': 'false',  # Force OIDC-only login (hide traditional login form)
+                'oidc_skip_login_screen': 'false',  # Skip the login screen, redirect straight to the IdP (issue #186)
                 'oidc_provider_name': 'oidc',
                 'oidc_client_id': '',
                 # 'oidc_client_secret': '', # Not returned
@@ -407,7 +408,7 @@ def get_site_settings():
                     continue
                 
                 # For boolean-like string settings, ensure they are 'true' or 'false'
-                if key in ['registration_enabled', 'oidc_enabled', 'oidc_only_mode', 'apprise_enabled', 'global_view_enabled', 'global_view_admin_only', 'paperless_enabled']:
+                if key in ['registration_enabled', 'oidc_enabled', 'oidc_only_mode', 'oidc_skip_login_screen', 'apprise_enabled', 'global_view_enabled', 'global_view_admin_only', 'paperless_enabled']:
                     settings_to_return[key] = 'true' if value.lower() == 'true' else 'false'
                 else:
                     settings_to_return[key] = value
@@ -472,7 +473,7 @@ def update_site_settings():
             requires_restart = False
             for key, value in data.items():
                 # Sanitize boolean-like string values
-                if key in ['registration_enabled', 'oidc_enabled', 'oidc_only_mode', 'global_view_enabled', 'global_view_admin_only', 'paperless_enabled']:
+                if key in ['registration_enabled', 'oidc_enabled', 'oidc_only_mode', 'oidc_skip_login_screen', 'global_view_enabled', 'global_view_admin_only', 'paperless_enabled']:
                     value = 'true' if str(value).lower() == 'true' else 'false'
                 
                 # Check if it's an OIDC related key that requires restart
