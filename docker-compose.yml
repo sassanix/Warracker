@@ -22,7 +22,7 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       # if SMTP_FROM_ADDRESS isn't defined, then SMTP_USERNAME will be used - but that may not always work
       - SMTP_FROM_ADDRESS=${SMTP_FROM_ADDRESS:-}
-      - SECRET_KEY=${SECRET_KEY:-your_very_secret_flask_key_change_me} # For Flask session and JWT
+      - SECRET_KEY=${SECRET_KEY:-} # Leave unset to auto-generate and persist a random key (backend config); do NOT give this a known default # For Flask session and JWT
       # OIDC SSO Configuration (User needs to set these based on their OIDC provider)
       - OIDC_PROVIDER_NAME=${OIDC_PROVIDER_NAME:-oidc}
       - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-} # e.g., your_oidc_client_id

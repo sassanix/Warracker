@@ -22,12 +22,14 @@ try:
     from .db_handler import get_db_connection, release_db_connection
     from .auth_utils import token_required, admin_required
     from .paperless_handler import get_paperless_handler
+    from .paperless_access import user_can_link_paperless_document, record_paperless_document_owner
     from .utils import allowed_file
 except ImportError:
     # Fallback for development environment
     from db_handler import get_db_connection, release_db_connection
     from auth_utils import token_required, admin_required
     from paperless_handler import get_paperless_handler
+    from paperless_access import user_can_link_paperless_document, record_paperless_document_owner
     from utils import allowed_file
 
 import logging
@@ -383,12 +385,30 @@ def add_warranty():
         paperless_manual_id = request.form.get('paperless_manual_id')
         paperless_photo_id = request.form.get('paperless_photo_id')
         paperless_other_id = request.form.get('paperless_other_id')
-        
+
         # Convert empty strings to None for database insertion
         paperless_invoice_id = int(paperless_invoice_id) if paperless_invoice_id and paperless_invoice_id.strip() else None
         paperless_manual_id = int(paperless_manual_id) if paperless_manual_id and paperless_manual_id.strip() else None
         paperless_photo_id = int(paperless_photo_id) if paperless_photo_id and paperless_photo_id.strip() else None
         paperless_other_id = int(paperless_other_id) if paperless_other_id and paperless_other_id.strip() else None
+
+        # A Paperless document may only be linked by the user who owns it in
+        # Warracker; naming another user's document id used to be enough to
+        # download it afterwards (GHSA-fv62-3hrm-gf83). Unclaimed documents
+        # are claimed by the first user who links them.
+        _paperless_ids = [pid for pid in (paperless_invoice_id, paperless_manual_id,
+                                          paperless_photo_id, paperless_other_id) if pid is not None]
+        if _paperless_ids:
+            _vconn = get_db_connection()
+            try:
+                with _vconn.cursor() as _vcur:
+                    for _pid in _paperless_ids:
+                        if not user_can_link_paperless_document(
+                                _vcur, user_id, request.user.get('is_admin', False), _pid):
+                            return jsonify({"error": "You are not authorized to link one of the specified Paperless documents",
+                                            "code": "paperless_document_not_owned"}), 403
+            finally:
+                release_db_connection(_vconn)
 
         # Handle invoice file upload (only if not stored in Paperless-ngx)
         db_invoice_path = None
@@ -501,7 +521,13 @@ def add_warranty():
                 invoice_url, manual_url, other_document_url, model_number
             ))
             warranty_id = cur.fetchone()[0]
-            
+
+            # Claim ownership of any Paperless documents linked above
+            for _pid in (paperless_invoice_id, paperless_manual_id,
+                         paperless_photo_id, paperless_other_id):
+                if _pid is not None:
+                    record_paperless_document_owner(cur, _pid, user_id)
+
             # Insert serial numbers
             if serial_numbers:
                 for serial_number in serial_numbers:
@@ -900,6 +926,16 @@ def update_warranty(warranty_id):
             paperless_other_id = int(paperless_other_id) if paperless_other_id and paperless_other_id.strip() else None
 
             logger.info(f"[UPDATE] Converted Paperless IDs: invoice={paperless_invoice_id}, manual={paperless_manual_id}, photo={paperless_photo_id}, other={paperless_other_id}")
+
+            # Same linking rule as warranty creation: a Paperless document
+            # owned by another user cannot be linked (GHSA-fv62-3hrm-gf83).
+            # Ownership of newly linked documents is recorded just before
+            # the final commit below.
+            for _pid in (paperless_invoice_id, paperless_manual_id,
+                         paperless_photo_id, paperless_other_id):
+                if _pid is not None and not user_can_link_paperless_document(cur, user_id, is_admin, _pid):
+                    return jsonify({"error": "You are not authorized to link one of the specified Paperless documents",
+                                    "code": "paperless_document_not_owned"}), 403
             
             # File handling for invoice
             db_invoice_path = None
@@ -1228,9 +1264,15 @@ def update_warranty(warranty_id):
                         ''', (warranty_id, tag_id))
                     else:
                         logger.warning(f"Skipping non-existent tag ID: {tag_id}")
-            
+
+            # Claim ownership of any Paperless documents linked above
+            for _pid in (paperless_invoice_id, paperless_manual_id,
+                         paperless_photo_id, paperless_other_id):
+                if _pid is not None:
+                    record_paperless_document_owner(cur, _pid, user_id)
+
             conn.commit()
-            
+
             return jsonify({"message": "Warranty updated successfully"}), 200
             
     except RequestEntityTooLarge:
@@ -2477,28 +2519,34 @@ def get_claims(warranty_id):
             }
             claims.append(claim)
 
-        # Embed each claim's documents (issue #148) in one extra query
+        # Embed each claim's documents (issue #148) in one extra query.
+        # Documents are owner/admin-only even under global view, so
+        # global-view readers get the claims without document metadata.
         if claims:
-            claim_ids = [c['id'] for c in claims]
-            cur.execute("""
-                SELECT id, claim_id, original_filename, file_path, paperless_document_id, created_at
-                FROM claim_documents
-                WHERE claim_id = ANY(%s)
-                ORDER BY created_at, id
-            """, (claim_ids,))
-            docs_by_claim = {}
-            for drow in cur.fetchall():
-                doc = {
-                    'id': drow[0],
-                    'claim_id': drow[1],
-                    'original_filename': drow[2],
-                    'file_path': drow[3],
-                    'paperless_document_id': drow[4],
-                    'created_at': drow[5].isoformat() if drow[5] else None
-                }
-                docs_by_claim.setdefault(drow[1], []).append(doc)
-            for claim in claims:
-                claim['documents'] = docs_by_claim.get(claim['id'], [])
+            if warranty[2] == user_id or is_admin:
+                claim_ids = [c['id'] for c in claims]
+                cur.execute("""
+                    SELECT id, claim_id, original_filename, file_path, paperless_document_id, created_at
+                    FROM claim_documents
+                    WHERE claim_id = ANY(%s)
+                    ORDER BY created_at, id
+                """, (claim_ids,))
+                docs_by_claim = {}
+                for drow in cur.fetchall():
+                    doc = {
+                        'id': drow[0],
+                        'claim_id': drow[1],
+                        'original_filename': drow[2],
+                        'file_path': drow[3],
+                        'paperless_document_id': drow[4],
+                        'created_at': drow[5].isoformat() if drow[5] else None
+                    }
+                    docs_by_claim.setdefault(drow[1], []).append(doc)
+                for claim in claims:
+                    claim['documents'] = docs_by_claim.get(claim['id'], [])
+            else:
+                for claim in claims:
+                    claim['documents'] = []
 
         return jsonify(claims), 200
         
@@ -2756,6 +2804,14 @@ def add_claim_document(warranty_id, claim_id):
             except (TypeError, ValueError):
                 return jsonify({'error': 'Invalid paperless_document_id'}), 400
 
+        # Claim documents follow the same Paperless linking rule as
+        # warranties: another user's document cannot be linked here either
+        # (GHSA-fv62-3hrm-gf83 / GHSA-3h89-rqfj-5674 via the claims path).
+        if paperless_document_id is not None and not user_can_link_paperless_document(
+                cur, user_id, request.user.get('is_admin', False), paperless_document_id):
+            return jsonify({'error': 'You are not authorized to link this Paperless document',
+                            'code': 'paperless_document_not_owned'}), 403
+
         db_file_path = None
         original_filename = None
 
@@ -2791,6 +2847,8 @@ def add_claim_document(warranty_id, claim_id):
         """, (claim_id, original_filename, db_file_path, paperless_document_id))
 
         document = _serialize_claim_document(cur.fetchone())
+        if paperless_document_id is not None:
+            record_paperless_document_owner(cur, paperless_document_id, user_id)
         conn.commit()
 
         logger.info(f"Added document {document['id']} to claim {claim_id} by user {user_id}")
@@ -2812,8 +2870,9 @@ def add_claim_document(warranty_id, claim_id):
 @warranties_bp.route('/warranties/<int:warranty_id>/claims/<int:claim_id>/documents', methods=['GET'])
 @token_required
 def get_claim_documents(warranty_id, claim_id):
-    """List a claim's documents. Read access follows the claims list:
-    the warranty owner, admins, and global-view users may read."""
+    """List a claim's documents. Owner and admins only: claim documents are
+    private even under global view, and their metadata (filenames, linked
+    Paperless ids) stays private with them."""
     conn = None
     cur = None
 
@@ -2834,12 +2893,7 @@ def get_claim_documents(warranty_id, claim_id):
             return jsonify({'error': 'Warranty or claim not found'}), 404
 
         if owner_row[0] != user_id and not is_admin:
-            cur.execute("SELECT key, value FROM site_settings WHERE key IN ('global_view_enabled', 'global_view_admin_only')")
-            settings = {row[0]: row[1] for row in cur.fetchall()}
-            global_view_enabled = settings.get('global_view_enabled', 'true').lower() == 'true'
-            admin_only = settings.get('global_view_admin_only', 'false').lower() == 'true'
-            if not global_view_enabled or admin_only:
-                return jsonify({'error': 'Warranty or claim not found or access denied'}), 404
+            return jsonify({'error': 'Warranty or claim not found or access denied'}), 404
 
         cur.execute("""
             SELECT id, claim_id, original_filename, file_path, paperless_document_id, created_at

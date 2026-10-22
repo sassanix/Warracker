@@ -15,7 +15,7 @@ services:
       - SMTP_PORT=465
       - SMTP_USERNAME=youremail@email.com
       - SMTP_PASSWORD=password
-      - SECRET_KEY=${APP_SECRET_KEY:-your_strong_default_secret_key_here} 
+      - SECRET_KEY=${APP_SECRET_KEY:-} # Leave unset to auto-generate and persist a random key (backend config); do NOT give this a known default 
       - MAX_UPLOAD_MB=32 # Example: Set max upload size to 32MB 
       - NGINX_MAX_BODY_SIZE_VALUE=32M # For Nginx, ensure this matches MAX_UPLOAD_MB in concept (e.g., 32M)
       # OIDC SSO Configuration (User needs to set these based on their OIDC provider)

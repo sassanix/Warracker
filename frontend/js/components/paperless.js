@@ -28,6 +28,18 @@ function getAuthToken() {
 	return authService.getToken() || localStorage.getItem('auth_token');
 }
 
+// Paperless document fields (title, correspondent, tag names) are
+// user-controlled text from the Paperless instance; they must be escaped
+// before being placed into innerHTML.
+function escapeHtml(value = '') {
+	return String(value)
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;');
+}
+
 function getSelectionInputId(documentType) {
 	if (documentType.startsWith('edit_')) {
 		const base = documentType.replace('edit_', '');
@@ -513,15 +525,15 @@ function renderPaperlessDocuments() {
 		item.className = 'paperless-document-item';
 		item.dataset.id = doc.id;
 		item.innerHTML = `
-			<div class="document-title">${doc.title || ''}</div>
+			<div class="document-title">${escapeHtml(doc.title || '')}</div>
 			<div class="document-meta">
 				<span><i class="fas fa-calendar"></i> ${doc.created ? new Date(doc.created).toLocaleDateString() : ''}</span>
-				<span><i class="fas fa-file"></i> ${doc.mime_type || 'Unknown'}</span>
-				${doc.correspondent ? `<span><i class="fas fa-user"></i> ${doc.correspondent}</span>` : ''}
+				<span><i class="fas fa-file"></i> ${escapeHtml(doc.mime_type || 'Unknown')}</span>
+				${doc.correspondent ? `<span><i class="fas fa-user"></i> ${escapeHtml(doc.correspondent)}</span>` : ''}
 			</div>
 			${Array.isArray(doc.tags) && doc.tags.length ? `
 				<div class="document-tags">
-					${doc.tags.map((tag) => `<span class="document-tag">${tag}</span>`).join('')}
+					${doc.tags.map((tag) => `<span class="document-tag">${escapeHtml(tag)}</span>`).join('')}
 				</div>` : ''}
 		`;
 		item.addEventListener('click', () => selectPaperlessDocument(doc.id));

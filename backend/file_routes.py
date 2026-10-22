@@ -9,12 +9,24 @@ try:
     from . import db_handler
     from .auth_utils import token_required, admin_required
     from .paperless_handler import get_paperless_handler, PaperlessHandler
+    from .paperless_access import (
+        check_paperless_document_access,
+        record_paperless_document_owner,
+        user_can_link_paperless_document,
+        visible_paperless_document_ids,
+    )
     from .utils import allowed_file
     from .db_handler import get_db_connection, release_db_connection
 except ImportError:
     import db_handler
     from auth_utils import token_required, admin_required
     from paperless_handler import get_paperless_handler, PaperlessHandler
+    from paperless_access import (
+        check_paperless_document_access,
+        record_paperless_document_owner,
+        user_can_link_paperless_document,
+        visible_paperless_document_ids,
+    )
     from utils import allowed_file
     from db_handler import get_db_connection, release_db_connection
 
@@ -282,64 +294,15 @@ def serve_paperless_document(paperless_id: int):
         # Get database connection
         conn = get_db_connection()
         
-        # Find warranty that has this Paperless document ID
+        # Authorization is based on document ownership and references, not
+        # on the presence of a link alone: linking is gated separately (see
+        # paperless_access), so a reference here was created legitimately.
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT w.id, w.user_id
-                FROM warranties w
-                WHERE w.paperless_invoice_id = %s OR w.paperless_manual_id = %s 
-                   OR w.paperless_photo_id = %s OR w.paperless_other_id = %s
-            """, (paperless_id, paperless_id, paperless_id, paperless_id))
-            
-            results = cur.fetchall()
-
-            # Claim documents (issue #148) link Paperless documents too;
-            # they resolve to the owning warranty's user and stay
-            # owner/admin-only (no global-view sharing, like claims).
-            if not results:
-                cur.execute("""
-                    SELECT w.id, w.user_id
-                    FROM claim_documents d
-                    JOIN warranty_claims c ON d.claim_id = c.id
-                    JOIN warranties w ON c.warranty_id = w.id
-                    WHERE d.paperless_document_id = %s
-                """, (paperless_id,))
-                results = cur.fetchall()
-
-            if not results:
-                logger.warning(f"[PAPERLESS_FILE] No warranty found with Paperless document ID {paperless_id}")
+            access = check_paperless_document_access(cur, user_id, is_admin, paperless_id)
+            if access == "not_found":
+                logger.warning(f"[PAPERLESS_FILE] No Warracker record of Paperless document ID {paperless_id}")
                 return jsonify({"message": "Document not found"}), 404
-            
-            # Check authorization
-            authorized = is_admin
-            if not authorized:
-                for warranty_id_db, warranty_user_id_db in results:
-                    if warranty_user_id_db == user_id:
-                        authorized = True
-                        break
-            
-            # Check global view for shared documents (photos, invoices, manuals)
-            if not authorized:
-                cur.execute("""
-                    SELECT w.id, w.user_id
-                    FROM warranties w
-                    WHERE w.paperless_photo_id = %s OR w.paperless_invoice_id = %s OR w.paperless_manual_id = %s
-                """, (paperless_id, paperless_id, paperless_id))
-                shared_doc_results = cur.fetchall()
-                
-                if shared_doc_results:
-                    # Get global view settings
-                    cur.execute("SELECT key, value FROM site_settings WHERE key IN ('global_view_enabled', 'global_view_admin_only')")
-                    settings = {row[0]: row[1] for row in cur.fetchall()}
-                    
-                    global_view_enabled = settings.get('global_view_enabled', 'true').lower() == 'true'
-                    admin_only = settings.get('global_view_admin_only', 'false').lower() == 'true'
-                    
-                    if global_view_enabled and (not admin_only or is_admin):
-                        authorized = True
-                        logger.info(f"[PAPERLESS_FILE] Global view access granted for shared Paperless document: {paperless_id}")
-            
-            if not authorized:
+            if access != "ok":
                 logger.warning(f"[PAPERLESS_FILE] Unauthorized access to Paperless document {paperless_id} by user {user_id}")
                 return jsonify({"message": "You are not authorized to access this document"}), 403
         
@@ -471,6 +434,17 @@ def paperless_upload():
         
         if success:
             logger.info("Upload successful")
+            # Record the uploader as the document's owner in Warracker, so
+            # search/linking/serving can be scoped to them. Paperless may
+            # return a non-numeric (task) id instead of a document id; only
+            # numeric ids can be tracked.
+            try:
+                numeric_document_id = int(document_id)
+                with conn.cursor() as cur:
+                    record_paperless_document_owner(cur, numeric_document_id, request.user['id'])
+                conn.commit()
+            except (TypeError, ValueError):
+                logger.info(f"Upload returned non-document id {document_id!r}; ownership not recorded")
             return jsonify({
                 "success": True,
                 "document_id": document_id,
@@ -621,9 +595,20 @@ def paperless_search():
                 'message': f'Paperless-ngx search failed: {str(e)}'
             }), 400
         search_result = response.json()
-        
+
         logger.info(f"Paperless search returned {len(search_result.get('results', []))} documents")
-        
+
+        # Scope results to the requesting user: the shared Paperless token
+        # can see every document in the instance, so non-admin users only
+        # receive documents they own or reference (GHSA-fv62-3hrm-gf83).
+        if not request.user.get('is_admin', False):
+            with conn.cursor() as cur:
+                visible_ids = visible_paperless_document_ids(cur, request.user['id'], False)
+            filtered = [d for d in search_result.get('results', []) if d.get('id') in visible_ids]
+            search_result['results'] = filtered
+            search_result['count'] = len(filtered)
+            search_result['next'] = None
+
         return jsonify(search_result)
         
     except Exception as e:
@@ -680,7 +665,7 @@ def paperless_tags():
             release_db_connection(conn)
 
 @file_bp.route('/paperless/debug', methods=['GET'])
-@token_required
+@admin_required
 def paperless_debug():
     """
     Debug endpoint to test Paperless-ngx configuration
@@ -736,7 +721,7 @@ def paperless_debug():
             release_db_connection(conn)
 
 @file_bp.route('/paperless/test-upload', methods=['POST'])
-@token_required
+@admin_required
 def test_file_upload():
     """
     Test file upload mechanism without Paperless-ngx
@@ -771,7 +756,7 @@ def test_file_upload():
         return jsonify({"error": f"Test upload failed: {str(e)}"}), 500
 
 @file_bp.route('/paperless/debug-document/<int:document_id>', methods=['GET'])
-@token_required
+@admin_required
 def paperless_debug_document(document_id: int):
     """
     Debug endpoint to check status of a specific Paperless-ngx document
@@ -973,6 +958,19 @@ def paperless_search_and_link():
         db_field = valid_types[document_type]
 
         with conn.cursor() as cursor:
+            # The found document must belong to the requesting user (or be
+            # unclaimed); linking another user's document is what used to
+            # unlock it in serve_paperless_document (GHSA-3h89-rqfj-5674).
+            if not user_can_link_paperless_document(
+                cursor, request.user["id"], request.user.get("is_admin", False), document_id
+            ):
+                logger.warning(
+                    "User %s tried to link Paperless document %s owned by another user",
+                    request.user["id"],
+                    document_id,
+                )
+                return jsonify({"success": False, "message": "This document belongs to another user"}), 403
+
             logger.info(
                 "Updating warranty %s field %s with document ID %s for user %s",
                 warranty_id,
@@ -994,6 +992,8 @@ def paperless_search_and_link():
                 logger.warning("No warranty found with ID %s for user %s", warranty_id, request.user["id"])
                 conn.rollback()
                 return jsonify({"success": False, "message": "Warranty not found or access denied"}), 404
+
+            record_paperless_document_owner(cursor, document_id, request.user["id"])
 
         conn.commit()
 
