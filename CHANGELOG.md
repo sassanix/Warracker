@@ -9,6 +9,8 @@
   - _Files: `frontend/script.js`, `frontend/js/components/paperless.js`, `frontend/js/components/claims.js`_
 - **Skip the login screen in OIDC-only mode (issue #186):** a new "Skip Login Screen" setting (admin settings, or the `OIDC_SKIP_LOGIN_SCREEN` environment variable) makes the login page redirect straight to the identity provider when OIDC-only mode is on, instead of showing the "Login with SSO" button screen. If the provider sends the user back with an error, the login screen is shown with the error and the button for a manual retry — the redirect never loops.
   - _Files: `backend/oidc_handler.py`, `backend/admin_routes.py`, `frontend/login.html`, `frontend/settings-new.html`, `frontend/settings-new.js`, `locales/en/translation.json`, `Docker/.env.example`_
+- **Dependency and runtime updates:** flask-cors 4.0.2 → 6.0.5, fixing four published CORS policy-bypass vulnerabilities in the old version (CVE-2024-6221, CVE-2024-6866, CVE-2024-6839, CVE-2024-6844). Authlib 1.8.0 → 1.9.1 and PyJWT 2.15.0 → 2.15.1 bring the OIDC/JWT libraries to their current patch releases, and setuptools moves to 84.0.0. The Docker base image moves from Python 3.13 to Python 3.15.
+  - _Files: `backend/requirements.txt`, `Dockerfile`_
 
 ## 1.0.3 - 2026-10-02
 
