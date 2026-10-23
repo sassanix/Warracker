@@ -80,7 +80,7 @@ def ensure_owner_exists():
                 # Promote the user to owner if found
                 if first_user_id is not None:
                     try:
-                        cur.execute("UPDATE users SET is_owner = TRUE WHERE id = %s", (first_user_id,))
+                        cur.execute("UPDATE users SET is_owner = TRUE, is_admin = TRUE WHERE id = %s", (first_user_id,))
                         conn.commit()
                         logger.info(f"✅ Automatically promoted user ID {first_user_id} to application owner")
                         
