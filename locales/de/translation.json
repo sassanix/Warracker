@@ -225,7 +225,7 @@
     "or_link_to_manual_url": "Oder verlinken Sie auf die manuelle URL",
     "unnamed_product": "Unbenanntes Produkt",
     "unvoid_warranty": "Ungültige Garantie",
-    "void": "Leere",
+    "void": "Ungültig",
     "void_warranty": "Garantie erlischt"
   },
   "settings": {
@@ -693,7 +693,7 @@
     "archived_warranties": "Archivierte Garantien",
     "total_value": "Gesamtwert",
     "total_value_tooltip": "Summe der Kaufpreise aller Garantien, die weder archiviert noch für ungültig erklärt sind, gerechnet in Ihrer Standardwährung. Garantien ohne Währungsangabe zählen in Ihrer Standardwährung; Garantien mit einer anderen Währung sind nicht enthalten. Garantien ohne Kaufpreis zählen als 0.",
-    "void_warranties": "Garantien erlöschen"
+    "void_warranties": "Ungültige Garantien"
   },
   "about": {
     "title": "Über Warracker",

@@ -7053,6 +7053,26 @@ async function checkPaperlessNgxStatus() {
         const token = localStorage.getItem('auth_token');
         if (!token) return false;
 
+        // Any signed-in user may read the enabled flag (see
+        // GET /api/paperless/status). The old /api/admin/settings
+        // route is admin-only, so it hid Paperless browse/link from
+        // every non-admin user; it remains only as a fallback.
+        const statusResponse = await fetch('/api/paperless/status', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (statusResponse.ok) {
+            const status = await statusResponse.json();
+            paperlessNgxEnabled = status.paperless_enabled === 'true' || status.paperless_enabled === true;
+            window.paperlessNgxEnabled = paperlessNgxEnabled;
+            console.log('[Paperless-ngx] Integration status:', paperlessNgxEnabled);
+            return paperlessNgxEnabled;
+        }
+
         const response = await fetch('/api/admin/settings', {
             method: 'GET',
             headers: {

@@ -21,6 +21,10 @@
   - _Files: `backend/statistics_routes.py`, `frontend/status.html`, `locales/*/translation.json`_
 - **New 1.0.4 strings machine-translated into all 19 non-English locales:** the void status (8 keys), claim documents (10), and OIDC skip-login (2) strings were added to English only, so non-English UIs showed them in English. All 20 keys are now machine-translated (380 entries), with placeholder integrity verified. These are machine translations — native-speaker review is recommended for customer-facing polish.
   - _Files: `locales/*/translation.json`_
+- **Paperless browse/link now visible to non-admin users:** the warranty forms read the Paperless enabled flag from the admin-only settings endpoint, which returns 403 for non-admins, so the browse sections and storage radios were hidden from every non-admin user on desktop and mobile — even though Paperless search-and-link itself is user-scoped. A new signed-in endpoint (`GET /api/paperless/status`) exposes only the enabled flag, never the Paperless URL or API token, and both frontend status checks now use it (admin settings remain as fallback).
+  - _Files: `backend/file_routes.py`, `frontend/js/components/paperless.js`, `frontend/script.js`_
+- **Void status mistranslations corrected:** the machine fill translated "Void" as emptiness in 14 locales (e.g. German "Leere", French "Vide", Russian "Пустота"), so voided cards read as "empty". The status word now reads as voided/invalid in those locales (e.g. German "Ungültig"), and the German and Portuguese void-warranty count labels are corrected as well. These are still unreviewed corrections — native-speaker review is recommended.
+  - _Files: `locales/*/translation.json`_
 
 ## 1.0.3 - 2026-10-02
 

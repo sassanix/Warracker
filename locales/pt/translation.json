@@ -225,7 +225,7 @@
     "or_link_to_manual_url": "Ou link para URL manual",
     "unnamed_product": "Produto sem nome",
     "unvoid_warranty": "Garantia não anulada",
-    "void": "Vazio",
+    "void": "Anulada",
     "void_warranty": "Anular garantia"
   },
   "claims": {
@@ -747,7 +747,7 @@
     "archived_warranties": "Garantias arquivadas",
     "total_value": "Valor total",
     "total_value_tooltip": "Soma dos preços de compra de todas as garantias que não estão arquivadas nem anuladas, calculada na sua moeda padrão. Garantias sem moeda usam a sua moeda padrão; garantias com outra moeda não são incluídas. Garantias sem preço de compra contam como 0.",
-    "void_warranties": "Anular garantias"
+    "void_warranties": "Garantias anuladas"
   },
   "about": {
     "title": "Sobre o Warracker",

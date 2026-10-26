@@ -664,6 +664,36 @@ def paperless_tags():
         if conn:
             release_db_connection(conn)
 
+@file_bp.route('/paperless/status', methods=['GET'])
+@token_required
+def paperless_status():
+    """
+    Paperless-ngx enabled flag for any signed-in user.
+
+    The warranty forms previously read this flag from the admin-only
+    /api/admin/settings endpoint, which returns 403 for non-admins, so
+    Paperless browse/link sections were hidden from every non-admin
+    user even though search-and-link itself is user-scoped. This
+    endpoint exposes only the enabled flag — never the Paperless URL
+    or API token — so the UI can show the sections to all users.
+    """
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT value FROM site_settings WHERE key = 'paperless_enabled'"
+            )
+            row = cur.fetchone()
+        enabled = bool(row and str(row[0]).lower() == 'true')
+        return jsonify({'paperless_enabled': 'true' if enabled else 'false'}), 200
+    except Exception as e:
+        logger.error(f"Error reading Paperless status: {e}")
+        return jsonify({'paperless_enabled': 'false'}), 200
+    finally:
+        if conn:
+            release_db_connection(conn)
+
 @file_bp.route('/paperless/debug', methods=['GET'])
 @admin_required
 def paperless_debug():
