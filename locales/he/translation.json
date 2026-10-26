@@ -233,7 +233,10 @@
     "or_link_to_files_url": "או קישור לכתובת URL של קבצים",
     "or_link_to_invoice_url": "או קישור לכתובת האתר של החשבונית",
     "or_link_to_manual_url": "או קישור לכתובת אתר ידנית",
-    "unnamed_product": "ללא שם מוצר"
+    "unnamed_product": "ללא שם מוצר",
+    "unvoid_warranty": "אחריות ללא ביטול",
+    "void": "בָּטֵל",
+    "void_warranty": "אחריות בטלה"
   },
   "settings": {
     "title": "הגדרות",
@@ -403,7 +406,9 @@
     "transfer_ownership_consequence_3": "רק הבעלים החדש יוכל להעביר בעלות שוב",
     "transfer_ownership_type_to_confirm": "כדי לאשר, הקלד \"TRANSFER\" בשדה:",
     "oidc_admin_desc": "קבוצה שקיבלה הרשאות מנהל. השאר ריק כדי להשבית.",
-    "oidc_admin_group": "קבוצת ניהול OIDC"
+    "oidc_admin_group": "קבוצת ניהול OIDC",
+    "oidc_skip_login_screen": "דלג על מסך הכניסה",
+    "oidc_skip_login_screen_desc": "במצב OIDC-Only, דלג על מסך הכניסה והפנה משתמשים ישירות לספק SSO. אם הכניסה ל-SSO נכשלת, מסך הכניסה מוצג עם השגיאה."
   },
   "actions": {
     "save": "שמור",
@@ -647,7 +652,11 @@
     "warranty_not_found_refresh": "אחריות לא נמצאה. אנא רענן ונסה שוב.",
     "import_success": "{{success}} אחריות יובאו. {{failure}} נכשל.",
     "invalid_claim_status": "סטטוס תביעה לא חוקי. חייב להיות אחד מ: {{statuses}}",
-    "product_name_too_long": "שם המוצר חייב להכיל 255 תווים או פחות"
+    "product_name_too_long": "שם המוצר חייב להכיל 255 תווים או פחות",
+    "confirm_void_warranty": "לבטל את האחריות הזו? הוא יסומן כלא פעיל ולא ייכלל בסיכומים ובהודעות. אתה יכול לשחזר אותו מאוחר יותר.",
+    "error_updating_void_status": "עדכון סטטוס הריק נכשל",
+    "unvoided_success": "האחריות שוחזרה מבטלה",
+    "voided_success": "האחריות בוטלה"
   },
   "languages": {
     "en": "אנגלית",
@@ -693,7 +702,8 @@
     "uptime": "זמן פעולה",
     "archived_warranties": "אחריות בארכיון",
     "total_value": "ערך כולל",
-    "total_value_tooltip": "סכום מחירי הרכישה של כל האחריות שאינן בארכיון ואינן מבוטלות, מחושב במטבע ברירת המחדל שלך. אחריות ללא מטבע מוגדר משתמשת במטבע ברירת המחדל; אחריות במטבע אחר אינה נכללת. אחריות ללא מחיר רכישה נספרת כ-0."
+    "total_value_tooltip": "סכום מחירי הרכישה של כל האחריות שאינן בארכיון ואינן מבוטלות, מחושב במטבע ברירת המחדל שלך. אחריות ללא מטבע מוגדר משתמשת במטבע ברירת המחדל; אחריות במטבע אחר אינה נכללת. אחריות ללא מחיר רכישה נספרת כ-0.",
+    "void_warranties": "אחריות בטלה"
   },
   "about": {
     "title": "אודות Warracker",
@@ -776,7 +786,17 @@
     "resolved_label": "נפתר",
     "status_unknown": "לֹא יְדוּעַ",
     "unknown_vendor": "ספק לא ידוע",
-    "view_only": "לצפייה בלבד"
+    "view_only": "לצפייה בלבד",
+    "attach_document": "צרף מסמך",
+    "confirm_delete_document": "להסיר את המסמך הזה מהתביעה?",
+    "document_add_failed": "צירוף המסמך נכשל",
+    "document_added": "מצורף מסמך",
+    "document_delete_failed": "הסרת המסמך נכשלה",
+    "document_deleted": "המסמך הוסר",
+    "document_open_failed": "פתיחת המסמך נכשלה",
+    "documents": "מסמכים",
+    "storage_local": "העלה קובץ",
+    "storage_paperless": "העלה ל-Paperless"
   },
   "errors": {
     "error": "שְׁגִיאָה"

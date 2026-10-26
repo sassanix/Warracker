@@ -230,7 +230,10 @@
     "or_link_to_files_url": "Nebo odkaz na adresu URL souborů",
     "or_link_to_invoice_url": "Nebo odkaz na adresu URL faktury",
     "or_link_to_manual_url": "Nebo odkaz na ruční URL",
-    "unnamed_product": "Nejmenovaný produkt"
+    "unnamed_product": "Nejmenovaný produkt",
+    "unvoid_warranty": "Zrušení záruky",
+    "void": "Neplatné",
+    "void_warranty": "Zrušení záruky"
   },
   "settings": {
     "title": "Nastavení",
@@ -400,7 +403,9 @@
     "transfer_ownership_consequence_3": "Pouze nový vlastník může znovu převést vlastnictví",
     "transfer_ownership_type_to_confirm": "Pro potvrzení zadejte \"TRANSFER\" do pole níže:",
     "oidc_admin_desc": "Skupina, která má oprávnění správce. Pro deaktivaci ponechejte prázdné.",
-    "oidc_admin_group": "Skupina administrátorů OIDC"
+    "oidc_admin_group": "Skupina administrátorů OIDC",
+    "oidc_skip_login_screen": "Přeskočit přihlašovací obrazovku",
+    "oidc_skip_login_screen_desc": "V režimu pouze OIDC přeskočte přihlašovací obrazovku a přesměrujte uživatele přímo na poskytovatele jednotného přihlášení. Pokud se přihlášení SSO nezdaří, zobrazí se přihlašovací obrazovka s chybou."
   },
   "actions": {
     "save": "Uložit",
@@ -644,7 +649,11 @@
     "warranty_duration_required": "Je vyžadována záruční doba",
     "warranty_not_found_refresh": "Záruka nenalezena. Obnovte stránku a zkuste to znovu.",
     "invalid_claim_status": "Neplatný stav nároku. Musí být jeden z: {{statuses}}",
-    "product_name_too_long": "Název produktu musí mít 255 znaků nebo méně"
+    "product_name_too_long": "Název produktu musí mít 255 znaků nebo méně",
+    "confirm_void_warranty": "Zrušit tuto záruku? Bude označena jako neaktivní a vyloučena z celkových součtů a oznámení. Můžete jej obnovit později.",
+    "error_updating_void_status": "Aktualizace stavu neplatnosti se nezdařila",
+    "unvoided_success": "Záruka obnovena z neplatnosti",
+    "voided_success": "Záruka zrušena"
   },
   "languages": {
     "en": "Angličtina",
@@ -690,7 +699,8 @@
     "uptime": "Doba provozu",
     "archived_warranties": "Archivované záruky",
     "total_value": "Celková hodnota",
-    "total_value_tooltip": "Součet pořizovacích cen všech záruk, které nejsou archivované ani zneplatněné, počítaný ve vaší výchozí měně. Záruky bez nastavené měny používají vaši výchozí měnu; záruky v jiné měně nejsou zahrnuty. Záruky bez pořizovací ceny se počítají jako 0."
+    "total_value_tooltip": "Součet pořizovacích cen všech záruk, které nejsou archivované ani zneplatněné, počítaný ve vaší výchozí měně. Záruky bez nastavené měny používají vaši výchozí měnu; záruky v jiné měně nejsou zahrnuty. Záruky bez pořizovací ceny se počítají jako 0.",
+    "void_warranties": "Neplatné záruky"
   },
   "about": {
     "title": "O aplikaci Warracker",
@@ -773,7 +783,17 @@
     "resolved_label": "Vyřešeno",
     "status_unknown": "Neznámý",
     "unknown_vendor": "Neznámý prodejce",
-    "view_only": "Pouze zobrazení"
+    "view_only": "Pouze zobrazení",
+    "attach_document": "Přiložte dokument",
+    "confirm_delete_document": "Odebrat tento dokument z nároku?",
+    "document_add_failed": "Nepodařilo se připojit dokument",
+    "document_added": "Dokument přiložen",
+    "document_delete_failed": "Dokument se nepodařilo odebrat",
+    "document_deleted": "Dokument odstraněn",
+    "document_open_failed": "Dokument se nepodařilo otevřít",
+    "documents": "Dokumenty",
+    "storage_local": "Nahrajte soubor",
+    "storage_paperless": "Nahrát do služby Paperless"
   },
   "errors": {
     "error": "Chyba"

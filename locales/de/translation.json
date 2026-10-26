@@ -223,7 +223,10 @@
     "or_link_to_files_url": "Oder verlinken Sie auf die Datei-URL",
     "or_link_to_invoice_url": "Oder verlinken Sie auf die Rechnungs-URL",
     "or_link_to_manual_url": "Oder verlinken Sie auf die manuelle URL",
-    "unnamed_product": "Unbenanntes Produkt"
+    "unnamed_product": "Unbenanntes Produkt",
+    "unvoid_warranty": "Ungültige Garantie",
+    "void": "Leere",
+    "void_warranty": "Garantie erlischt"
   },
   "settings": {
     "title": "Einstellungen",
@@ -393,7 +396,9 @@
     "transfer_ownership_consequence_3": "Nur der neue Eigentümer kann das Eigentum erneut übertragen",
     "transfer_ownership_type_to_confirm": "Zur Bestätigung geben Sie bitte \"TRANSFER\" in das Feld unten ein:",
     "oidc_admin_desc": "Gruppe, die Administratorrechte erhält. Zum Deaktivieren leer lassen.",
-    "oidc_admin_group": "OIDC-Administratorgruppe"
+    "oidc_admin_group": "OIDC-Administratorgruppe",
+    "oidc_skip_login_screen": "Anmeldebildschirm überspringen",
+    "oidc_skip_login_screen_desc": "Überspringen Sie im Nur-OIDC-Modus den Anmeldebildschirm und leiten Sie Benutzer direkt zum SSO-Anbieter weiter. Wenn die SSO-Anmeldung fehlschlägt, wird der Anmeldebildschirm mit dem Fehler angezeigt."
   },
   "actions": {
     "save": "Speichern",
@@ -637,7 +642,11 @@
     "warranty_duration_required": "Die Garantiedauer ist erforderlich",
     "warranty_not_found_refresh": "Garantie nicht gefunden. Bitte aktualisieren Sie und versuchen Sie es erneut.",
     "invalid_claim_status": "Ungültiger Anspruchsstatus. Muss einer der folgenden sein: {{statuses}}",
-    "product_name_too_long": "Der Produktname darf maximal 255 Zeichen lang sein"
+    "product_name_too_long": "Der Produktname darf maximal 255 Zeichen lang sein",
+    "confirm_void_warranty": "Diese Garantie ungültig machen? Es wird als inaktiv markiert und von Gesamtsummen und Benachrichtigungen ausgeschlossen. Sie können es später wiederherstellen.",
+    "error_updating_void_status": "Der Ungültigkeitsstatus konnte nicht aktualisiert werden",
+    "unvoided_success": "Die Garantie wurde nach Ablauf der Gültigkeit wiederhergestellt",
+    "voided_success": "Garantie erlischt"
   },
   "languages": {
     "en": "Englisch",
@@ -683,7 +692,8 @@
     "uptime": "Betriebszeit",
     "archived_warranties": "Archivierte Garantien",
     "total_value": "Gesamtwert",
-    "total_value_tooltip": "Summe der Kaufpreise aller Garantien, die weder archiviert noch für ungültig erklärt sind, gerechnet in Ihrer Standardwährung. Garantien ohne Währungsangabe zählen in Ihrer Standardwährung; Garantien mit einer anderen Währung sind nicht enthalten. Garantien ohne Kaufpreis zählen als 0."
+    "total_value_tooltip": "Summe der Kaufpreise aller Garantien, die weder archiviert noch für ungültig erklärt sind, gerechnet in Ihrer Standardwährung. Garantien ohne Währungsangabe zählen in Ihrer Standardwährung; Garantien mit einer anderen Währung sind nicht enthalten. Garantien ohne Kaufpreis zählen als 0.",
+    "void_warranties": "Garantien erlöschen"
   },
   "about": {
     "title": "Über Warracker",
@@ -766,7 +776,17 @@
     "status_unknown": "Unbekannt",
     "unknown_vendor": "Unbekannter Anbieter",
     "view_only": "Nur anzeigen",
-    "claim_number_label": "Beanspruchen #"
+    "claim_number_label": "Beanspruchen #",
+    "attach_document": "Dokument anhängen",
+    "confirm_delete_document": "Dieses Dokument aus dem Anspruch entfernen?",
+    "document_add_failed": "Dokument konnte nicht angehängt werden",
+    "document_added": "Dokument beigefügt",
+    "document_delete_failed": "Dokument konnte nicht entfernt werden",
+    "document_deleted": "Dokument entfernt",
+    "document_open_failed": "Dokument konnte nicht geöffnet werden",
+    "documents": "Unterlagen",
+    "storage_local": "Datei hochladen",
+    "storage_paperless": "Auf Paperless hochladen"
   },
   "errors": {
     "error": "Fehler"

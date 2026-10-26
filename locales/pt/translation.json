@@ -223,7 +223,10 @@
     "or_link_to_files_url": "Ou link para URL dos arquivos",
     "or_link_to_invoice_url": "Ou link para o URL da fatura",
     "or_link_to_manual_url": "Ou link para URL manual",
-    "unnamed_product": "Produto sem nome"
+    "unnamed_product": "Produto sem nome",
+    "unvoid_warranty": "Garantia não anulada",
+    "void": "Vazio",
+    "void_warranty": "Anular garantia"
   },
   "claims": {
     "claims": "Reclamações",
@@ -267,7 +270,17 @@
     "resolved_label": "Resolvido",
     "status_unknown": "Desconhecido",
     "unknown_vendor": "Fornecedor desconhecido",
-    "view_only": "Ver somente"
+    "view_only": "Ver somente",
+    "attach_document": "Anexar documento",
+    "confirm_delete_document": "Remover este documento da reclamação?",
+    "document_add_failed": "Falha ao anexar documento",
+    "document_added": "Documento anexado",
+    "document_delete_failed": "Falha ao remover o documento",
+    "document_deleted": "Documento removido",
+    "document_open_failed": "Falha ao abrir o documento",
+    "documents": "Documentos",
+    "storage_local": "Carregar arquivo",
+    "storage_paperless": "Carregar para sem papel"
   },
   "settings": {
     "title": "Configurações",
@@ -437,7 +450,9 @@
     "transfer_ownership_consequence_3": "Apenas o novo proprietário poderá transferir a propriedade novamente",
     "transfer_ownership_type_to_confirm": "Para confirmar, digite \"TRANSFER\" no campo abaixo:",
     "oidc_admin_desc": "Grupo que recebe privilégios de administrador. Deixe em branco para desabilitar.",
-    "oidc_admin_group": "Grupo de administração do OIDC"
+    "oidc_admin_group": "Grupo de administração do OIDC",
+    "oidc_skip_login_screen": "Pular tela de login",
+    "oidc_skip_login_screen_desc": "No modo somente OIDC, pule a tela de login e redirecione os usuários diretamente para o provedor de SSO. Se o login SSO falhar, a tela de login será mostrada com o erro."
   },
   "actions": {
     "save": "Salvar",
@@ -681,7 +696,11 @@
     "warranty_not_found_refresh": "Garantia não encontrada. Atualize e tente novamente.",
     "import_success": "{{success}} garantias importadas. {{failure}} falhou.",
     "invalid_claim_status": "Status de reivindicação inválido. Deve ser um dos seguintes: {{statuses}}",
-    "product_name_too_long": "O nome do produto deve ter 255 caracteres ou menos"
+    "product_name_too_long": "O nome do produto deve ter 255 caracteres ou menos",
+    "confirm_void_warranty": "Anular esta garantia? Será marcado como inativo e excluído dos totais e notificações. Você pode restaurá-lo mais tarde.",
+    "error_updating_void_status": "Falha ao atualizar o status nulo",
+    "unvoided_success": "Garantia restaurada do nulo",
+    "voided_success": "Garantia anulada"
   },
   "languages": {
     "en": "English",
@@ -727,7 +746,8 @@
     "uptime": "Tempo de Atividade",
     "archived_warranties": "Garantias arquivadas",
     "total_value": "Valor total",
-    "total_value_tooltip": "Soma dos preços de compra de todas as garantias que não estão arquivadas nem anuladas, calculada na sua moeda padrão. Garantias sem moeda usam a sua moeda padrão; garantias com outra moeda não são incluídas. Garantias sem preço de compra contam como 0."
+    "total_value_tooltip": "Soma dos preços de compra de todas as garantias que não estão arquivadas nem anuladas, calculada na sua moeda padrão. Garantias sem moeda usam a sua moeda padrão; garantias com outra moeda não são incluídas. Garantias sem preço de compra contam como 0.",
+    "void_warranties": "Anular garantias"
   },
   "about": {
     "title": "Sobre o Warracker",

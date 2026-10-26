@@ -223,7 +223,10 @@
     "or_link_to_files_url": "Of link naar de bestands-URL",
     "or_link_to_invoice_url": "Of link naar factuur-URL",
     "or_link_to_manual_url": "Of link naar handmatige URL",
-    "unnamed_product": "Naamloos product"
+    "unnamed_product": "Naamloos product",
+    "unvoid_warranty": "Ongeldige garantie",
+    "void": "Leegte",
+    "void_warranty": "Garantie ongeldig"
   },
   "settings": {
     "title": "Instellingen",
@@ -393,7 +396,9 @@
     "transfer_ownership_consequence_3": "Alleen de nieuwe eigenaar kan het eigendom opnieuw overdragen",
     "transfer_ownership_type_to_confirm": "Typ \"TRANSFER\" in het onderstaande veld om te bevestigen:",
     "oidc_admin_desc": "Groep die beheerdersrechten heeft. Laat dit leeg om uit te schakelen.",
-    "oidc_admin_group": "OIDC-beheerdersgroep"
+    "oidc_admin_group": "OIDC-beheerdersgroep",
+    "oidc_skip_login_screen": "Sla het inlogscherm over",
+    "oidc_skip_login_screen_desc": "Sla in de OIDC-Only-modus het inlogscherm over en stuur gebruikers rechtstreeks door naar de SSO-provider. Als de SSO-aanmelding mislukt, wordt het inlogscherm met de fout weergegeven."
   },
   "actions": {
     "save": "Opslaan",
@@ -637,7 +642,11 @@
     "warranty_not_found_refresh": "Garantie niet gevonden. Vernieuw de pagina en probeer het opnieuw.",
     "import_success": "{{success}} garanties geïmporteerd. {{failure}} is mislukt.",
     "invalid_claim_status": "Ongeldige claimstatus. Moet een van zijn: {{statuses}}",
-    "product_name_too_long": "De productnaam moet 255 tekens of minder bevatten"
+    "product_name_too_long": "De productnaam moet 255 tekens of minder bevatten",
+    "confirm_void_warranty": "Deze garantie ongeldig maken? Het wordt gemarkeerd als inactief en uitgesloten van totalen en meldingen. Je kunt het later herstellen.",
+    "error_updating_void_status": "Kan de ongeldigheidsstatus niet bijwerken",
+    "unvoided_success": "Garantie hersteld van ongeldig",
+    "voided_success": "Garantie ongeldig"
   },
   "languages": {
     "en": "Engels",
@@ -683,7 +692,8 @@
     "uptime": "Uptime",
     "archived_warranties": "Gearchiveerde garanties",
     "total_value": "Totale waarde",
-    "total_value_tooltip": "Som van de aankoopprijzen van alle garanties die niet zijn gearchiveerd of ongeldig verklaard, gerekend in uw standaardvaluta. Garanties zonder valuta gebruiken uw standaardvaluta; garanties in een andere valuta tellen niet mee. Garanties zonder aankoopprijs tellen als 0."
+    "total_value_tooltip": "Som van de aankoopprijzen van alle garanties die niet zijn gearchiveerd of ongeldig verklaard, gerekend in uw standaardvaluta. Garanties zonder valuta gebruiken uw standaardvaluta; garanties in een andere valuta tellen niet mee. Garanties zonder aankoopprijs tellen als 0.",
+    "void_warranties": "Garanties ongeldig"
   },
   "about": {
     "title": "Over Warracker",
@@ -766,7 +776,17 @@
     "resolved_label": "Opgelost",
     "status_unknown": "Onbekend",
     "unknown_vendor": "Onbekende leverancier",
-    "view_only": "Alleen bekijken"
+    "view_only": "Alleen bekijken",
+    "attach_document": "Document bijvoegen",
+    "confirm_delete_document": "Dit document uit de claim verwijderen?",
+    "document_add_failed": "Kan document niet bijvoegen",
+    "document_added": "Document bijgevoegd",
+    "document_delete_failed": "Kan document niet verwijderen",
+    "document_deleted": "Document verwijderd",
+    "document_open_failed": "Kan document niet openen",
+    "documents": "Documenten",
+    "storage_local": "Bestand uploaden",
+    "storage_paperless": "Uploaden naar papierloos"
   },
   "errors": {
     "error": "Fout"

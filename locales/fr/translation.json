@@ -223,7 +223,10 @@
     "or_link_to_files_url": "Ou un lien vers l'URL des fichiers",
     "or_link_to_invoice_url": "Ou un lien vers l'URL de la facture",
     "or_link_to_manual_url": "Ou un lien vers une URL manuelle",
-    "unnamed_product": "Produit sans nom"
+    "unnamed_product": "Produit sans nom",
+    "unvoid_warranty": "Annuler la garantie",
+    "void": "Vide",
+    "void_warranty": "Annuler la garantie"
   },
   "settings": {
     "title": "Paramètres",
@@ -393,7 +396,9 @@
     "transfer_ownership_consequence_3": "Seul le nouveau propriétaire peut à nouveau transférer la propriété",
     "transfer_ownership_type_to_confirm": "Pour confirmer, veuillez taper \"TRANSFER\" dans le champ ci-dessous :",
     "oidc_admin_desc": "Groupe bénéficiant de privilèges d'administrateur. Laissez vide pour désactiver.",
-    "oidc_admin_group": "Groupe d'administrateurs OIDC"
+    "oidc_admin_group": "Groupe d'administrateurs OIDC",
+    "oidc_skip_login_screen": "Ignorer l'écran de connexion",
+    "oidc_skip_login_screen_desc": "En mode OIDC uniquement, ignorez l'écran de connexion et redirigez les utilisateurs directement vers le fournisseur SSO. Si la connexion SSO échoue, l'écran de connexion s'affiche avec l'erreur."
   },
   "actions": {
     "save": "Enregistrer",
@@ -637,7 +642,11 @@
     "warranty_not_found_refresh": "Garantie introuvable. Veuillez actualiser et réessayer.",
     "import_success": "{{success}} garanties importées. {{failure}} a échoué.",
     "invalid_claim_status": "Statut de réclamation invalide. Doit être l'un des : {{statuses}}",
-    "product_name_too_long": "Le nom du produit doit comporter 255 caractères maximum"
+    "product_name_too_long": "Le nom du produit doit comporter 255 caractères maximum",
+    "confirm_void_warranty": "Annuler cette garantie ? Il sera marqué comme inactif et exclu des totaux et des notifications. Vous pourrez le restaurer plus tard.",
+    "error_updating_void_status": "Échec de la mise à jour du statut d'annulation",
+    "unvoided_success": "Garantie restaurée après annulation",
+    "voided_success": "Garantie annulée"
   },
   "languages": {
     "en": "English",
@@ -683,7 +692,8 @@
     "uptime": "Temps de Fonctionnement",
     "archived_warranties": "Garanties archivées",
     "total_value": "Valeur totale",
-    "total_value_tooltip": "Total des prix d'achat de toutes les garanties ni archivées ni annulées, calculé dans votre devise par défaut. Les garanties sans devise utilisent votre devise par défaut ; celles libellées dans une autre devise ne sont pas incluses. Les garanties sans prix d'achat comptent pour 0."
+    "total_value_tooltip": "Total des prix d'achat de toutes les garanties ni archivées ni annulées, calculé dans votre devise par défaut. Les garanties sans devise utilisent votre devise par défaut ; celles libellées dans une autre devise ne sont pas incluses. Les garanties sans prix d'achat comptent pour 0.",
+    "void_warranties": "Garanties annulées"
   },
   "about": {
     "title": "À Propos de Warracker",
@@ -766,7 +776,17 @@
     "resolved_label": "Résolu",
     "status_unknown": "Inconnu",
     "unknown_vendor": "Fournisseur inconnu",
-    "view_only": "Afficher uniquement"
+    "view_only": "Afficher uniquement",
+    "attach_document": "Joindre un document",
+    "confirm_delete_document": "Supprimer ce document de la réclamation ?",
+    "document_add_failed": "Impossible de joindre le document",
+    "document_added": "Document joint",
+    "document_delete_failed": "Échec de la suppression du document",
+    "document_deleted": "Document supprimé",
+    "document_open_failed": "Échec de l'ouverture du document",
+    "documents": "Documents",
+    "storage_local": "Télécharger le fichier",
+    "storage_paperless": "Télécharger vers le sans papier"
   },
   "errors": {
     "error": "Erreur"

@@ -223,7 +223,10 @@
     "none": "没有任何",
     "not_specified": "未指定",
     "notes_title": "保修说明",
-    "unnamed_product": "未命名产品"
+    "unnamed_product": "未命名产品",
+    "unvoid_warranty": "保修无效",
+    "void": "空白",
+    "void_warranty": "保修无效"
   },
   "settings": {
     "title": "Warracker - 设置",
@@ -393,7 +396,9 @@
     "transfer_ownership_consequence_1": "您将成为普通管理员",
     "transfer_ownership_consequence_2": "新所有者将拥有应用的最终控制权",
     "transfer_ownership_consequence_3": "只有新所有者才能再次转移所有权",
-    "transfer_ownership_type_to_confirm": "要确认，请在下面的字段中输入“TRANSFER”："
+    "transfer_ownership_type_to_confirm": "要确认，请在下面的字段中输入“TRANSFER”：",
+    "oidc_skip_login_screen": "跳过登录屏幕",
+    "oidc_skip_login_screen_desc": "在仅 OIDC 模式下，跳过登录屏幕并将用户直接重定向到 SSO 提供商。如果 SSO 登录失败，则会显示登录屏幕并显示错误。"
   },
   "actions": {
     "save": "保存",
@@ -637,7 +642,11 @@
     "error_loading_personal_warranties": "无法加载您的保修。请再试一次。",
     "expiration_date_after_purchase_date": "有效期必须晚于购买日期",
     "product_name_too_long": "产品名称不得超过 255 个字符",
-    "invalid_claim_status": "无效的索赔状态。必须是以下之一：{{statuses}}"
+    "invalid_claim_status": "无效的索赔状态。必须是以下之一：{{statuses}}",
+    "confirm_void_warranty": "使本保修失效？它将被标记为非活动状态并从总数和通知中排除。您可以稍后恢复它。",
+    "error_updating_void_status": "无法更新无效状态",
+    "unvoided_success": "保修从无效状态恢复",
+    "voided_success": "保修失效"
   },
   "languages": {
     "en": "English",
@@ -683,7 +692,8 @@
     "uptime": "正常运行时间",
     "archived_warranties": "存档的保修",
     "total_value": "总价值",
-    "total_value_tooltip": "所有未归档、未作废保修的购买价格总和，按您的默认货币计算。未设置货币的保修使用您的默认货币；以其他货币标价的保修不计入。没有购买价格的保修按 0 计算。"
+    "total_value_tooltip": "所有未归档、未作废保修的购买价格总和，按您的默认货币计算。未设置货币的保修使用您的默认货币；以其他货币标价的保修不计入。没有购买价格的保修按 0 计算。",
+    "void_warranties": "无效保证"
   },
   "about": {
     "title": "关于 - Warracker",
@@ -766,7 +776,17 @@
     "status_unknown": "未知",
     "unknown_vendor": "未知供应商",
     "view_only": "仅供查看",
-    "resolved": "已解决"
+    "resolved": "已解决",
+    "attach_document": "附上文件",
+    "confirm_delete_document": "从索赔中删除此文件吗？",
+    "document_add_failed": "无法附加文档",
+    "document_added": "附文件",
+    "document_delete_failed": "删除文档失败",
+    "document_deleted": "文档已删除",
+    "document_open_failed": "无法打开文档",
+    "documents": "文件",
+    "storage_local": "上传文件",
+    "storage_paperless": "上传至无纸化"
   },
   "paperless": {
     "disabled": "无纸化-ngx 集成未启用",

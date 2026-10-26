@@ -233,7 +233,10 @@
     "or_link_to_invoice_url": "أو رابط إلى عنوان URL للفاتورة",
     "or_link_to_manual_url": "أو قم بالارتباط بعنوان URL اليدوي",
     "search_or_add_new_tag": "بحث أو إضافة علامة جديدة...",
-    "unnamed_product": "منتج غير مسمى"
+    "unnamed_product": "منتج غير مسمى",
+    "unvoid_warranty": "ضمان غير مبطل",
+    "void": "فارغ",
+    "void_warranty": "ضمان باطل"
   },
   "settings": {
     "title": "الإعدادات",
@@ -403,7 +406,9 @@
     "transfer_ownership_type_to_confirm": "للتأكيد، يرجى كتابة \"TRANSFER\" في الحقل أدناه:",
     "oidc_admin_desc": "المجموعة التي تم منحها امتيازات المسؤول. اتركه فارغًا للتعطيل.",
     "oidc_admin_group": "مجموعة إدارة OIDC",
-    "paperless_url_desc": "عنوان URL الأساسي لمثيل Paperless-ngx الخاص بك"
+    "paperless_url_desc": "عنوان URL الأساسي لمثيل Paperless-ngx الخاص بك",
+    "oidc_skip_login_screen": "تخطي شاشة تسجيل الدخول",
+    "oidc_skip_login_screen_desc": "في وضع OIDC فقط، قم بتخطي شاشة تسجيل الدخول وأعد توجيه المستخدمين مباشرة إلى موفر تسجيل الدخول الموحّد (SSO). إذا فشل تسجيل الدخول الموحّد (SSO)، فستظهر شاشة تسجيل الدخول مع الخطأ."
   },
   "actions": {
     "save": "حفظ",
@@ -647,7 +652,11 @@
     "warranty_not_found_refresh": "لم يتم العثور على الضمان. يرجى التحديث والمحاولة مرة أخرى.",
     "import_success": "{{success}} ضمانات مستوردة. {{failure}} فشل.",
     "invalid_claim_status": "حالة المطالبة غير صالحة. يجب أن يكون واحدًا من: {{statuses}}",
-    "product_name_too_long": "يجب أن يكون اسم المنتج 255 حرفًا أو أقل"
+    "product_name_too_long": "يجب أن يكون اسم المنتج 255 حرفًا أو أقل",
+    "confirm_void_warranty": "هل يبطل هذا الضمان؟ سيتم وضع علامة عليه كغير نشط واستبعاده من الإجماليات والإشعارات. ويمكنك استعادته لاحقًا.",
+    "error_updating_void_status": "فشل تحديث حالة الفراغ",
+    "unvoided_success": "تم استعادة الضمان من الفراغ",
+    "voided_success": "الضمان باطلة"
   },
   "languages": {
     "en": "English",
@@ -693,7 +702,8 @@
     "uptime": "وقت التشغيل",
     "archived_warranties": "الضمانات المؤرشفة",
     "total_value": "القيمة الإجمالية",
-    "total_value_tooltip": "مجموع أسعار شراء جميع الضمانات غير المؤرشفة وغير الملغاة، محسوبًا بعملتك الافتراضية. الضمانات التي لا عملة لها تستخدم عملتك الافتراضية؛ والضمانات بعملة مختلفة غير مشمولة. الضمانات بدون سعر شراء تُحسب كـ 0."
+    "total_value_tooltip": "مجموع أسعار شراء جميع الضمانات غير المؤرشفة وغير الملغاة، محسوبًا بعملتك الافتراضية. الضمانات التي لا عملة لها تستخدم عملتك الافتراضية؛ والضمانات بعملة مختلفة غير مشمولة. الضمانات بدون سعر شراء تُحسب كـ 0.",
+    "void_warranties": "ضمانات باطلة"
   },
   "about": {
     "title": "حول Warracker",
@@ -776,7 +786,17 @@
     "resolved_label": "تم الحل",
     "status_unknown": "مجهول",
     "unknown_vendor": "بائع غير معروف",
-    "view_only": "عرض فقط"
+    "view_only": "عرض فقط",
+    "attach_document": "إرفاق الوثيقة",
+    "confirm_delete_document": "هل تريد إزالة هذا المستند من المطالبة؟",
+    "document_add_failed": "فشل إرفاق المستند",
+    "document_added": "الوثيقة مرفقة",
+    "document_delete_failed": "فشل في إزالة المستند",
+    "document_deleted": "تمت إزالة المستند",
+    "document_open_failed": "فشل في فتح المستند",
+    "documents": "وثائق",
+    "storage_local": "تحميل الملف",
+    "storage_paperless": "تحميل إلى بلا ورق"
   },
   "errors": {
     "error": "خطأ"

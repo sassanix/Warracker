@@ -223,7 +223,10 @@
     "or_link_to_files_url": "或連結到文件 URL",
     "or_link_to_invoice_url": "或連結到發票 URL",
     "or_link_to_manual_url": "或連結到手冊 URL",
-    "unnamed_product": "未命名產品"
+    "unnamed_product": "未命名產品",
+    "unvoid_warranty": "保固無效",
+    "void": "空白",
+    "void_warranty": "保固無效"
   },
   "settings": {
     "title": "設定",
@@ -393,7 +396,9 @@
     "transfer_ownership_consequence_3": "只有新所有者才能再次轉移所有權",
     "transfer_ownership_type_to_confirm": "要確認，請在下面的欄位中輸入“TRANSFER”：",
     "oidc_admin_desc": "被授予管理員權限的群組。留空以停用。",
-    "oidc_admin_group": "OIDC 管理員組"
+    "oidc_admin_group": "OIDC 管理員組",
+    "oidc_skip_login_screen": "跳過登入畫面",
+    "oidc_skip_login_screen_desc": "在僅 OIDC 模式下，跳過登入畫面並將使用者直接重新導向至 SSO 提供者。如果 SSO 登入失敗，則會顯示登入畫面並顯示錯誤。"
   },
   "actions": {
     "save": "儲存",
@@ -637,7 +642,11 @@
     "warranty_duration_required": "需要保固期限",
     "warranty_not_found_refresh": "未找到保固。請刷新並重試。",
     "invalid_claim_status": "無效的索賠狀態。必須是以下之一：{{statuses}}",
-    "product_name_too_long": "產品名稱不得超過 255 個字符"
+    "product_name_too_long": "產品名稱不得超過 255 個字符",
+    "confirm_void_warranty": "使本保固失效？它將被標記為非活動狀態並從總數和通知中排除。您可以稍後恢復它。",
+    "error_updating_void_status": "無法更新無效狀態",
+    "unvoided_success": "保固從無效狀態恢復",
+    "voided_success": "保固失效"
   },
   "languages": {
     "en": "English",
@@ -683,7 +692,8 @@
     "uptime": "正常執行時間",
     "archived_warranties": "存檔的保固",
     "total_value": "總價值",
-    "total_value_tooltip": "所有未封存、未作廢保養的購買價格總和，按您的預設貨幣計算。未設定貨幣的保養使用您的預設貨幣；以其他貨幣標價的保養不計入。沒有購買價格的保養按 0 計算。"
+    "total_value_tooltip": "所有未封存、未作廢保養的購買價格總和，按您的預設貨幣計算。未設定貨幣的保養使用您的預設貨幣；以其他貨幣標價的保養不計入。沒有購買價格的保養按 0 計算。",
+    "void_warranties": "無效保證"
   },
   "about": {
     "title": "關於Warracker",
@@ -766,7 +776,17 @@
     "resolved_label": "已解決",
     "status_unknown": "未知",
     "unknown_vendor": "未知供應商",
-    "view_only": "僅供查看"
+    "view_only": "僅供查看",
+    "attach_document": "附上文件",
+    "confirm_delete_document": "從索賠中刪除此文件嗎？",
+    "document_add_failed": "無法附加文檔",
+    "document_added": "附文件",
+    "document_delete_failed": "刪除文檔失敗",
+    "document_deleted": "文件已刪除",
+    "document_open_failed": "無法開啟文檔",
+    "documents": "文件",
+    "storage_local": "上傳文件",
+    "storage_paperless": "上傳至無紙化"
   },
   "errors": {
     "error": "錯誤"

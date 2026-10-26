@@ -204,7 +204,11 @@
     "error_updating_archive_status": "Arşiv durumu güncellenemedi",
     "warranty_not_found_refresh": "Garanti bulunamadı. Lütfen yenileyin ve tekrar deneyin.",
     "invalid_claim_status": "Geçersiz hak talebi durumu. Şunlardan biri olmalı: {{statuses}}",
-    "product_name_too_long": "Ürün adı 255 karakter veya daha az olmalıdır"
+    "product_name_too_long": "Ürün adı 255 karakter veya daha az olmalıdır",
+    "confirm_void_warranty": "Bu garanti geçersiz mi? Etkin değil olarak işaretlenecek ve toplamlardan ve bildirimlerden hariç tutulacaktır. Daha sonra geri yükleyebilirsiniz.",
+    "error_updating_void_status": "Geçersiz durumu güncellenemedi",
+    "unvoided_success": "Garanti geçersiz durumdan geri getirildi",
+    "voided_success": "Garanti geçersiz"
   },
   "settings": {
     "title": "Ayarlar",
@@ -374,7 +378,9 @@
     "transfer_ownership_consequence_3": "Yalnızca yeni sahip tekrar sahipliği devredebilir",
     "transfer_ownership_type_to_confirm": "Onaylamak için lütfen aşağıdaki alana \"TRANSFER\" yazın:",
     "oidc_admin_desc": "Yönetici ayrıcalıklarının verildiği grup. Devre dışı bırakmak için boş bırakın.",
-    "oidc_admin_group": "OIDC Yönetici Grubu"
+    "oidc_admin_group": "OIDC Yönetici Grubu",
+    "oidc_skip_login_screen": "Giriş Ekranını Atla",
+    "oidc_skip_login_screen_desc": "Yalnızca OIDC modunda oturum açma ekranını atlayın ve kullanıcıları doğrudan SSO sağlayıcısına yönlendirin. SSO oturum açma işlemi başarısız olursa oturum açma ekranı hatayla birlikte gösterilir."
   },
   "languages": {
     "en": "İngilizce",
@@ -614,7 +620,10 @@
     "or_link_to_files_url": "Veya dosya URL'sine bağlantı",
     "or_link_to_invoice_url": "Veya fatura URL'sine bağlantı",
     "or_link_to_manual_url": "Veya manuel URL'ye bağlantı",
-    "unnamed_product": "Adsız Ürün"
+    "unnamed_product": "Adsız Ürün",
+    "unvoid_warranty": "Garantiyi geçersiz kılma",
+    "void": "Geçersiz",
+    "void_warranty": "Garantiyi geçersiz kılma"
   },
   "actions": {
     "save": "Kaydet",
@@ -683,7 +692,8 @@
     "uptime": "Çalışma Süresi",
     "archived_warranties": "Arşivlenmiş Garantiler",
     "total_value": "Toplam Değer",
-    "total_value_tooltip": "Arşivlenmemiş ve geçersiz kılınmamış tüm garantilerin satın alma fiyatlarının toplamı, varsayılan para biriminizde hesaplanır. Para birimi ayarlanmamış garantiler varsayılan para biriminizi kullanır; farklı para birimindeki garantiler dahil edilmez. Satın alma fiyatı olmayan garantiler 0 sayılır."
+    "total_value_tooltip": "Arşivlenmemiş ve geçersiz kılınmamış tüm garantilerin satın alma fiyatlarının toplamı, varsayılan para biriminizde hesaplanır. Para birimi ayarlanmamış garantiler varsayılan para biriminizi kullanır; farklı para birimindeki garantiler dahil edilmez. Satın alma fiyatı olmayan garantiler 0 sayılır.",
+    "void_warranties": "Geçersiz Garantiler"
   },
   "about": {
     "title": "Warracker Hakkında",
@@ -766,7 +776,17 @@
     "resolved_label": "Çözüldü",
     "status_unknown": "Bilinmiyor",
     "unknown_vendor": "Bilinmeyen Satıcı",
-    "view_only": "Yalnızca Görüntüle"
+    "view_only": "Yalnızca Görüntüle",
+    "attach_document": "Belge ekle",
+    "confirm_delete_document": "Bu doküman hak talebinden kaldırılsın mı?",
+    "document_add_failed": "Belge eklenemedi",
+    "document_added": "Belge ekli",
+    "document_delete_failed": "Doküman kaldırılamadı",
+    "document_deleted": "Doküman kaldırıldı",
+    "document_open_failed": "Doküman açılamadı",
+    "documents": "Belgeler",
+    "storage_local": "Dosya yükle",
+    "storage_paperless": "Kağıtsız'a Yükle"
   },
   "errors": {
     "error": "Hata"

@@ -95,7 +95,8 @@
     "uptime": "Tempo di Attività",
     "archived_warranties": "Garanzie archiviate",
     "total_value": "Valore totale",
-    "total_value_tooltip": "Somma dei prezzi di acquisto di tutte le garanzie non archiviate e non annullate, calcolata nella valuta predefinita. Le garanzie senza valuta usano quella predefinita; quelle con una valuta diversa non sono incluse. Le garanzie senza prezzo di acquisto contano come 0."
+    "total_value_tooltip": "Somma dei prezzi di acquisto di tutte le garanzie non archiviate e non annullate, calcolata nella valuta predefinita. Le garanzie senza valuta usano quella predefinita; quelle con una valuta diversa non sono incluse. Le garanzie senza prezzo di acquisto contano come 0.",
+    "void_warranties": "Garanzie nulle"
   },
   "about": {
     "title": "Informazioni su Warracker",
@@ -310,7 +311,9 @@
     "transfer_ownership_warning": "Trasferisci la proprietà dell'applicazione a un altro utente amministratore. Questa azione è irreversibile.",
     "validate_urls": "Convalida URL",
     "view_full_list_of_supported_services": "Visualizza l'elenco completo dei servizi supportati",
-    "warning_title": "Avvertimento:"
+    "warning_title": "Avvertimento:",
+    "oidc_skip_login_screen": "Salta la schermata di accesso",
+    "oidc_skip_login_screen_desc": "In modalità Solo OIDC, salta la schermata di accesso e reindirizza gli utenti direttamente al provider SSO. Se l'accesso SSO non riesce, viene visualizzata la schermata di accesso con l'errore."
   },
   "warranties": {
     "title": "Garanzie",
@@ -485,7 +488,10 @@
     "or_link_to_invoice_url": "Oppure collegati all'URL della fattura",
     "or_link_to_manual_url": "Oppure collegarsi all'URL manuale",
     "search_or_add_new_tag": "Cerca o aggiungi un nuovo tag...",
-    "unnamed_product": "Prodotto senza nome"
+    "unnamed_product": "Prodotto senza nome",
+    "unvoid_warranty": "Garanzia non valida",
+    "void": "Vuoto",
+    "void_warranty": "Garanzia nulla"
   },
   "actions": {
     "save": "Salva",
@@ -729,7 +735,11 @@
     "warranty_not_found_refresh": "Garanzia non trovata. Aggiorna e riprova.",
     "import_success": "{{success}} garanzie importate. {{failure}} non riuscito.",
     "invalid_claim_status": "Stato del reclamo non valido. Deve essere uno tra: {{statuses}}",
-    "product_name_too_long": "Il nome del prodotto deve contenere massimo 255 caratteri"
+    "product_name_too_long": "Il nome del prodotto deve contenere massimo 255 caratteri",
+    "confirm_void_warranty": "Annullare questa garanzia? Verrà contrassegnato come inattivo ed escluso dai totali e dalle notifiche. Puoi ripristinarlo in seguito.",
+    "error_updating_void_status": "Impossibile aggiornare lo stato di annullamento",
+    "unvoided_success": "Garanzia ripristinata da nulla",
+    "voided_success": "Garanzia annullata"
   },
   "claims": {
     "claims": "Reclami",
@@ -773,7 +783,17 @@
     "resolved_label": "Risolto",
     "status_unknown": "Sconosciuto",
     "unknown_vendor": "Venditore sconosciuto",
-    "view_only": "Solo visualizzazione"
+    "view_only": "Solo visualizzazione",
+    "attach_document": "Allega documento",
+    "confirm_delete_document": "Rimuovere questo documento dal reclamo?",
+    "document_add_failed": "Impossibile allegare il documento",
+    "document_added": "Documento allegato",
+    "document_delete_failed": "Impossibile rimuovere il documento",
+    "document_deleted": "Documento rimosso",
+    "document_open_failed": "Impossibile aprire il documento",
+    "documents": "Documenti",
+    "storage_local": "Carica file",
+    "storage_paperless": "Carica su senza carta"
   },
   "errors": {
     "error": "Errore"

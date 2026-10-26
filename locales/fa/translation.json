@@ -223,7 +223,10 @@
     "or_link_to_files_url": "یا به آدرس فایل ها لینک دهید",
     "or_link_to_invoice_url": "یا به URL فاکتور پیوند دهید",
     "or_link_to_manual_url": "یا به URL دستی پیوند دهید",
-    "unnamed_product": "محصول بدون نام"
+    "unnamed_product": "محصول بدون نام",
+    "unvoid_warranty": "گارانتی بی اعتبار",
+    "void": "باطل",
+    "void_warranty": "گارانتی باطل"
   },
   "settings": {
     "title": "تنظیمات",
@@ -393,7 +396,9 @@
     "transfer_ownership_consequence_3": "فقط مالک جدید می‌تواند دوباره مالکیت را منتقل کند",
     "transfer_ownership_type_to_confirm": "برای تأیید، لطفاً \"TRANSFER\" را در قسمت زیر تایپ کنید:",
     "oidc_admin_desc": "گروهی که به آن امتیازات مدیریت داده شده است. برای غیرفعال کردن آن را خالی بگذارید.",
-    "oidc_admin_group": "گروه مدیریت OIDC"
+    "oidc_admin_group": "گروه مدیریت OIDC",
+    "oidc_skip_login_screen": "رد شدن از صفحه ورود",
+    "oidc_skip_login_screen_desc": "در حالت OIDC-Only، از صفحه ورود رد شوید و کاربران را مستقیماً به ارائه دهنده SSO هدایت کنید. اگر ورود SSO ناموفق باشد، صفحه ورود با خطا نشان داده می شود."
   },
   "actions": {
     "save": "ذخیره",
@@ -637,7 +642,11 @@
     "warranty_not_found_refresh": "گارانتی پیدا نشد لطفاً بازخوانی کنید و دوباره امتحان کنید.",
     "import_success": "ضمانت‌های {{success}} وارد شد. {{failure}} ناموفق بود.",
     "invalid_claim_status": "وضعیت ادعا نامعتبر است. باید یکی از این موارد باشد: {{statuses}}",
-    "product_name_too_long": "نام محصول باید 255 کاراکتر یا کمتر باشد"
+    "product_name_too_long": "نام محصول باید 255 کاراکتر یا کمتر باشد",
+    "confirm_void_warranty": "این گارانتی باطل می شود؟ غیرفعال علامت‌گذاری می‌شود و از جمع کل و اعلان‌ها حذف می‌شود. بعدا می توانید آن را بازیابی کنید.",
+    "error_updating_void_status": "وضعیت خالی به‌روزرسانی نشد",
+    "unvoided_success": "گارانتی از باطل بازگردانده شد",
+    "voided_success": "گارانتی باطل شد"
   },
   "languages": {
     "en": "انگلیسی",
@@ -683,7 +692,8 @@
     "uptime": "مدت فعالیت",
     "archived_warranties": "گارانتی های آرشیو شده",
     "total_value": "ارزش کل",
-    "total_value_tooltip": "مجموع قیمت خرید همه گارانتی‌هایی که بایگانی یا باطل نشده‌اند، با ارز پیش‌فرض شما محاسبه می‌شود. گارانتی‌های بدون ارز از ارز پیش‌فرض شما استفاده می‌کنند؛ گارانتی‌های با ارز متفاوت لحاظ نمی‌شوند. گارانتی‌های بدون قیمت خرید ۰ محسوب می‌شوند."
+    "total_value_tooltip": "مجموع قیمت خرید همه گارانتی‌هایی که بایگانی یا باطل نشده‌اند، با ارز پیش‌فرض شما محاسبه می‌شود. گارانتی‌های بدون ارز از ارز پیش‌فرض شما استفاده می‌کنند؛ گارانتی‌های با ارز متفاوت لحاظ نمی‌شوند. گارانتی‌های بدون قیمت خرید ۰ محسوب می‌شوند.",
+    "void_warranties": "گارانتی های باطل"
   },
   "about": {
     "title": "درباره Warracker",
@@ -766,7 +776,17 @@
     "resolved_label": "حل شد",
     "status_unknown": "ناشناس",
     "unknown_vendor": "فروشنده ناشناس",
-    "view_only": "مشاهده فقط"
+    "view_only": "مشاهده فقط",
+    "attach_document": "سند را پیوست کنید",
+    "confirm_delete_document": "این سند از ادعا حذف شود؟",
+    "document_add_failed": "سند پیوست نشد",
+    "document_added": "سند پیوست",
+    "document_delete_failed": "سند حذف نشد",
+    "document_deleted": "سند حذف شد",
+    "document_open_failed": "سند باز نشد",
+    "documents": "اسناد",
+    "storage_local": "آپلود فایل",
+    "storage_paperless": "در Paperless آپلود کنید"
   },
   "errors": {
     "error": "خطا"
