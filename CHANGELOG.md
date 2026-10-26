@@ -25,6 +25,8 @@
   - _Files: `backend/file_routes.py`, `frontend/js/components/paperless.js`, `frontend/script.js`_
 - **Void status mistranslations corrected:** the machine fill translated "Void" as emptiness in 14 locales (e.g. German "Leere", French "Vide", Russian "Пустота"), so voided cards read as "empty". The status word now reads as voided/invalid in those locales (e.g. German "Ungültig"), and the German and Portuguese void-warranty count labels are corrected as well. These are still unreviewed corrections — native-speaker review is recommended.
   - _Files: `locales/*/translation.json`_
+- **First OIDC user now becomes owner (PR #254):** signing in via OIDC as the first user previously granted admin but not owner, startup recovery promoted an ownerless database's first user to owner without admin, and admin-group sync could demote the owner on their next login. The first OIDC user now gets both owner and admin, recovery grants both roles, and the current owner keeps admin access regardless of admin-group membership.
+  - _Files: `backend/oidc_handler.py`, `backend/__init__.py`_
 
 ## 1.0.3 - 2026-10-02
 
