@@ -23,6 +23,8 @@ body:
       options:
         - Docker Compose
         - Unraid
+        - Proxmox
+        - TrueNAS
         - From source
         - Other
     validations:

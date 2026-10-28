@@ -133,11 +133,11 @@ The essential features are reliable and ready for everyday use. Development is o
 
 ### Other platforms
 
-Warracker is also available as a one-click install on:
+[![Unraid](https://img.shields.io/badge/Unraid-F15A24?style=for-the-badge&logo=unraid&logoColor=white)](https://ca.unraid.net/apps/warracker-0pkvcdo0mizgxc)
+[![Proxmox](https://img.shields.io/badge/Proxmox-E57000?style=for-the-badge&logo=proxmox&logoColor=white)](https://github.com/sassanix/Warracker/tree/main/proxmox)
+[![TrueNAS](https://img.shields.io/badge/TrueNAS-0095D5?style=for-the-badge&logo=truenas&logoColor=white)](https://github.com/sassanix/Warracker/tree/main/truenas)
 
-*   **Unraid** — Community Apps (Tools > System), see the [Unraid listing](https://ca.unraid.net/apps/warracker-0pkvcdo0mizgxc).
-*   **Proxmox VE** — community helper script, see [`proxmox/`](https://github.com/sassanix/Warracker/tree/main/proxmox).
-*   **TrueNAS SCALE** — official Apps catalog, see [`truenas/`](https://github.com/sassanix/Warracker/tree/main/truenas).
+One-click installs on Unraid (Community Apps), Proxmox VE (community helper script), and TrueNAS SCALE (Apps catalog) — see the [`proxmox/`](https://github.com/sassanix/Warracker/tree/main/proxmox) and [`truenas/`](https://github.com/sassanix/Warracker/tree/main/truenas) guides.
 
 <details>
 <summary>Full <code>docker-compose.yml</code> reference</summary>
@@ -345,6 +345,7 @@ This project is licensed under the GNU Affero General Public License v3.0 - see 
 *   Chart.js
 *   Apprise
 *   i18next
+*   [Font Awesome](https://fontawesome.com) Free — icons used in the app interface and the wiki documentation
 
 ### Security researchers
 *   [humidnhefty](https://github.com/humidnhefty) and the CSCE 413 (Texas A&M University) vulnerability-research team — Carrigan Royer, Jayani Singh, Seshadithya Saravanan, Aaditya Srinivasan, Miko Quinones — for the responsible disclosure of a stored XSS vulnerability.
