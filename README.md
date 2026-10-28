@@ -339,12 +339,12 @@ This project is licensed under the GNU Affero General Public License v3.0 - see 
 
 ## 🙏Acknowledgements
 
-*   Flask
-*   PostgreSQL
-*   Docker
-*   Chart.js
-*   Apprise
-*   i18next
+*   [Flask](https://flask.palletsprojects.com)
+*   [PostgreSQL](https://www.postgresql.org)
+*   [Docker](https://www.docker.com)
+*   [Chart.js](https://www.chartjs.org)
+*   [Apprise](https://github.com/caronc/apprise)
+*   [i18next](https://www.i18next.com)
 *   [Font Awesome](https://fontawesome.com) Free — icons used in the app interface and the wiki documentation
 
 ### Security researchers
