@@ -345,7 +345,7 @@ This project is licensed under the GNU Affero General Public License v3.0 - see 
 *   [Chart.js](https://www.chartjs.org)
 *   [Apprise](https://github.com/caronc/apprise)
 *   [i18next](https://www.i18next.com)
-*   [Font Awesome](https://fontawesome.com) Free — icons used in the app interface and the wiki documentation
+*   [Font Awesome](https://fontawesome.com)
 
 ### Security researchers
 *   [humidnhefty](https://github.com/humidnhefty) and the CSCE 413 (Texas A&M University) vulnerability-research team — Carrigan Royer, Jayani Singh, Seshadithya Saravanan, Aaditya Srinivasan, Miko Quinones — for the responsible disclosure of a stored XSS vulnerability.
