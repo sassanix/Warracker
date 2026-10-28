@@ -1,0 +1,74 @@
+name: Bug report
+description: Report a problem with Warracker
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before reporting, please check the [FAQ](https://github.com/sassanix/Warracker/wiki/FAQ) and [Troubleshooting](https://github.com/sassanix/Warracker/wiki/Troubleshooting) pages, and search existing issues — your problem may already have a fix or workaround.
+        For security vulnerabilities, do **not** open a public issue. Use [private vulnerability reporting](https://github.com/sassanix/Warracker/security/advisories/new) instead.
+  - type: input
+    id: version
+    attributes:
+      label: Warracker version
+      description: Find it on the About page in the app.
+      placeholder: e.g. 1.0.3
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install Warracker?
+      options:
+        - Docker Compose
+        - Unraid
+        - From source
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear description of what went wrong.
+      placeholder: When I click X, Y happens instead of Z.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps that reliably reproduce the problem.
+      placeholder: |
+        1. Go to ...
+        2. Click ...
+        3. See the error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen instead.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant lines from `docker compose logs warracker` (or `docker logs warracker`). Remove any passwords, tokens, or other secrets before pasting.
+      render: shell
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Helpful files
+      description: Drag and drop files here that help diagnose the issue — a screenshot or recording of the error, browser console output, the full log file, or a sample file that fails to import. Do NOT upload your real .env file, unredacted logs, or documents containing personal information — remove passwords, tokens, and private details first.
+      placeholder: Drop screenshots, log files, or sample files here.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and this bug has not been reported already
+          required: true
+        - label: This is not a security vulnerability
+          required: true

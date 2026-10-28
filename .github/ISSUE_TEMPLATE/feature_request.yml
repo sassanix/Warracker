@@ -1,0 +1,52 @@
+name: Feature request
+description: Suggest an enhancement or new feature for Warracker
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before requesting, please search existing issues — your idea may already be open for discussion.
+        If you are reporting a security vulnerability instead, do **not** open a public issue. Use [private vulnerability reporting](https://github.com/sassanix/Warracker/security/advisories/new).
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the problem or limitation you run into today, not just the solution.
+      placeholder: I have to ... manually every time because ...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How you imagine this working.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Other ways to solve the same problem, if any.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of Warracker this touches.
+      options:
+        - Dashboard / warranty list
+        - Adding or editing warranties
+        - Claims
+        - Notifications
+        - Paperless-ngx
+        - Authentication / OIDC
+        - Import / export
+        - Mobile / PWA
+        - Translations
+        - Other
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contributing
+      options:
+        - label: I would be willing to contribute a pull request for this
