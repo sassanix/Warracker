@@ -131,6 +131,14 @@ The essential features are reliable and ready for everyday use. Development is o
     ```
 4. Open `http://localhost:8005` in your browser. The first account you create automatically becomes the admin.
 
+### Other platforms
+
+Warracker is also available as a one-click install on:
+
+*   **Unraid** — Community Apps (Tools > System), see the [Unraid listing](https://ca.unraid.net/apps/warracker-0pkvcdo0mizgxc).
+*   **Proxmox VE** — community helper script, see [`proxmox/`](https://github.com/sassanix/Warracker/tree/main/proxmox).
+*   **TrueNAS SCALE** — official Apps catalog, see [`truenas/`](https://github.com/sassanix/Warracker/tree/main/truenas).
+
 <details>
 <summary>Full <code>docker-compose.yml</code> reference</summary>
 
