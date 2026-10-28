@@ -19,6 +19,7 @@ The easiest way to organize product warranties, monitor expiration dates, and st
 ![GitHub last commit](https://img.shields.io/github/last-commit/sassanix/Warracker)
 ![GitHub release](https://img.shields.io/github/v/release/sassanix/Warracker)
 ![GitHub contributors](https://img.shields.io/github/contributors/sassanix/Warracker)
+[![Wiki](https://img.shields.io/badge/Wiki-Documentation-blue?logo=github)](https://github.com/sassanix/Warracker/wiki)
 [![Discord](https://img.shields.io/badge/discord-chat-green?logo=discord)](https://discord.gg/PGxVS3U2Nw)
 [![Ask DeepWiki](https://img.shields.io/badge/Ask_DeepWiki-AI_docs-blue)](https://deepwiki.com/sassanix/Warracker)
 
@@ -33,6 +34,8 @@ The easiest way to organize product warranties, monitor expiration dates, and st
 ## 🌟Overview
 
 **Warracker** is a web-based application that simplifies the management of product warranties. It allows users to organize warranty information, monitor expiration dates, and securely store related documents.
+
+Full guides live in the [Warracker Wiki](https://github.com/sassanix/Warracker/wiki): setup, the complete user guide, configuration, backup and restore, updating, reverse proxies, security, troubleshooting, and contributing.
 
 
 ## 🔑 Key Features
