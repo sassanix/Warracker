@@ -33,6 +33,8 @@ os.environ.setdefault("DB_NAME", "warranty_test_suite")
 os.environ.setdefault("DB_USER", "warranty_user")
 os.environ.setdefault("DB_PASSWORD", "warranty_password")
 os.environ.setdefault("SECRET_KEY", "warracker-test-secret-key-0123456789")
+# Cap uploads at 1 MB so the 413 path is testable with a small file.
+os.environ.setdefault("MAX_UPLOAD_MB", "1")
 os.environ.setdefault(
     "UPLOAD_FOLDER",
     os.path.join(tempfile.gettempdir(), "warracker-test-uploads"),
@@ -140,6 +142,14 @@ def warranty_factory(client):
         return client.post("/api/warranties", data=data, headers=headers)
 
     return _make
+
+
+@pytest.fixture()
+def db_connection():
+    """Direct connection to the suite database (legacy-data setups)."""
+    conn = _connect(os.environ["DB_NAME"])
+    yield conn
+    conn.close()
 
 
 @pytest.fixture(scope="session")

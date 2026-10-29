@@ -95,6 +95,74 @@ def test_claim_status_validation(client, user_factory, warranty_factory):
     assert r.status_code == 200
 
 
+def test_serial_number_too_long(client, user_factory):
+    h = user_factory()["headers"]
+    base = {"product_name": "SerialWidget", "purchase_date": TODAY_S,
+            "exact_expiration_date": NEXT_YEAR}
+    r = client.post("/api/warranties", headers=h,
+                    data={**base, "serial_numbers[]": ["x" * 300]})
+    assert r.status_code == 400
+    assert r.get_json()["code"] == "serial_number_too_long"
+    r = client.post("/api/warranties", headers=h,
+                    data={**base, "serial_numbers[]": ["x" * 255]})
+    assert r.status_code == 201, r.get_data(as_text=True)
+
+
+def test_whitespace_only_product_name(client, user_factory):
+    h = user_factory()["headers"]
+    r = _add(client, h, "   ", TODAY_S, exp_date=NEXT_YEAR)
+    assert r.status_code == 400
+
+
+def test_tag_name_too_long(client, user_factory):
+    h = user_factory()["headers"]
+    r = client.post("/api/tags", headers=h,
+                    json={"name": "x" * 51, "color": "#123456"})
+    assert r.status_code == 400
+    r = client.post("/api/tags", headers=h,
+                    json={"name": "x" * 50, "color": "#123456"})
+    assert r.status_code in (200, 201), r.get_data(as_text=True)
+
+
+def test_password_over_72_chars_rejected(client):
+    # bcrypt truncates/rejects past 72 bytes; registration must fail
+    # cleanly with a 400, not a 500 (1.0.3 fix).
+    r = client.post("/api/auth/register", json={
+        "username": "longpwuser", "email": "longpw@test.local",
+        "password": "P" * 100, "first_name": "Long", "last_name": "Pw"})
+    assert r.status_code == 400
+
+
+def test_claim_document_file_type_rejected(client, user_factory,
+                                           warranty_factory):
+    h = user_factory()["headers"]
+    wid = warranty_factory(h).get_json()["id"]
+    r = client.post(f"/api/warranties/{wid}/claims", headers=h, json={
+        "claim_date": TODAY_S, "status": "Submitted"})
+    cid = r.get_json()["id"]
+    r = client.post(f"/api/warranties/{wid}/claims/{cid}/documents",
+                    headers=h,
+                    data={"file": (io.BytesIO(b"MZ"), "evil.exe")},
+                    content_type="multipart/form-data")
+    assert r.status_code == 400
+    assert r.get_json()["code"] == "file_type_not_allowed"
+
+
+def test_oversized_upload_returns_json_413(client, user_factory):
+    # The suite caps uploads at 1 MB (see conftest); a 2 MB photo must
+    # get the JSON 413, not an HTML error page or a 500 (1.0.3 fix).
+    h = user_factory()["headers"]
+    big = io.BytesIO(b"\x89PNG\r\n\x1a\n" + b"0" * (2 * 1024 * 1024))
+    r = client.post("/api/warranties", headers=h,
+                    data={"product_name": "BigPhoto",
+                          "purchase_date": TODAY_S,
+                          "exact_expiration_date": NEXT_YEAR,
+                          "product_photo": (big, "big.png")},
+                    content_type="multipart/form-data")
+    assert r.status_code == 413
+    assert r.is_json
+
+
 def test_csv_import_comma_tags(client, user_factory):
     h = user_factory()["headers"]
     csv_body = (
