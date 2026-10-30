@@ -96,7 +96,7 @@ The essential features are reliable and ready for everyday use. Development is o
 
 ## 🗺️Roadmap
 
-What's planned next — the 1.0.5 features, planned work, and feature requests under consideration — lives on the [Roadmap](https://github.com/sassanix/Warracker/wiki/Roadmap) page in the wiki. Shipped work is in the [changelog](CHANGELOG.md) and the [releases](https://github.com/sassanix/Warracker/releases).
+What's planned next — 1.0.4, in final testing now, then 1.0.5, plus the feature requests under consideration — lives on the [Roadmap](https://github.com/sassanix/Warracker/wiki/Roadmap) page in the wiki. Shipped work is in the [changelog](CHANGELOG.md) and the [releases](https://github.com/sassanix/Warracker/releases).
 
 ## 🚀Setup
 
