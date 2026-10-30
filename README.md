@@ -14,11 +14,13 @@ The easiest way to organize product warranties, monitor expiration dates, and st
 
 <div align="center">
     
+![GitHub stars](https://img.shields.io/github/stars/sassanix/Warracker)
 ![GitHub issues](https://img.shields.io/github/issues/sassanix/Warracker)
 ![GitHub license](https://img.shields.io/github/license/sassanix/Warracker)
 ![GitHub last commit](https://img.shields.io/github/last-commit/sassanix/Warracker)
 ![GitHub release](https://img.shields.io/github/v/release/sassanix/Warracker)
 ![GitHub contributors](https://img.shields.io/github/contributors/sassanix/Warracker)
+[![Tests](https://github.com/sassanix/Warracker/actions/workflows/tests.yml/badge.svg)](https://github.com/sassanix/Warracker/actions/workflows/tests.yml)
 [![Wiki](https://img.shields.io/badge/Wiki-Documentation-blue?logo=github)](https://github.com/sassanix/Warracker/wiki)
 [![Discord](https://img.shields.io/badge/discord-chat-green?logo=discord)](https://discord.gg/PGxVS3U2Nw)
 [![Ask DeepWiki](https://img.shields.io/badge/Ask_DeepWiki-AI_docs-blue)](https://deepwiki.com/sassanix/Warracker)
@@ -43,25 +45,19 @@ Full guides live in the [Warracker Wiki](https://github.com/sassanix/Warracker/w
 | **Feature**                      | **Description**                                                                                          |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | 🗃️ **Centralized Management**   | Track all your product warranties in one place                                                           |
-| 🧾 **Detailed Records**          | Store purchase dates, durations, notes, and product photos with thumbnail previews                       |
+| 🧾 **Detailed Records**          | Store purchase dates, durations, notes, multiple serial numbers, and product photos with thumbnail previews |
 | 📄 **Document Storage**          | Upload receipts, invoices, and manuals securely                                                          |
-| 📝 **Warranty Claims**           | Manage warranty claims end-to-end with statuses, dates, resolutions, and full lifecycle visibility       |
+| 📝 **Warranty Claims**           | Manage warranty claims end-to-end with statuses, dates, resolutions, attached documents, and full lifecycle visibility |
 | 🔔 **Proactive Alerts**          | Get alerts for upcoming expirations via email or 100+ push services (Discord, Slack, etc.) using Apprise — each threshold notifies once, never daily repeats |
-| 🔍 **Quick Search and Filter**   | Search by product name, serial number, vendor, tags, and more with real-time filtering                   |
-| #️⃣ **Multiple Serial Numbers**  | Add and manage multiple serial numbers per product                                                       |
-| 🌍 **Global Warranty View**      | Authenticated users can view global warranty data with role-based permissions                            |
-| 👥 **Multi-User Support**        | Manage multiple accounts with admin controls and global access toggles                                   |
+| 🔍 **Quick Search and Filter**   | Search by product name, serial number, vendor, and more with real-time filtering, and organize with custom tags |
+| 👥 **Multi-User & Global View**  | Multiple accounts with admin controls; authenticated users can view global warranty data with role-based permissions |
 | 📤 **Data Export/Import**        | Import/export warranty data via CSV — exports include every field (notes, currency, model, warranty type), so a re-import restores your data exactly |
 | ⚙️ **Customizable Settings**     | Configure currency, date formats, notification timing, and branding                                      |
-| 🌐 **Internationalization Support** | Support for multiple currencies and date formats tailored to regional preferences, enabling a seamless global user experience |
-| 🏷️ **Tagging**                  | Organize warranties using custom tags                                                                    |
 | 📦 **Archiving**                 | Archive expired or unused warranties for better organization, while keeping records accessible when needed |
-| 🔐 **Password Reset**            | Token-based, secure account recovery system                                                              |
 | 🔑 **OIDC SSO**                  | Single sign-on with providers like Google, GitHub, and Keycloak                                          |
 | 📊 **Status Dashboard**          | Visual analytics and stats with charts, tables, and global/user views — including Total Value (in your default currency) and Archived summary cards, plus CSV export of the filtered view |
-| 📱 **Responsive UI**             | Mobile-friendly interface with admin tools and improved UX                                               |
 | 📦 **Paperless-ngx Integration** | Store/manage documents directly in Paperless-ngx with file-level control                                 |
-| 📖 **Localization Support**      | [Full multilingual UI with 20 languages](https://github.com/sassanix/Warracker?tab=readme-ov-file#-localization-support), RTL support, instant language switching, and native name display |
+| 📖 **Localization Support**      | [Full multilingual UI with 20 languages](https://github.com/sassanix/Warracker/wiki/User-Guide#languages), RTL support, instant language switching, and native name display |
 
 
 ---
@@ -80,14 +76,14 @@ The essential features are reliable and ready for everyday use. Development is o
 
 **Home Page**
 
-<img width="1214" height="928" alt="image" src="https://github.com/user-attachments/assets/0c13e416-42ea-4378-ae50-7addee435e00" />
+<img width="1214" height="928" alt="Warracker home page with warranty cards" src="https://github.com/user-attachments/assets/0c13e416-42ea-4378-ae50-7addee435e00" />
 
-<img width="1208" height="927" alt="image" src="https://github.com/user-attachments/assets/4c5fdd5d-ff43-427d-82a5-45121dd21373" />
+<img width="1208" height="927" alt="Warracker home page, table view" src="https://github.com/user-attachments/assets/4c5fdd5d-ff43-427d-82a5-45121dd21373" />
 
 
-**Status Dashboard**  
+**Status Dashboard**
 
-<img width="1167" height="1140" alt="image" src="https://github.com/user-attachments/assets/fca09073-7c34-4165-ad5c-86a03618ec87" />
+<img src="images/status-dashboard.png" alt="Warracker status dashboard with summary cards including Total Value and Void">
 
 
 ## 🛠️Technology Stack
@@ -100,21 +96,8 @@ The essential features are reliable and ready for everyday use. Development is o
 
 ## 🗺️Roadmap
 
-* ✅ User Authentication
-* ✅ Settings Page
-* ✅ Status Page
-* ✅ Customizable Reminders
-* ✅ Email Notifications
-* ✅ Warranty Categories via Tags
-* ✅ CSV Import/Export
-* ✅ OIDC SSO Functionality
-* ✅ Advanced User/Admin Controls
-* ✅ Paperless-ngx integration
-* ✅ Localization Support
-* ✅ Warranty Claim Tracking
-* ✅ Audit trail
-* [ ] Calendar Integration
-      
+What's planned next — the 1.0.5 features, planned work, and feature requests under consideration — lives on the [Roadmap](https://github.com/sassanix/Warracker/wiki/Roadmap) page in the wiki. Shipped work is in the [changelog](CHANGELOG.md) and the [releases](https://github.com/sassanix/Warracker/releases).
+
 ## 🚀Setup
 
 ### Prerequisites
@@ -123,13 +106,19 @@ The essential features are reliable and ready for everyday use. Development is o
 
 ### Steps
 
-1. Copy the compose file and `.env` example from the [`Docker/`](https://github.com/sassanix/Warracker/tree/main/Docker) folder.
-2. Fill in the required values in your `.env` file (database credentials, `SECRET_KEY`, etc.).
-3. Start the stack:
+```bash
+mkdir warracker && cd warracker
+curl -O https://raw.githubusercontent.com/sassanix/Warracker/main/Docker/docker-compose.yml
+curl -O https://raw.githubusercontent.com/sassanix/Warracker/main/Docker/.env.example
+mv .env.example .env
+```
+
+1. Fill in the required values in your `.env` file (database credentials, `SECRET_KEY`, etc.).
+2. Start the stack:
     ```
     docker compose up -d
     ```
-4. Open `http://localhost:8005` in your browser. The first account you create automatically becomes the admin.
+3. Open `http://localhost:8005` in your browser. The first account you create automatically becomes the admin.
 
 ### Other platforms
 
@@ -200,75 +189,14 @@ volumes:
 - A warranty that expires today is still counted as active (not expired) across the dashboard, warranty lists, and expiry notifications.  
 
 
-<details>
-<summary><strong>Product Information Entry Requirements for CSV import</strong></summary>
-
-Click on **Data** > **Import**
-
-| Field Name     | Format / Example                          | Required?                                              | Notes                                                                 |
-|----------------|-------------------------------------------|--------------------------------------------------------|-----------------------------------------------------------------------|
-| **ProductName** | Text                                       | ✅ Yes                                                  | Provide the name of the product.                                     |
-| **PurchaseDate** | Date (`YYYY-MM-DD`, e.g., `2024-05-21`)   | ✅ Yes                                                  | Use ISO format only.                                                 |
-| **WarrantyDurationYears** | Whole Number (`0`, `1`, `5`)      | ✅ Yes, if `IsLifetime` is `FALSE` and Months/Days are 0/blank. At least one duration field (Years, Months, Days) must be non-zero if not lifetime. | Represents the years part of the warranty. Can be combined with Months and Days. |
-| **WarrantyDurationMonths** | Whole Number (`0`, `6`, `18`)    | ✅ Yes, if `IsLifetime` is `FALSE` and Years/Days are 0/blank. At least one duration field (Years, Months, Days) must be non-zero if not lifetime. | Represents the months part of the warranty. Can be combined with Years and Days. Max 11 if Years also provided. |
-| **WarrantyDurationDays** | Whole Number (`0`, `15`, `90`)     | ✅ Yes, if `IsLifetime` is `FALSE` and Years/Months are 0/blank. At least one duration field (Years, Months, Days) must be non-zero if not lifetime. | Represents the days part of the warranty. Can be combined with Years and Months. Max 29/30 if Months also provided. |
-| **ExpirationDate** | Date (`YYYY-MM-DD`, e.g., `2031-10-08`)   | ❌ No (Optional)                                        | Use this if duration fields are 0 and `IsLifetime` is `FALSE`.       |
-| **IsLifetime**  | `TRUE` or `FALSE` (case-insensitive)       | ❌ No (Optional)                                        | If omitted, defaults to `FALSE`. If `TRUE`, duration fields are ignored. |
-| **PurchasePrice** | Number (`199.99`, `50`)                  | ❌ No (Optional)                                        | Cannot be negative if provided.                                      |
-| **SerialNumber** | Text (`SN123`, `SN123,SN456`)             | ❌ No (Optional)                                        | For multiple values, separate with commas. Exports use JSON encoding when a value itself contains a comma; the importer accepts both formats. |
-| **ProductURL**   | Text (URL format)                         | ❌ No (Optional)                                        | Full URL to product page (optional field). https://producturl.com                           |
-| **Vendor**       | Text                                      | ❌ No (Optional)                                        | Name of the vendor or seller where the product was purchased.        |
-| **Tags**         | Text (`tag1,tag2`)                        | ❌ No (Optional)                                        | Use comma-separated values for multiple tags. Exports use JSON encoding when a tag itself contains a comma; the importer accepts both formats. |
-| **Notes**        | Text                                      | ❌ No (Optional)                                        | Free-text notes stored with the warranty. Included in CSV exports, so re-importing an export restores them. |
-| **Currency**     | Currency code (`USD`, `EUR`, `CAD`)       | ❌ No (Optional)                                        | Must be a supported currency code; unknown codes fall back to your preferred currency. Included in CSV exports. |
-| **ModelNumber**  | Text                                      | ❌ No (Optional)                                        | Product model number. Included in CSV exports.                       |
-| **WarrantyType** | Text                                      | ❌ No (Optional)                                        | Warranty type (e.g. manufacturer, extended). Included in CSV exports. |
-</details>
+To import, click **Data** > **Import** and choose a CSV file. The full field reference — formats, which fields are required, and how exports encode values — is in the [User Guide](https://github.com/sassanix/Warracker/wiki/User-Guide#csv-import-and-export).
 
 ---
 
 
 ## 🌐 Localization Support
 
-Warracker offers **full multilingual UI support** with **20 languages**, including **RTL (Right-to-Left) support**, instant language switching, and native name display.
-
-<details>
-    
-<summary><strong>Supported Languages</strong></summary>
-
-| Language | Code | Native Name | Notes |
-|---|---:|---|---|
-| <img src="https://flagcdn.com/16x12/sa.png" width="16" height="12" alt="SA"> Arabic | ar | العربية | *RTL Support* |
-| <img src="https://flagcdn.com/16x12/cz.png" width="16" height="12" alt="CZ"> Czech | cs | Čeština | |
-| <img src="https://flagcdn.com/16x12/de.png" width="16" height="12" alt="DE"> German | de | Deutsch | |
-| <img src="https://flagcdn.com/16x12/gb.png" width="16" height="12" alt="GB"> English | en | English | *Default* |
-| <img src="https://flagcdn.com/16x12/es.png" width="16" height="12" alt="ES"> Spanish | es | Español | |
-| <img src="https://abs.twimg.com/responsive-web/client-web/1f1ee-1f1f7.4a41f56a.svg" width="16" height="12" alt="IR"> Persian | fa | فارسی | *RTL Support* |
-| <img src="https://flagcdn.com/16x12/fr.png" width="16" height="12" alt="FR"> French | fr | Français | |
-| <img src="https://flagcdn.com/16x12/in.png" width="16" height="12" alt="IN"> Hindi | hi | हिन्दी | |
-| <img src="https://flagcdn.com/16x12/it.png" width="16" height="12" alt="IT"> Italian | it | Italiano | |
-| <img src="https://flagcdn.com/16x12/jp.png" width="16" height="12" alt="JP"> Japanese | ja | 日本語 | |
-| <img src="https://flagcdn.com/16x12/kr.png" width="16" height="12" alt="KR"> Korean | ko | 한국어 | |
-| <img src="https://flagcdn.com/16x12/nl.png" width="16" height="12" alt="NL"> Dutch | nl | Nederlands | |
-| <img src="https://flagcdn.com/16x12/pt.png" width="16" height="12" alt="PT"> Portuguese | pt | Português | |
-| <img src="https://flagcdn.com/16x12/ru.png" width="16" height="12" alt="RU"> Russian | ru | Русский | |
-| <img src="https://flagcdn.com/16x12/ua.png" width="16" height="12" alt="UA"> Ukrainian | uk | Українська | |
-| <img src="https://flagcdn.com/16x12/cn.png" width="16" height="12" alt="CN"> Chinese (Simplified) | zh_CN | 简体中文 | |
-| <img src="https://flagcdn.com/16x12/hk.png" width="16" height="12" alt="HK"> Chinese (Hong Kong) | zh_HK | 繁體中文 (香港) | |
-| <img src="https://flagcdn.com/16x12/tr.png" width="16" height="12" alt="TR"> Turkish | tr | Türkçe | |
-| <img src="https://flagcdn.com/16x12/pl.png" width="16" height="12" alt="PL"> Polish | pl | Polski | |
-| <img src="https://flagcdn.com/16x12/il.png" width="16" height="12" alt="IL"> Hebrew | he | עברית | *RTL Support* |
-
----
-
-### Language Selection Features
-
-- **Auto-Detection:** Automatically detects browser language on first visit  
-- **User Preference:** Saves individual language choice to user profile  
-- **Native Names:** Dropdown displays language names in native scripts for clarity  
-- **Instant Switching:** Change languages in real-time without page reload  
-
-</details>
+Warracker offers **full multilingual UI support** with **20 languages**, including **RTL (Right-to-Left) support**, instant language switching, and native name display. The language is auto-detected from your browser on first visit and saved to your profile. The full list of supported languages is in the [User Guide](https://github.com/sassanix/Warracker/wiki/User-Guide#languages).
 
 ---
 
