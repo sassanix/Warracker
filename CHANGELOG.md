@@ -27,6 +27,8 @@
   - _Files: `locales/*/translation.json`_
 - **First OIDC user now becomes owner (PR #254):** signing in via OIDC as the first user previously granted admin but not owner, startup recovery promoted an ownerless database's first user to owner without admin, and admin-group sync could demote the owner on their next login. The first OIDC user now gets both owner and admin, recovery grants both roles, and the current owner keeps admin access regardless of admin-group membership.
   - _Files: `backend/oidc_handler.py`, `backend/__init__.py`_
+- **Claim document attach button sizing:** the "Attach document" button in a claim's Documents section stretched across the whole section — the base button style is full-width (it is designed for form submit buttons), while this button sits in a row beside the compact storage select. It now sizes to its content at the same scale as the select, matching the other compact controls in the app, and the row wraps on narrow screens so the button stays inside the section on mobile instead of overflowing it. The stylesheet cache version is bumped so the fix reaches existing installs without a hard refresh.
+  - _Files: `frontend/style.css`, `frontend/*.html` (stylesheet version bump)_
 
 ## 1.0.3 - 2026-10-02
 

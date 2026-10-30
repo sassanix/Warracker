@@ -5496,6 +5496,7 @@ html.dark-mode .warracker-footer a:hover {
 .claim-documents-add {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
 }
@@ -5507,6 +5508,15 @@ html.dark-mode .warracker-footer a:hover {
   border-radius: 4px;
   background: var(--card-bg);
   color: var(--text-color);
+}
+
+/* The base .btn is full-width for form submits; the attach button sits in a
+   row next to the storage select, so size it to its content like the select. */
+.claim-doc-attach {
+  width: auto;
+  flex: 0 0 auto;
+  padding: 4px 14px;
+  font-size: 0.85rem;
 }
 
 /* Status badges */
