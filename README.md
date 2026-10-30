@@ -33,11 +33,26 @@ The easiest way to organize product warranties, monitor expiration dates, and st
 
 ⭐ If you find Warracker helpful, we’d truly appreciate a star on GitHub! Your support motivates us to keep improving and building great new features.
 
+## 📚Documentation
+
+Full guides live in the [Warracker Wiki](https://github.com/sassanix/Warracker/wiki) — every guide opens with a Contents list, so you can jump straight to the section you need:
+
+- [Getting Started](https://github.com/sassanix/Warracker/wiki/Getting-Started) — installation and first run
+- [User Guide](https://github.com/sassanix/Warracker/wiki/User-Guide) — every screen, button, and field
+- [Paperless-ngx](https://github.com/sassanix/Warracker/wiki/Paperless-ngx) — document integration and access rules
+- [Authentication](https://github.com/sassanix/Warracker/wiki/Authentication) — accounts, OIDC, and roles
+- [Settings](https://github.com/sassanix/Warracker/wiki/Settings) — every setting explained
+- [Configuration](https://github.com/sassanix/Warracker/wiki/Configuration) — environment variables and defaults
+- [Backup and Restore](https://github.com/sassanix/Warracker/wiki/Backup-and-Restore) — what to back up and how to restore
+- [Updating](https://github.com/sassanix/Warracker/wiki/Updating) — image tags, updates, and rollback
+- [Reverse Proxy](https://github.com/sassanix/Warracker/wiki/Reverse-Proxy) — Nginx, Caddy, Traefik, Cloudflare Tunnel
+- [Troubleshooting](https://github.com/sassanix/Warracker/wiki/Troubleshooting) — fixes and error numbers
+- [FAQ](https://github.com/sassanix/Warracker/wiki/FAQ) — common questions
+- [Roadmap](https://github.com/sassanix/Warracker/wiki/Roadmap) — what is planned next
+
 ## 🌟Overview
 
 **Warracker** is a web-based application that simplifies the management of product warranties. It allows users to organize warranty information, monitor expiration dates, and securely store related documents.
-
-Full guides live in the [Warracker Wiki](https://github.com/sassanix/Warracker/wiki): setup, the complete user guide, configuration, backup and restore, updating, reverse proxies, security, troubleshooting, and contributing.
 
 
 ## 🔑 Key Features
