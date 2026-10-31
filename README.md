@@ -83,7 +83,7 @@ The essential features are reliable and ready for everyday use. Development is o
 
 **Status Dashboard**
 
-<img src="images/status-dashboard.png" alt="Warracker status dashboard with summary cards including Total Value and Void">
+<img src="images/status-dashboard-2026.png" alt="Warracker status dashboard with summary cards including Total Value and Void">
 
 
 ## 🛠️Technology Stack
