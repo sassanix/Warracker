@@ -33,6 +33,8 @@ The easiest way to organize product warranties, monitor expiration dates, and st
 
 ⭐ If you find Warracker helpful, we’d truly appreciate a star on GitHub! Your support motivates us to keep improving and building great new features.
 
+[![Support Warracker](https://img.shields.io/badge/Support-Warracker-red?style=for-the-badge&logo=github-sponsors)](https://buymeacoffee.com/sassanix)
+
 ## 🌟Overview
 
 **Warracker** is a web-based application that simplifies the management of product warranties. It allows users to organize warranty information, monitor expiration dates, and securely store related documents.
@@ -252,7 +254,7 @@ We welcome contributions and appreciate your interest in improving this project!
 
 
 
-[![Support Warracker](https://img.shields.io/badge/Support-Warracker-red?style=for-the-badge&logo=github-sponsors)](https://buymeacoffee.com/sassanix)
+<a href="https://buymeacoffee.com/sassanix"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="217" height="60"/></a>
 
 
 ## Join Our Community
