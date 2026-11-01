@@ -38,10 +38,10 @@ class Config:
     # Database Configuration
     DB_HOST = os.environ.get('DB_HOST', 'warrackerdb')
     DB_NAME = os.environ.get('DB_NAME', 'warranty_db')
-    DB_USER = os.environ.get('DB_USER')
-    DB_PASSWORD = os.environ.get('DB_PASSWORD')
-    DB_ADMIN_USER = os.environ.get('DB_ADMIN_USER')
-    DB_ADMIN_PASSWORD = os.environ.get('DB_ADMIN_PASSWORD')
+    DB_USER = os.environ.get('DB_USER', 'warranty_user')
+    DB_PASSWORD = os.environ.get('DB_PASSWORD', 'warranty_password')
+    DB_ADMIN_USER = os.environ.get('DB_ADMIN_USER', 'warracker_admin')
+    DB_ADMIN_PASSWORD = os.environ.get('DB_ADMIN_PASSWORD', 'default_admin_password')
     
     # File Upload Configuration
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', '/data/uploads')
@@ -82,9 +82,29 @@ class Config:
     USE_X_SENDFILE = False  # Serve files directly via Flask; nginx is not configured to handle X-Sendfile
     
     @staticmethod
+    def _warn_unset_db_vars(app):
+        # Built-in DB credential defaults are deprecated: installs should set
+        # all four variables explicitly. Warn for one release cycle (1.0.5);
+        # the defaults are removed and the variables become required in 1.0.6.
+        if app.config.get('TESTING'):
+            return
+        unset_vars = [
+            var for var in ('DB_USER', 'DB_PASSWORD', 'DB_ADMIN_USER', 'DB_ADMIN_PASSWORD')
+            if not os.environ.get(var)
+        ]
+        if unset_vars:
+            logger.warning(
+                "DEPRECATION WARNING: %s not set explicitly, so built-in default "
+                "database credentials are in use. These defaults are deprecated and "
+                "will be removed in version 1.0.6, when all four variables will be "
+                "required. Set them in your environment or .env file.",
+                ', '.join(unset_vars))
+
+    @staticmethod
     def init_app(app):
         """Initialize configuration-specific settings."""
         Config._check_secret_key()
+        Config._warn_unset_db_vars(app)
 
         if not os.path.exists(Config.UPLOAD_FOLDER):
             try:
@@ -118,13 +138,6 @@ class ProductionConfig(Config):
     
     @staticmethod
     def init_app(app):
-        missing_db_vars = [
-            var for var in ('DB_USER', 'DB_PASSWORD', 'DB_ADMIN_USER', 'DB_ADMIN_PASSWORD')
-            if not app.config.get(var)
-        ]
-        if missing_db_vars:
-            raise RuntimeError(f"Missing required database environment variables: {', '.join(missing_db_vars)}")
-
         Config.init_app(app)
         logger.info("Production configuration loaded")
 

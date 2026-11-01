@@ -51,11 +51,11 @@
     Display="always" Required="true" Mask="true"></Config>
 
   <Config Name="DB_ADMIN_USER" Target="DB_ADMIN_USER" Default="warracker_admin" Mode=""
-    Description="PostgreSQL admin username, used for database migrations. Required since 1.0.5 (the app no longer assumes it). Pre-filled with the value Warracker used to assume; change it if your PostgreSQL admin user differs." Type="Variable"
+    Description="PostgreSQL admin username, used for database migrations. Set it explicitly: the built-in default is deprecated and will be removed in 1.0.6. Pre-filled with the value Warracker assumes by default; change it if your PostgreSQL admin user differs." Type="Variable"
     Display="always" Required="true" Mask="false">warracker_admin</Config>
 
   <Config Name="DB_ADMIN_PASSWORD" Target="DB_ADMIN_PASSWORD" Default="default_admin_password" Mode=""
-    Description="PostgreSQL admin password, used for database migrations. Required since 1.0.5 (the app no longer assumes it). Pre-filled with the value Warracker used to assume; change it to your PostgreSQL admin password." Type="Variable"
+    Description="PostgreSQL admin password, used for database migrations. Set it explicitly: the built-in default is deprecated and will be removed in 1.0.6. Pre-filled with the value Warracker assumes by default; change it to your PostgreSQL admin password." Type="Variable"
     Display="always" Required="true" Mask="true">default_admin_password</Config>
 
   <Config Name="SECRET_KEY" Target="SECRET_KEY" Default="" Mode=""
