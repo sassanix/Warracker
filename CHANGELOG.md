@@ -1,5 +1,10 @@
 # Changelog
-## 1.0.4 - 2026-10-31
+
+## 1.0.5 - Unreleased
+
+- **Other documents accept more than archives (#222):** the Other Document file picker in the add form and both edit modals only offered ZIP/RAR files, even though the server has always accepted PDFs and images there too — so a warranty terms PDF could not be attached through the UI. The picker now offers every type the server accepts (PDF, PNG, JPG, WebP, GIF, ZIP, RAR), and the field label no longer calls out only archives (all 20 locales).
+
+# 1.0.4 - 2026-10-31
 
 - **Claim documents (issue #148):** claims can now carry documents — claim approval or rejection letters, photos of the defect, repair invoices, and similar evidence. Each claim shows a Documents section in the claims view: attach a file directly, or upload it to Paperless-ngx and link it, then view or remove it from the same place. Access follows the warranty's other documents: the owner and admins only, never shared through global view. Deleting a claim or its warranty removes the attached local files from disk; Paperless documents are unlinked, never deleted from Paperless.
   - _Files: `backend/migrations/052_create_claim_documents_table.sql`, `backend/warranties_routes.py`, `backend/file_routes.py`, `frontend/js/components/claims.js`, `frontend/style.css`, `locales/en/translation.json`_
