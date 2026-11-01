@@ -44,6 +44,17 @@ CI runs the same suite on every pull request
   other users get the global-view-shared types (photo, invoice,
   manual) but never "other documents" or claim documents; missing
   files return a JSON 404.
+- `test_config_deprecation.py` — the softened #221 behavior: the
+  built-in DB credential defaults still work in 1.0.5, production
+  init does not refuse to start, and the startup deprecation warning
+  names exactly the unset variables (all four gone in 1.0.6).
+- `test_notifications.py` — notification selection: the expiring-soon
+  query includes in-window warranties and excludes expired, lifetime,
+  archived and voided ones, and honors each user's own
+  expiring_soon_days preference.
+- `test_migration_upgrade.py` — upgrade path: a database built with
+  the pre-1.0.4 migration set (000-051) upgrades to the current
+  schema with its data intact.
 - `test_photo_url.py` — product photo by URL (#207): the server
   downloads the image once and stores it like an upload; redirects are
   followed, non-images are rejected, an uploaded file wins over a URL,
