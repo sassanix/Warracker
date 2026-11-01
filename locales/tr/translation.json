@@ -738,6 +738,7 @@
     "claims": "Talepler",
     "warranty_claims": "Garanti Talepleri",
     "add_new_claim": "Yeni Talep Ekle",
+    "voided_note": "Bu garanti geçersizdir. Yeni talepler eklenemez — talep oluşturmanız gerekiyorsa önce geçersiz durumunu kaldırın.",
     "add_claim": "Talep Ekle",
     "edit_claim": "Talebi Düzenle",
     "claim_date": "Talep Tarihi",

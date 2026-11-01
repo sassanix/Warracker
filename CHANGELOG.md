@@ -2,6 +2,8 @@
 
 ## 1.0.5 - Unreleased
 
+- **Claims can no longer be added to a voided warranty:** a voided warranty's coverage is dead, but the app still let new claims be filed against it. Claim creation now returns a clear error (code `warranty_voided`), the claims view hides the Add Claim button for voided warranties and explains why, and claims recorded before the void stay fully editable — un-voiding restores claim creation.
+
 - **Other documents accept more than archives (#222):** the Other Document file picker in the add form and both edit modals only offered ZIP/RAR files, even though the server has always accepted PDFs and images there too — so a warranty terms PDF could not be attached through the UI. The picker now offers every type the server accepts (PDF, PNG, JPG, WebP, GIF, ZIP, RAR), and the field label no longer calls out only archives (all 20 locales).
 
 # 1.0.4 - 2026-10-31

@@ -738,6 +738,7 @@
     "claims": "Reklamationen",
     "warranty_claims": "Garantieansprüche",
     "add_new_claim": "Neue Reklamation hinzufügen",
+    "voided_note": "Diese Garantie ist ungültig. Neue Ansprüche können nicht hinzugefügt werden — heben Sie die Ungültigkeit zuerst auf, wenn Sie einen Anspruch einreichen möchten.",
     "add_claim": "Reklamation hinzufügen",
     "edit_claim": "Reklamation bearbeiten",
     "claim_date": "Reklamationsdatum",

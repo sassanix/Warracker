@@ -738,6 +738,7 @@
     "claims": "클레임",
     "warranty_claims": "보증 클레임",
     "add_new_claim": "새 클레임 추가",
+    "voided_note": "이 보증은 무효입니다. 새 클레임을 추가할 수 없습니다 — 클레임을 제출해야 한다면 먼저 무효를 해제하세요.",
     "add_claim": "클레임 추가",
     "edit_claim": "클레임 수정",
     "claim_date": "클레임 날짜",

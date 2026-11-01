@@ -5493,6 +5493,12 @@ html.dark-mode .warracker-footer a:hover {
   font-size: 0.8rem;
 }
 
+.claim-voided-note {
+  margin: 8px 0 0;
+  color: var(--danger-color);
+  font-size: 0.9rem;
+}
+
 .claim-documents-add {
   display: flex;
   align-items: center;

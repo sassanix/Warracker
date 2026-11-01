@@ -232,6 +232,7 @@
     "claims": "Reclamações",
     "warranty_claims": "Reclamações de Garantia",
     "add_new_claim": "Adicionar nova reclamação",
+    "voided_note": "Esta garantia está anulada. Não é possível adicionar novas reivindicações — remova primeiro o estado anulado se precisar registrar uma.",
     "add_claim": "Adicionar reclamação",
     "edit_claim": "Editar reclamação",
     "claim_date": "Data da reclamação",

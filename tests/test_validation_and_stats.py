@@ -75,6 +75,40 @@ def test_statistics_buckets(client, user_factory):
     assert st["active"] >= 3             # two long-lived + today's
 
 
+def test_claim_on_voided_warranty_rejected(client, user_factory,
+                                           warranty_factory):
+    """New claims cannot be added to a voided warranty; claims recorded
+    before the void stay editable, and un-voiding restores creation."""
+    h = user_factory()["headers"]
+    wid = warranty_factory(h).get_json()["id"]
+
+    r = client.post(f"/api/warranties/{wid}/claims", headers=h, json={
+        "claim_date": TODAY_S, "status": "Submitted"})
+    assert r.status_code == 201, r.get_data(as_text=True)
+    cid = r.get_json()["id"]
+
+    r = client.patch(f"/api/warranties/{wid}/void", headers=h,
+                     json={"voided": True})
+    assert r.status_code == 200, r.get_data(as_text=True)
+
+    r = client.post(f"/api/warranties/{wid}/claims", headers=h, json={
+        "claim_date": TODAY_S, "status": "Submitted"})
+    assert r.status_code == 400, r.get_data(as_text=True)
+    assert r.get_json().get("code") == "warranty_voided"
+
+    # The pre-existing claim is historical record: still updatable.
+    r = client.put(f"/api/warranties/{wid}/claims/{cid}", headers=h,
+                   json={"status": "In Progress"})
+    assert r.status_code == 200, r.get_data(as_text=True)
+
+    r = client.patch(f"/api/warranties/{wid}/void", headers=h,
+                     json={"voided": False})
+    assert r.status_code == 200, r.get_data(as_text=True)
+    r = client.post(f"/api/warranties/{wid}/claims", headers=h, json={
+        "claim_date": TODAY_S, "status": "Submitted"})
+    assert r.status_code == 201, r.get_data(as_text=True)
+
+
 def test_claim_status_validation(client, user_factory, warranty_factory):
     h = user_factory()["headers"]
     wid = warranty_factory(h).get_json()["id"]

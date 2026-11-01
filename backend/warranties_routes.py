@@ -2356,13 +2356,21 @@ def create_claim(warranty_id):
         cur = conn.cursor()
         
         cur.execute("""
-            SELECT id, product_name FROM warranties 
+            SELECT id, product_name, voided_at FROM warranties
             WHERE id = %s AND user_id = %s
         """, (warranty_id, user_id))
-        
+
         warranty = cur.fetchone()
         if not warranty:
             return jsonify({'error': 'Warranty not found or access denied'}), 404
+
+        # A voided warranty's coverage is dead, so it cannot gain new
+        # claims. Claims recorded before the void stay editable.
+        if warranty[2] is not None:
+            return jsonify({
+                'error': 'Claims cannot be added to a voided warranty. Un-void the warranty first.',
+                'code': 'warranty_voided',
+            }), 400
         
         # Validate required fields
         claim_date = data.get('claim_date')

@@ -738,6 +738,7 @@
     "claims": "Claims",
     "warranty_claims": "Warranty Claims",
     "add_new_claim": "Add New Claim",
+    "voided_note": "This warranty is void. New claims cannot be added — un-void it first if you need to file one.",
     "add_claim": "Add Claim",
     "edit_claim": "Edit Claim",
     "claim_date": "Claim Date",

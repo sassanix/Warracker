@@ -745,6 +745,7 @@
     "claims": "Reclami",
     "warranty_claims": "Reclami di garanzia",
     "add_new_claim": "Aggiungi nuovo reclamo",
+    "voided_note": "Questa garanzia è nulla. Non è possibile aggiungere nuovi reclami — rimuovi prima lo stato nullo se devi presentarne uno.",
     "add_claim": "Aggiungi reclamo",
     "edit_claim": "Modifica reclamo",
     "claim_date": "Data del reclamo",

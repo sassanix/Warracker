@@ -738,6 +738,7 @@
     "claims": "Claims",
     "warranty_claims": "Garantieclaims",
     "add_new_claim": "Nieuwe claim toevoegen",
+    "voided_note": "Deze garantie is ongeldig. Er kunnen geen nieuwe claims worden toegevoegd — maak de ongeldigheid eerst ongedaan als u er een moet indienen.",
     "add_claim": "Claim toevoegen",
     "edit_claim": "Claim bewerken",
     "claim_date": "Claimdatum",

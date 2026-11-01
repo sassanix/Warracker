@@ -7,6 +7,7 @@ const state = {
 	currentWarrantyId: null,
 	claims: [],
 	canEdit: false,
+	warrantyVoided: false,
 };
 
 const dom = {
@@ -135,7 +136,8 @@ function bindClaimsListBodyActions() {
 
 function updateAddClaimVisibility() {
 	if (dom.addClaimBtn) {
-		dom.addClaimBtn.style.display = state.canEdit ? 'inline-block' : 'none';
+		dom.addClaimBtn.style.display =
+			state.canEdit && !state.warrantyVoided ? 'inline-block' : 'none';
 	}
 }
 
@@ -160,6 +162,7 @@ function updateWarrantyInfo(warranty) {
 				</span>
 			</div>
 		</div>
+		${state.warrantyVoided ? `<p class="claim-voided-note"><i class="fas fa-ban"></i> ${t('claims.voided_note', 'This warranty is void. New claims cannot be added — un-void it first if you need to file one.')}</p>` : ''}
 	`;
 }
 
@@ -301,6 +304,13 @@ async function loadClaims(warrantyId) {
 
 function openClaimFormModal(claim = null) {
 	if (!dom.claimFormModal) return;
+	if (!claim && state.warrantyVoided) {
+		showToast(
+			t('claims.voided_note', 'This warranty is void. New claims cannot be added — un-void it first if you need to file one.'),
+			'error'
+		);
+		return;
+	}
 	if (dom.claimFormTitle) {
 		dom.claimFormTitle.textContent = claim
 			? t('claims.edit_claim', 'Edit Claim')
@@ -608,6 +618,7 @@ export async function openClaimsModal(warrantyId) {
 		return;
 	}
 	state.currentWarrantyId = warrantyId;
+	state.warrantyVoided = Boolean(warranty.voided_at);
 	const currentUser = authService.getCurrentUser?.() || null;
 	const isAdmin = Boolean(currentUser?.is_admin);
 	const globalView = getIsGlobalView();

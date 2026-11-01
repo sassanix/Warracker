@@ -738,6 +738,7 @@
     "claims": "理赔",
     "warranty_claims": "保修理赔",
     "add_new_claim": "新增理赔记录",
+    "voided_note": "此保修已无效。无法添加新索赔 — 如需提交索赔，请先取消无效状态。",
     "add_claim": "添加理赔",
     "edit_claim": "编辑理赔",
     "claim_date": "理赔日期",

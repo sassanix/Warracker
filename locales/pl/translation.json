@@ -738,6 +738,7 @@
     "claims": "Reklamacje",
     "warranty_claims": "Reklamacje gwarancyjne",
     "add_new_claim": "Dodaj nową reklamację",
+    "voided_note": "Ta gwarancja jest unieważniona. Nie można dodawać nowych roszczeń — najpierw cofnij unieważnienie, jeśli musisz złożyć roszczenie.",
     "add_claim": "Dodaj reklamację",
     "edit_claim": "Edytuj reklamację",
     "claim_date": "Data reklamacji",

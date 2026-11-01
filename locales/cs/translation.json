@@ -745,6 +745,7 @@
     "claims": "Reklamace",
     "warranty_claims": "Reklamace záruky",
     "add_new_claim": "Přidat novou reklamaci",
+    "voided_note": "Tato záruka je neplatná. Nelze přidávat nové nároky — pokud potřebujete nějaký podat, nejprve zrušte neplatnost.",
     "add_claim": "Přidat reklamaci",
     "edit_claim": "Upravit reklamaci",
     "claim_date": "Datum reklamace",

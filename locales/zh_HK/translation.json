@@ -738,6 +738,7 @@
     "claims": "索賠",
     "warranty_claims": "保修索賠",
     "add_new_claim": "新增索賠",
+    "voided_note": "此保養已無效。無法新增索償 — 如需提交索償，請先取消無效狀態。",
     "add_claim": "新增索賠",
     "edit_claim": "編輯索賠",
     "claim_date": "索賠日期",
