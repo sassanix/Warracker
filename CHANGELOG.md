@@ -3,18 +3,25 @@
 ## 1.0.5 - Unreleased
 
 - **Dependency and runtime updates:** gunicorn 24.1.1 → 26.2.0 and gevent 24.11.1 → 26.9.0 (the new gevent ships Python 3.15 wheels, ending the from-source compile that slowed multi-arch Docker builds), python-dateutil 2.9.0 → 3.0.0, setuptools 84.0.0 → 84.2.1, and the Python 3.15 slim base image digest refreshed.
+  - _Files: `Dockerfile`, `backend/requirements.txt`, `.github/workflows/renovate.yml`_
 
 - **Database credential defaults deprecated (#221, by Nam0101):** `DB_USER`, `DB_PASSWORD`, `DB_ADMIN_USER`, and `DB_ADMIN_PASSWORD` should now be set explicitly. The built-in defaults still work in this release, but the app logs a deprecation warning at startup naming any of the four that are not set, and the defaults will be removed in 1.0.6, when all four become required. Both shipped Docker Compose files set all four explicitly, the Unraid app template includes all four as well, and the root `env.example` now lists all four (it previously lacked `DB_USER` and `DB_ADMIN_USER`), so installs that follow the shipped templates need no action beyond checking for the warning.
+  - _Files: `backend/config.py`, `env.example`, `Docker/docker-compose.yml`, `unraid/warracker.xml`_
 
 - **Mobile photo capture with client-side downscaling (#249, by canni):** a new "Take Photo" button opens the camera directly on mobile — the photo never enters the phone's gallery — and product photos are downscaled in the browser to at most 2048px (JPEG) before upload, so a multi-megabyte phone photo stops inflating storage and slowing uploads. Downscaling is EXIF-orientation-safe, renders transparency on white, never produces a larger file, passes animated GIFs through untouched, and falls back to the original file on any error. Applies to the add and edit photo inputs on the main and status pages.
+  - _Files: `frontend/index.html`, `frontend/status.html`, `frontend/script.js`, `frontend/sw.js`_
 
 - **Admin users list: sign-in provider shown, email editable (#134):** the admin Users list now has a Provider column (Local / OIDC) so it is obvious how each account signs in — the API reports the provider without exposing the raw OIDC subject. The Edit User dialog's email field, previously shown disabled, is now editable: an admin can fix a user's email without touching the database, with format and uniqueness validation.
+  - _Files: `backend/admin_routes.py`, `frontend/settings-new.html`, `frontend/settings-new.js`, `tests/test_admin_users.py`_
 
 - **Product photo comes first in the Add Warranty form (#146):** the photo upload lived on the Documents tab, at the end of the flow, so users photographing a receipt had to read its purchase date and serial number in a separate program while filling the form. The photo upload (with its preview) now opens the Product tab: upload the receipt or product photo first, then read the details straight off the preview as you type.
+  - _Files: `frontend/index.html`_
 
 - **Claims can no longer be added to a voided warranty:** a voided warranty's coverage is dead, but the app still let new claims be filed against it. Claim creation now returns a clear error (code `warranty_voided`), the claims view hides the Add Claim button for voided warranties and explains why, and claims recorded before the void stay fully editable — un-voiding restores claim creation.
+  - _Files: `backend/warranties_routes.py`, `frontend/js/components/claims.js`, `frontend/style.css`, `frontend/index.html`, `frontend/status.html`, `locales/en/translation.json`, `tests/test_validation_and_stats.py`_
 
 - **Other documents accept more than archives (#222):** the Other Document file picker in the add form and both edit modals only offered ZIP/RAR files, even though the server has always accepted PDFs and images there too — so a warranty terms PDF could not be attached through the UI. The picker now offers every type the server accepts (PDF, PNG, JPG, WebP, GIF, ZIP, RAR), and the field label no longer calls out only archives (all 20 locales).
+  - _Files: `frontend/index.html`, `frontend/status.html`, `locales/en/translation.json`_
 
 # 1.0.4 - 2026-10-31
 
