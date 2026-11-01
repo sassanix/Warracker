@@ -13,7 +13,7 @@ Authlib==1.9.1
 requests==2.34.2
 gevent==24.11.1
 psycogreen==1.0.2
-setuptools==84.0.0
+setuptools==84.2.1
 apprise==1.13.1
 Flask-Babel==4.0.0
 Babel==2.18.0
