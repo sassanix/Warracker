@@ -2,6 +2,8 @@
 
 ## 1.0.5 - Unreleased
 
+- **Product photo comes first in the Add Warranty form (#146):** the photo upload lived on the Documents tab, at the end of the flow, so users photographing a receipt had to read its purchase date and serial number in a separate program while filling the form. The photo upload (with its preview) now opens the Product tab: upload the receipt or product photo first, then read the details straight off the preview as you type.
+
 - **Claims can no longer be added to a voided warranty:** a voided warranty's coverage is dead, but the app still let new claims be filed against it. Claim creation now returns a clear error (code `warranty_voided`), the claims view hides the Add Claim button for voided warranties and explains why, and claims recorded before the void stay fully editable — un-voiding restores claim creation.
 
 - **Other documents accept more than archives (#222):** the Other Document file picker in the add form and both edit modals only offered ZIP/RAR files, even though the server has always accepted PDFs and images there too — so a warranty terms PDF could not be attached through the UI. The picker now offers every type the server accepts (PDF, PNG, JPG, WebP, GIF, ZIP, RAR), and the field label no longer calls out only archives (all 20 locales).

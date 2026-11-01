@@ -401,6 +401,19 @@
                                 <!-- Product Information Tab -->
                                 <div class="tab-content active" id="product-info">
                                     <div class="form-group">
+                                        <label data-i18n="warranties.product_photo_optional">Product Photo (Optional)</label>
+                                        <div class="file-input-wrapper">
+                                            <label for="productPhoto" class="file-input-label">
+                                                <i class="fas fa-camera"></i> <span data-i18n="warranties.choose_photo">Choose Photo</span>
+                                            </label>
+                                            <input type="file" id="productPhoto" name="product_photo" class="file-input" accept=".png,.jpg,.jpeg,.webp">
+                                        </div>
+                                        <div id="productPhotoFileName" class="file-name"></div>
+                                        <div id="productPhotoPreview" class="photo-preview" style="display: none;">
+                                            <img id="productPhotoImg" src="" alt="Product Photo Preview" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 10px;">
+                                        </div>
+
+                                    <div class="form-group">
                                         <label for="productName" data-i18n="warranties.product_name">Product Name</label>
                                         <input type="text" id="productName" name="product_name" class="form-control" required>
                                     </div>
@@ -531,19 +544,6 @@
                                         <strong>Paperless-ngx Integration Enabled!</strong> You can now choose to store documents in your Paperless-ngx instance instead of locally.
                                     </div>
                                     
-                                    <div class="form-group">
-                                        <label data-i18n="warranties.product_photo_optional">Product Photo (Optional)</label>
-                                        <div class="file-input-wrapper">
-                                            <label for="productPhoto" class="file-input-label">
-                                                <i class="fas fa-camera"></i> <span data-i18n="warranties.choose_photo">Choose Photo</span>
-                                            </label>
-                                            <input type="file" id="productPhoto" name="product_photo" class="file-input" accept=".png,.jpg,.jpeg,.webp">
-                                        </div>
-                                        <div id="productPhotoFileName" class="file-name"></div>
-                                        <div id="productPhotoPreview" class="photo-preview" style="display: none;">
-                                            <img id="productPhotoImg" src="" alt="Product Photo Preview" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 10px;">
-                                        </div>
-
                                     </div>
                                     
                                     <div class="form-group">
