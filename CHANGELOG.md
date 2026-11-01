@@ -2,6 +2,8 @@
 
 ## 1.0.5 - Unreleased
 
+- **Database credentials have no built-in defaults anymore (#221, by Nam0101) — breaking for non-compose installs:** `DB_USER`, `DB_PASSWORD`, `DB_ADMIN_USER`, and `DB_ADMIN_PASSWORD` no longer fall back to the values that used to be printed in this repository, and the app refuses to start in production mode when any of them is missing, naming the missing variables. The shipped Docker Compose files already set all four explicitly, so compose installs are unaffected; anyone running the app another way (bare metal, LXC) must make sure all four are set in the environment. The root `env.example` now lists all four (it previously lacked `DB_USER` and `DB_ADMIN_USER`).
+
 - **Mobile photo capture with client-side downscaling (#249, by canni):** a new "Take Photo" button opens the camera directly on mobile — the photo never enters the phone's gallery — and product photos are downscaled in the browser to at most 2048px (JPEG) before upload, so a multi-megabyte phone photo stops inflating storage and slowing uploads. Downscaling is EXIF-orientation-safe, renders transparency on white, never produces a larger file, passes animated GIFs through untouched, and falls back to the original file on any error. Applies to the add and edit photo inputs on the main and status pages.
 
 - **Admin users list: sign-in provider shown, email editable (#134):** the admin Users list now has a Provider column (Local / OIDC) so it is obvious how each account signs in — the API reports the provider without exposing the raw OIDC subject. The Edit User dialog's email field, previously shown disabled, is now editable: an admin can fix a user's email without touching the database, with format and uniqueness validation.
