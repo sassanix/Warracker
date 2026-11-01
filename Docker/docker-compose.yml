@@ -11,6 +11,8 @@ services:
       - DB_NAME=warranty_db
       - DB_USER=warranty_user
       - DB_PASSWORD=${DB_PASSWORD:-warranty_password}
+      - DB_ADMIN_USER=warracker_admin
+- DB_ADMIN_PASSWORD=${DB_ADMIN_PASSWORD:-change_this_password_in_production}
       - SMTP_HOST=smtp.email.com
       - SMTP_PORT=465
       - SMTP_USERNAME=youremail@email.com
