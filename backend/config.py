@@ -38,10 +38,10 @@ class Config:
     # Database Configuration
     DB_HOST = os.environ.get('DB_HOST', 'warrackerdb')
     DB_NAME = os.environ.get('DB_NAME', 'warranty_db')
-    DB_USER = os.environ.get('DB_USER', 'warranty_user')
-    DB_PASSWORD = os.environ.get('DB_PASSWORD', 'warranty_password')
-    DB_ADMIN_USER = os.environ.get('DB_ADMIN_USER', 'warracker_admin')
-    DB_ADMIN_PASSWORD = os.environ.get('DB_ADMIN_PASSWORD', 'change_this_password_in_production')
+    DB_USER = os.environ.get('DB_USER')
+    DB_PASSWORD = os.environ.get('DB_PASSWORD')
+    DB_ADMIN_USER = os.environ.get('DB_ADMIN_USER')
+    DB_ADMIN_PASSWORD = os.environ.get('DB_ADMIN_PASSWORD')
     
     # File Upload Configuration
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', '/data/uploads')
@@ -118,6 +118,13 @@ class ProductionConfig(Config):
     
     @staticmethod
     def init_app(app):
+        missing_db_vars = [
+            var for var in ('DB_USER', 'DB_PASSWORD', 'DB_ADMIN_USER', 'DB_ADMIN_PASSWORD')
+            if not app.config.get(var)
+        ]
+        if missing_db_vars:
+            raise RuntimeError(f"Missing required database environment variables: {', '.join(missing_db_vars)}")
+
         Config.init_app(app)
         logger.info("Production configuration loaded")
 
