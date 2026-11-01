@@ -38,7 +38,7 @@
     <script src="mobile-menu.js?v=20250119002" defer></script>
     <!-- Load fix for auth buttons -->
     <script src="fix-auth-buttons-loader.js?v=20250119001"></script>
-    <script src="script.js?v=20260518002" defer></script> <!-- Added script.js -->
+    <script src="script.js?v=20261101002" defer></script> <!-- Added script.js -->
     <style>
         .user-menu {
             position: relative;
@@ -703,6 +703,10 @@
                                 </label>
                                 <input type="file" id="editProductPhoto" name="product_photo" class="file-input" accept=".png,.jpg,.jpeg,.webp">
                             </div>
+                            <label for="editProductPhotoCamera" class="file-input-label" tabindex="0">
+                                <i class="fas fa-camera"></i> <span data-i18n="warranties.take_photo">Take Photo</span>
+                            </label>
+                            <input type="file" accept="image/*" capture="environment" id="editProductPhotoCamera" style="display: none;">
                             <div id="editProductPhotoFileName" class="file-name"></div>
                             <div id="editProductPhotoPreview" class="photo-preview" style="display: none;">
                                 <img id="editProductPhotoImg" src="" alt="Product Photo Preview" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 10px;">

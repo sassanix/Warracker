@@ -2,6 +2,8 @@
 
 ## 1.0.5 - Unreleased
 
+- **Mobile photo capture with client-side downscaling (#249, by canni):** a new "Take Photo" button opens the camera directly on mobile — the photo never enters the phone's gallery — and product photos are downscaled in the browser to at most 2048px (JPEG) before upload, so a multi-megabyte phone photo stops inflating storage and slowing uploads. Downscaling is EXIF-orientation-safe, renders transparency on white, never produces a larger file, passes animated GIFs through untouched, and falls back to the original file on any error. Applies to the add and edit photo inputs on the main and status pages.
+
 - **Admin users list: sign-in provider shown, email editable (#134):** the admin Users list now has a Provider column (Local / OIDC) so it is obvious how each account signs in — the API reports the provider without exposing the raw OIDC subject. The Edit User dialog's email field, previously shown disabled, is now editable: an admin can fix a user's email without touching the database, with format and uniqueness validation.
 
 - **Product photo comes first in the Add Warranty form (#146):** the photo upload lived on the Documents tab, at the end of the flow, so users photographing a receipt had to read its purchase date and serial number in a separate program while filling the form. The photo upload (with its preview) now opens the Product tab: upload the receipt or product photo first, then read the details straight off the preview as you type.
