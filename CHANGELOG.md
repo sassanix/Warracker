@@ -2,6 +2,8 @@
 
 ## 1.0.5 - Unreleased
 
+- **Admin users list: sign-in provider shown, email editable (#134):** the admin Users list now has a Provider column (Local / OIDC) so it is obvious how each account signs in — the API reports the provider without exposing the raw OIDC subject. The Edit User dialog's email field, previously shown disabled, is now editable: an admin can fix a user's email without touching the database, with format and uniqueness validation.
+
 - **Product photo comes first in the Add Warranty form (#146):** the photo upload lived on the Documents tab, at the end of the flow, so users photographing a receipt had to read its purchase date and serial number in a separate program while filling the form. The photo upload (with its preview) now opens the Product tab: upload the receipt or product photo first, then read the details straight off the preview as you type.
 
 - **Claims can no longer be added to a voided warranty:** a voided warranty's coverage is dead, but the app still let new claims be filed against it. Claim creation now returns a clear error (code `warranty_voided`), the claims view hides the Add Claim button for voided warranties and explains why, and claims recorded before the void stay fully editable — un-voiding restores claim creation.

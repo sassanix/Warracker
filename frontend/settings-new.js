@@ -2082,6 +2082,17 @@ async function loadUsers() {
                 emailCell.textContent = user.email;
                 emailCell.style.cssText = 'padding: 12px 8px; color: var(--text-color); border-right: 1px solid var(--border-color); font-size: 0.9em;';
                 row.appendChild(emailCell);
+
+                // Auth provider (Local / OIDC)
+                const providerCell = document.createElement('td');
+                const providerBadge = document.createElement('span');
+                const isOidc = user.auth_provider === 'oidc';
+                providerBadge.className = `badge ${isOidc ? 'badge-primary' : 'badge-secondary'}`;
+                providerBadge.textContent = isOidc ? 'OIDC' : 'Local';
+                providerBadge.style.cssText = 'padding: 4px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 600;';
+                providerCell.appendChild(providerBadge);
+                providerCell.style.cssText = 'padding: 12px 8px; text-align: center; border-right: 1px solid var(--border-color);';
+                row.appendChild(providerCell);
                 
                 // Name
                 const nameCell = document.createElement('td');
@@ -2304,7 +2315,8 @@ async function saveUserChanges() {
             },
             body: JSON.stringify({
                 is_active: editUserActive.checked,
-                is_admin: editUserAdmin.checked
+                is_admin: editUserAdmin.checked,
+                email: editEmail.value.trim()
             })
         });
         

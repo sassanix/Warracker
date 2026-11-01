@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime, date
 import os
+import re
 import logging
 
 # Use try-except pattern for imports to handle both Docker and development environments
@@ -42,8 +43,8 @@ def get_all_users():
             # Try to get users with is_owner column, fall back to without it if column doesn't exist
             try:
                 cur.execute('''
-                    SELECT id, username, email, first_name, last_name, is_active, is_admin, is_owner, created_at, last_login 
-                    FROM users 
+                    SELECT id, username, email, first_name, last_name, is_active, is_admin, is_owner, created_at, last_login, oidc_sub
+                    FROM users
                     ORDER BY created_at DESC
                 ''')
                 users = cur.fetchall()
@@ -65,7 +66,12 @@ def get_all_users():
             
             for row in users:
                 user_dict = dict(zip(columns, row))
-                
+
+                # Expose how the user signs in, without exposing the
+                # raw OIDC subject identifier.
+                oidc_sub = user_dict.pop('oidc_sub', None)
+                user_dict['auth_provider'] = 'oidc' if oidc_sub else 'local'
+
                 # Add is_owner field if it wasn't included in the query
                 if not has_owner_column:
                     user_dict['is_owner'] = False
@@ -124,17 +130,37 @@ def update_user(user_id):
                 if 'is_active' in data and data['is_active'] is False:
                     return jsonify({"message": "The application owner's account cannot be deactivated."}), 403
             
+            # Validate an email change up front: format plus
+            # uniqueness across the other accounts.
+            new_email = None
+            if 'email' in data:
+                raw_email = data.get('email')
+                if (not isinstance(raw_email, str)
+                        or len(raw_email.strip()) > 255
+                        or not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                                        raw_email.strip())):
+                    return jsonify({"message": "Invalid email address"}), 400
+                new_email = raw_email.strip()
+                cur.execute('SELECT id FROM users WHERE email = %s AND id != %s',
+                            (new_email, user_id))
+                if cur.fetchone():
+                    return jsonify({"message": "Email address is already in use by another account"}), 400
+
             # Update fields
             updates = []
             params = []
-            
+
             if 'is_admin' in data:
                 updates.append('is_admin = %s')
                 params.append(bool(data['is_admin']))
-            
+
             if 'is_active' in data:
                 updates.append('is_active = %s')
                 params.append(bool(data['is_active']))
+
+            if new_email is not None:
+                updates.append('email = %s')
+                params.append(new_email)
             
             if not updates:
                 return jsonify({"message": "No fields to update"}), 400
@@ -153,6 +179,8 @@ def update_user(user_id):
                     details_list.append(f"admin status to {data['is_admin']}")
                 if 'is_active' in data:
                     details_list.append(f"active status to {data['is_active']}")
+                if new_email is not None:
+                    details_list.append("email address")
                 if details_list:
                     details = 'Updated user: set ' + ', '.join(details_list)
                     create_audit_log('UPDATE_USER', target_type='User', target_id=user_id, details=details)
