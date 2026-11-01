@@ -532,10 +532,12 @@ function populateDocuments(warranty) {
   renderCurrentManual(manualContainer, deleteManualBtn, warranty, window.i18next);
   renderCurrentPhoto(photoContainer, deletePhotoBtn, warranty, window.i18next);
   renderCurrentOther(otherContainer, deleteOtherBtn, warranty, window.i18next);
-  setDeleteHandler('deleteInvoiceBtn', invoiceContainer, window.i18next ? window.i18next.t('warranties.invoice_will_be_deleted') : 'Invoice will be deleted');
-  setDeleteHandler('deleteManualBtn', manualContainer, window.i18next ? window.i18next.t('warranties.manual_will_be_deleted') : 'Manual will be deleted');
-  setDeleteHandler('deleteProductPhotoBtn', photoContainer, window.i18next ? window.i18next.t('warranties.photo_will_be_deleted') : 'Photo will be deleted');
-  setDeleteHandler('deleteOtherDocumentBtn', otherContainer, window.i18next ? window.i18next.t('warranties.other_document_will_be_deleted') : 'Files will be deleted');
+  setDeleteHandler('deleteInvoiceBtn', invoiceContainer, (window.i18next && window.i18next.t('warranties.invoice_will_be_deleted') || 'Invoice will be deleted'));
+  setDeleteHandler('deleteManualBtn', manualContainer, (window.i18next && window.i18next.t('warranties.manual_will_be_deleted') || 'Manual will be deleted'));
+  setDeleteHandler('deleteProductPhotoBtn', photoContainer, (window.i18next && window.i18next.t('warranties.photo_will_be_deleted') || 'Photo will be deleted'));
+  setDeleteHandler('deleteOtherDocumentBtn', otherContainer, (window.i18next && window.i18next.t('warranties.other_document_will_be_deleted') || 'Files will be deleted'));
+  const photoUrlInput = document.getElementById('editProductPhotoUrl');
+  if (photoUrlInput) photoUrlInput.value = '';
   clearPaperlessSelection('edit_invoice');
   clearPaperlessSelection('edit_manual');
   clearPaperlessSelection('edit_productPhoto');
@@ -550,7 +552,7 @@ export async function saveWarranty() {
     setCurrentWarrantyId(currentId);
   }
   if (!currentId) {
-    showToast(window.i18next ? window.i18next.t('messages.no_warranty_selected_for_update') : 'No warranty selected', 'error');
+    showToast((window.i18next && window.i18next.t('messages.no_warranty_selected_for_update') || 'No warranty selected'), 'error');
     return;
   }
 
@@ -646,6 +648,8 @@ export async function saveWarranty() {
   if (manualFile) formData.append('manual', manualFile);
   if (otherDocumentFile) formData.append('other_document', otherDocumentFile);
   if (productPhotoFile) formData.append('product_photo', productPhotoFile);
+  const productPhotoUrl = (document.getElementById('editProductPhotoUrl') || {}).value || '';
+  if (productPhotoUrl) formData.append('product_photo_url', productPhotoUrl);
 
   // Paperless browse selections (linked existing documents)
   const paperlessFields = [
@@ -722,7 +726,7 @@ export async function saveWarranty() {
     await updateWarranty(currentId, formData);
 
     hideLoadingSpinner();
-    showToast(window.i18next ? window.i18next.t('messages.warranty_updated_successfully') : 'Warranty updated successfully', 'success');
+    showToast((window.i18next && window.i18next.t('messages.warranty_updated_successfully') || 'Warranty updated successfully'), 'success');
     setCurrentWarrantyId(null);
     if (typeof window !== 'undefined') {
       window.currentWarrantyId = null;
@@ -751,7 +755,7 @@ export async function saveWarranty() {
   } catch (error) {
     hideLoadingSpinner();
     console.error('Error updating warranty:', error);
-    showToast(apiErrorMessage(error, window.i18next ? window.i18next.t('messages.failed_to_update_warranty') : 'Failed to update warranty'), 'error');
+    showToast(apiErrorMessage(error, (window.i18next && window.i18next.t('messages.failed_to_update_warranty') || 'Failed to update warranty')), 'error');
   }
 }
 

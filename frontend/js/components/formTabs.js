@@ -208,9 +208,9 @@ function showValidationErrors(tabIndex) {
                 control.parentNode.insertBefore(validationMessageElement, control.nextSibling);
             }
             if (control.hasAttribute('required') && control.value.trim() === '') {
-                validationMessageElement.textContent = window.i18next ? window.i18next.t('messages.please_fill_out_this_field') : 'Please fill out this field.';
+                validationMessageElement.textContent = (window.i18next && window.i18next.t('messages.please_fill_out_this_field') || 'Please fill out this field.');
             } else {
-                validationMessageElement.textContent = control.validationMessage || (window.i18next ? window.i18next.t('messages.field_is_invalid') : 'This field is invalid.');
+                validationMessageElement.textContent = control.validationMessage || ((window.i18next && window.i18next.t('messages.field_is_invalid') || 'This field is invalid.'));
             }
         } else {
             control.classList.remove('invalid');
@@ -292,7 +292,7 @@ function updateSummary() {
 
     if (summaryWarrantyDuration) {
         if (isLifetime) {
-            summaryWarrantyDuration.textContent = window.i18next ? window.i18next.t('warranties.lifetime') : 'Lifetime';
+            summaryWarrantyDuration.textContent = (window.i18next && window.i18next.t('warranties.lifetime') || 'Lifetime');
         } else {
             const years = parseInt(warrantyDurationYearsInput?.value || 0);
             const months = parseInt(warrantyDurationMonthsInput?.value || 0);
@@ -300,15 +300,15 @@ function updateSummary() {
 
             let durationParts = [];
             if (years > 0) {
-                const yearText = window.i18next ? window.i18next.t('warranties.year', {count: years}) : `year${years !== 1 ? 's' : ''}`;
+                const yearText = (window.i18next && window.i18next.t('warranties.year', {count: years}) || `year${years !== 1 ? 's' : ''}`);
                 durationParts.push(`${years} ${yearText}`);
             }
             if (months > 0) {
-                const monthText = window.i18next ? window.i18next.t('warranties.month', {count: months}) : `month${months !== 1 ? 's' : ''}`;
+                const monthText = (window.i18next && window.i18next.t('warranties.month', {count: months}) || `month${months !== 1 ? 's' : ''}`);
                 durationParts.push(`${months} ${monthText}`);
             }
             if (days > 0) {
-                const dayText = window.i18next ? window.i18next.t('warranties.day', {count: days}) : `day${days !== 1 ? 's' : ''}`;
+                const dayText = (window.i18next && window.i18next.t('warranties.day', {count: days}) || `day${days !== 1 ? 's' : ''}`);
                 durationParts.push(`${days} ${dayText}`);
             }
 

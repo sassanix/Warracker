@@ -23,7 +23,7 @@ function addSerialNumberInput(container) {
     input.type = 'text';
     input.className = 'form-control';
     input.name = 'serial_numbers[]';
-    input.placeholder = window.i18next ? window.i18next.t('warranties.enter_serial_number') : 'Enter serial number';
+    input.placeholder = (window.i18next && window.i18next.t('warranties.enter_serial_number') || 'Enter serial number');
     
     // Check if this is the first serial number input
     const isFirstInput = container.querySelectorAll('.serial-number-input').length === 0;
@@ -59,7 +59,7 @@ function addSerialNumberInput(container) {
         const newAddButton = document.createElement('button');
         newAddButton.type = 'button';
         newAddButton.className = 'btn btn-sm btn-secondary add-serial';
-        newAddButton.innerHTML = '<i class="fas fa-plus"></i> ' + (window.i18next ? window.i18next.t('warranties.add_serial_number') : 'Add Serial Number');
+        newAddButton.innerHTML = '<i class="fas fa-plus"></i> ' + ((window.i18next && window.i18next.t('warranties.add_serial_number') || 'Add Serial Number'));
         
         newAddButton.addEventListener('click', function() {
             addSerialNumberInput(container);

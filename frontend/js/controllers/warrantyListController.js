@@ -150,7 +150,7 @@ export async function loadWarranties(isAuthenticatedOverride) {
 		if (!isAuthenticated) {
 			renderEmptyState(
 				getWarrantiesListElement(),
-				window.i18next ? window.i18next.t('messages.login_to_view_warranties') : 'Please log in to view warranties.',
+				(window.i18next && window.i18next.t('messages.login_to_view_warranties') || 'Please log in to view warranties.'),
 			);
 			setWarranties([], { warrantiesLoaded: false, lastLoadedArchived: false, lastLoadedIncludesArchived: false });
 			return;
@@ -188,9 +188,7 @@ export async function loadWarranties(isAuthenticatedOverride) {
 		if (!processed.length) {
 			renderEmptyState(
 				getWarrantiesListElement(),
-				window.i18next
-					? window.i18next.t('messages.no_warranties_found_add_first')
-					: 'No warranties yet. Add your first warranty to get started.',
+				(window.i18next && window.i18next.t('messages.no_warranties_found_add_first') || 'No warranties yet. Add your first warranty to get started.'),
 			);
 			return;
 		}
@@ -203,13 +201,11 @@ export async function loadWarranties(isAuthenticatedOverride) {
 		console.error('[controller.loadWarranties] Error:', error);
 		renderEmptyState(
 			getWarrantiesListElement(),
-			window.i18next
-				? window.i18next.t('messages.error_loading_warranties_try_again')
-				: 'Error loading warranties. Please try again.',
+			(window.i18next && window.i18next.t('messages.error_loading_warranties_try_again') || 'Error loading warranties. Please try again.'),
 		);
 		showToast(
 			error?.message ||
-				(window.i18next ? window.i18next.t('messages.error_loading_warranties_try_again') : 'Failed to load warranties'),
+				((window.i18next && window.i18next.t('messages.error_loading_warranties_try_again') || 'Failed to load warranties')),
 			'error',
 		);
 	} finally {
@@ -797,6 +793,14 @@ export function initEventListeners() {
 				}
 				return;
 			}
+			if (e.target.closest('.duplicate-btn')) {
+				e.preventDefault();
+				const el = e.target.closest('.duplicate-btn');
+				const id = parseInt(el?.dataset?.id);
+				const warranty = storeGetWarranties().find(w => w.id === id);
+				if (warranty && typeof window.openDuplicateForm === 'function') window.openDuplicateForm(warranty);
+				return;
+			}
 			if (e.target.closest('.delete-btn')) {
 				e.preventDefault();
 				const el = e.target.closest('.delete-btn');
@@ -834,9 +838,7 @@ export function initEventListeners() {
 			if (e.target.closest('.void-btn')) {
 				e.preventDefault();
 				const id = parseInt(e.target.closest('.void-btn')?.dataset?.id);
-				const confirmMessage = window.i18next
-					? window.i18next.t('messages.confirm_void_warranty')
-					: 'Void this warranty? It will be marked inactive and excluded from totals and notifications. You can restore it later.';
+				const confirmMessage = (window.i18next && window.i18next.t('messages.confirm_void_warranty') || 'Void this warranty? It will be marked inactive and excluded from totals and notifications. You can restore it later.');
 				if (Number.isFinite(id) && window.confirm(confirmMessage)) toggleVoid(id, true);
 				return;
 			}

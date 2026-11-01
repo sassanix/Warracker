@@ -5,7 +5,7 @@ import { getCurrentWarrantyId, setCurrentWarrantyId } from '../store.js';
 
 async function toggleArchiveStatus(warrantyId, shouldArchive) {
 	if (!warrantyId) {
-		showToast(window.i18next ? window.i18next.t('messages.no_warranty_selected') : 'No warranty selected', 'error');
+		showToast((window.i18next && window.i18next.t('messages.no_warranty_selected') || 'No warranty selected'), 'error');
 		return;
 	}
 	try {
@@ -18,8 +18,8 @@ async function toggleArchiveStatus(warrantyId, shouldArchive) {
 		hideLoadingSpinner();
 		showToast(
 			shouldArchive
-				? window.i18next ? window.i18next.t('messages.archived_success') : 'Warranty archived'
-				: window.i18next ? window.i18next.t('messages.unarchived_success') : 'Warranty unarchived',
+				? (window.i18next && window.i18next.t('messages.archived_success') || 'Warranty archived')
+				: (window.i18next && window.i18next.t('messages.unarchived_success') || 'Warranty unarchived'),
 			'success',
 		);
 		await loadWarranties(true);
@@ -28,7 +28,7 @@ async function toggleArchiveStatus(warrantyId, shouldArchive) {
 		hideLoadingSpinner();
 		console.error('[warrantyActions] Failed to toggle archive', error);
 		showToast(
-			window.i18next ? window.i18next.t('messages.error_updating_archive_status') : 'Failed to update archive status',
+			(window.i18next && window.i18next.t('messages.error_updating_archive_status') || 'Failed to update archive status'),
 			'error',
 		);
 	}
@@ -36,7 +36,7 @@ async function toggleArchiveStatus(warrantyId, shouldArchive) {
 
 async function toggleVoidStatus(warrantyId, shouldVoid) {
 	if (!warrantyId) {
-		showToast(window.i18next ? window.i18next.t('messages.no_warranty_selected') : 'No warranty selected', 'error');
+		showToast((window.i18next && window.i18next.t('messages.no_warranty_selected') || 'No warranty selected'), 'error');
 		return;
 	}
 	try {
@@ -49,8 +49,8 @@ async function toggleVoidStatus(warrantyId, shouldVoid) {
 		hideLoadingSpinner();
 		showToast(
 			shouldVoid
-				? window.i18next ? window.i18next.t('messages.voided_success') : 'Warranty voided'
-				: window.i18next ? window.i18next.t('messages.unvoided_success') : 'Warranty restored from void',
+				? (window.i18next && window.i18next.t('messages.voided_success') || 'Warranty voided')
+				: (window.i18next && window.i18next.t('messages.unvoided_success') || 'Warranty restored from void'),
 			'success',
 		);
 		await loadWarranties(true);
@@ -59,7 +59,7 @@ async function toggleVoidStatus(warrantyId, shouldVoid) {
 		hideLoadingSpinner();
 		console.error('[warrantyActions] Failed to toggle void', error);
 		showToast(
-			window.i18next ? window.i18next.t('messages.error_updating_void_status') : 'Failed to update void status',
+			(window.i18next && window.i18next.t('messages.error_updating_void_status') || 'Failed to update void status'),
 			'error',
 		);
 	}
@@ -72,14 +72,14 @@ async function deleteWarranty() {
 		warrantyId = window.currentWarrantyId;
 	}
 	if (!warrantyId) {
-		showToast(window.i18next ? window.i18next.t('messages.no_warranty_selected_for_deletion') : 'No warranty selected', 'error');
+		showToast((window.i18next && window.i18next.t('messages.no_warranty_selected_for_deletion') || 'No warranty selected'), 'error');
 		return;
 	}
 	try {
 		showLoadingSpinner();
 		await apiDeleteWarranty(warrantyId);
 		hideLoadingSpinner();
-		showToast(window.i18next ? window.i18next.t('messages.deleted_successfully') : 'Warranty deleted', 'success');
+		showToast((window.i18next && window.i18next.t('messages.deleted_successfully') || 'Warranty deleted'), 'success');
 		closeModals();
 		setCurrentWarrantyId(null);
 		// Also clear global variable for script.js compatibility
@@ -91,7 +91,7 @@ async function deleteWarranty() {
 	} catch (error) {
 		hideLoadingSpinner();
 		console.error('[warrantyActions] Failed to delete warranty', error);
-		showToast(window.i18next ? window.i18next.t('messages.failed_to_delete_warranty') : 'Failed to delete warranty', 'error');
+		showToast((window.i18next && window.i18next.t('messages.failed_to_delete_warranty') || 'Failed to delete warranty'), 'error');
 	}
 }
 
@@ -102,7 +102,7 @@ async function confirmArchive() {
 		warrantyId = window.currentWarrantyId;
 	}
 	if (!warrantyId) {
-		showToast(window.i18next ? window.i18next.t('messages.no_warranty_selected_for_update') : 'No warranty selected', 'error');
+		showToast((window.i18next && window.i18next.t('messages.no_warranty_selected_for_update') || 'No warranty selected'), 'error');
 		return;
 	}
 	await toggleArchiveStatus(warrantyId, true);

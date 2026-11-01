@@ -385,6 +385,9 @@ function buildActionButtons(warranty, { canEdit, isArchivedView, claimsMeta }) {
 				</button>
 				`}
 			`}
+		<button class="action-btn duplicate-btn" title="${t('warranties.duplicate_warranty', 'Duplicate warranty')}" data-id="${warranty.id}">
+			<i class="fas fa-copy"></i>
+		</button>
 		<button class="action-btn delete-btn" title="Delete" data-id="${warranty.id}">
 			<i class="fas fa-trash"></i>
 		</button>

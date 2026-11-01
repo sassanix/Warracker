@@ -4,7 +4,7 @@ import { showLoadingSpinner, hideLoadingSpinner, showToast } from './ui.js';
 const DEFAULT_MODAL_HTML = `
 	<div class="modal" style="max-width: 500px;">
 		<div class="modal-header">
-			<h3 class="modal-title">${window.i18next ? window.i18next.t('warranties.notes_title') : 'Warranty Notes'}</h3>
+			<h3 class="modal-title">${(window.i18next && window.i18next.t('warranties.notes_title') || 'Warranty Notes')}</h3>
 			<button class="close-btn" id="closeNotesModal">&times;</button>
 		</div>
 		<div class="modal-body">
@@ -12,10 +12,10 @@ const DEFAULT_MODAL_HTML = `
 			<textarea id="notesModalTextarea" style="display:none;width:100%;min-height:100px;"></textarea>
 		</div>
 		<div class="modal-footer" id="notesModalFooter">
-			<button class="btn btn-secondary" id="editNotesBtn">${window.i18next ? window.i18next.t('actions.edit_notes') : 'Edit Notes'}</button>
-			<button class="btn btn-info" id="editWarrantyBtn">${window.i18next ? window.i18next.t('actions.edit_warranty') : 'Edit Warranty'}</button>
-			<button class="btn btn-primary" id="saveNotesBtn" style="display:none;">${window.i18next ? window.i18next.t('actions.save') : 'Save'}</button>
-			<button class="btn btn-danger" id="cancelEditNotesBtn" style="display:none;">${window.i18next ? window.i18next.t('actions.cancel') : 'Cancel'}</button>
+			<button class="btn btn-secondary" id="editNotesBtn">${(window.i18next && window.i18next.t('actions.edit_notes') || 'Edit Notes')}</button>
+			<button class="btn btn-info" id="editWarrantyBtn">${(window.i18next && window.i18next.t('actions.edit_warranty') || 'Edit Warranty')}</button>
+			<button class="btn btn-primary" id="saveNotesBtn" style="display:none;">${(window.i18next && window.i18next.t('actions.save') || 'Save')}</button>
+			<button class="btn btn-danger" id="cancelEditNotesBtn" style="display:none;">${(window.i18next && window.i18next.t('actions.cancel') || 'Cancel')}</button>
 		</div>
 	</div>
 `;
@@ -84,7 +84,7 @@ function handleEditWarranty() {
 		warranty = resolveWarranty(state.warrantyId);
 	}
 	if (!warranty) {
-		showToast(window.i18next ? window.i18next.t('messages.warranty_not_found_refresh') : 'Warranty not found', 'error');
+		showToast((window.i18next && window.i18next.t('messages.warranty_not_found_refresh') || 'Warranty not found'), 'error');
 		return;
 	}
 	callIfExists(window.openEditModal, warranty);
@@ -215,15 +215,13 @@ function updateStoreNotes(noteValue) {
 
 async function saveNotes() {
 	if (!dom || !state.warrantyId || !state.warranty) {
-		showToast(window.i18next ? window.i18next.t('messages.warranty_not_found_refresh') : 'Warranty not found', 'error');
+		showToast((window.i18next && window.i18next.t('messages.warranty_not_found_refresh') || 'Warranty not found'), 'error');
 		return;
 	}
 	const noteValue = dom.textarea.value.trim();
 	if (!validateDuration(state.warranty)) {
 		showToast(
-			window.i18next
-				? window.i18next.t('messages.invalid_warranty_duration_before_notes')
-				: 'Cannot save notes until warranty duration is valid.',
+			(window.i18next && window.i18next.t('messages.invalid_warranty_duration_before_notes') || 'Cannot save notes until warranty duration is valid.'),
 			'error',
 			7000,
 		);
@@ -231,7 +229,7 @@ async function saveNotes() {
 	}
 	const token = getToken();
 	if (!token) {
-		showToast(window.i18next ? window.i18next.t('messages.authentication_required') : 'Authentication required', 'error');
+		showToast((window.i18next && window.i18next.t('messages.authentication_required') || 'Authentication required'), 'error');
 		return;
 	}
 	try {
@@ -247,7 +245,7 @@ async function saveNotes() {
 			throw new Error(errorData.error || `Failed to update note (Status: ${response.status})`);
 		}
 		hideLoadingSpinner();
-		showToast(window.i18next ? window.i18next.t('messages.note_updated_successfully') : 'Note updated', 'success');
+		showToast((window.i18next && window.i18next.t('messages.note_updated_successfully') || 'Note updated'), 'success');
 		updateStoreNotes(noteValue);
 		if (!noteValue) {
 			hideModal();
@@ -259,7 +257,7 @@ async function saveNotes() {
 	} catch (error) {
 		hideLoadingSpinner();
 		console.error('[notes] Failed to update note', error);
-		showToast(error.message || (window.i18next ? window.i18next.t('messages.failed_to_update_note') : 'Failed to update note'), 'error');
+		showToast(error.message || ((window.i18next && window.i18next.t('messages.failed_to_update_note') || 'Failed to update note')), 'error');
 	}
 }
 

@@ -7,7 +7,7 @@ import { formatDateYYYYMMDD } from '../lib/dates.js';
 export async function exportWarranties() {
   const warranties = getWarranties();
   if (!warranties.length) {
-    showToast(window.i18next ? window.i18next.t('messages.no_warranties_to_export') : 'No warranties to export', 'info');
+    showToast((window.i18next && window.i18next.t('messages.no_warranties_to_export') || 'No warranties to export'), 'info');
     return;
   }
   const filters = getFilters();
@@ -38,7 +38,7 @@ export async function exportWarranties() {
   }
 
   if (!filtered.length) {
-    showToast(window.i18next ? window.i18next.t('messages.no_warranties_to_export') : 'No warranties to export', 'info');
+    showToast((window.i18next && window.i18next.t('messages.no_warranties_to_export') || 'No warranties to export'), 'info');
     return;
   }
 
@@ -103,20 +103,18 @@ export async function exportWarranties() {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
   showToast(
-    window.i18next
-      ? window.i18next.t('messages.exported_warranties_successfully', { count: filtered.length })
-      : `Exported ${filtered.length} warranties`,
+    (window.i18next && window.i18next.t('messages.exported_warranties_successfully', { count: filtered.length }) || `Exported ${filtered.length} warranties`),
     'success',
   );
 }
 
 export async function handleImport(file) {
   if (!file) {
-    showToast(window.i18next ? window.i18next.t('messages.no_file_selected') : 'No file selected', 'warning');
+    showToast((window.i18next && window.i18next.t('messages.no_file_selected') || 'No file selected'), 'warning');
     return;
   }
   if (!file.name.toLowerCase().endsWith('.csv')) {
-    showToast(window.i18next ? window.i18next.t('messages.invalid_file_type') : 'Invalid file type', 'error');
+    showToast((window.i18next && window.i18next.t('messages.invalid_file_type') || 'Invalid file type'), 'error');
     return;
   }
   showLoadingSpinner();
@@ -133,14 +131,12 @@ export async function handleImport(file) {
     const result = await response.json();
     hideLoadingSpinner();
     if (!response.ok) {
-      showToast(result.error || (window.i18next ? window.i18next.t('messages.import_failed') : 'Import failed'), 'error');
+      showToast(result.error || ((window.i18next && window.i18next.t('messages.import_failed') || 'Import failed')), 'error');
       if (result.errors) console.warn('[importExport] detailed import errors', result.errors);
       return;
     }
     showToast(
-      window.i18next
-        ? window.i18next.t('messages.import_success', { success: result.success_count, failure: result.failure_count })
-        : `${result.success_count} warranties imported. ${result.failure_count} failed.`,
+      (window.i18next && window.i18next.t('messages.import_success', { success: result.success_count, failure: result.failure_count }) || `${result.success_count} warranties imported. ${result.failure_count} failed.`),
       'success',
     );
     await loadTags(true);
@@ -150,7 +146,7 @@ export async function handleImport(file) {
   } catch (error) {
     hideLoadingSpinner();
     console.error('[importExport] Import error', error);
-    showToast(window.i18next ? window.i18next.t('messages.import_failed') : 'Import failed', 'error');
+    showToast((window.i18next && window.i18next.t('messages.import_failed') || 'Import failed'), 'error');
   } finally {
     const input = document.getElementById('csvFileInput');
     if (input) input.value = '';

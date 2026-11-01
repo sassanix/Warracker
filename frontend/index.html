@@ -22,7 +22,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png?v=2">
     <link rel="apple-touch-icon" sizes="180x180" href="img/favicon-512x512.png">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css?v=20261101001">
+    <link rel="stylesheet" href="style.css?v=20261101002">
     <script src="theme-loader.js?v=20250119001"></script> <!-- Apply theme early -->
 
     <!-- Font Awesome for icons -->
@@ -416,6 +416,7 @@
                                         <div id="productPhotoPreview" class="photo-preview" style="display: none;">
                                             <img id="productPhotoImg" src="" alt="Product Photo Preview" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 10px;">
                                         </div>
+                                        <input type="url" id="productPhotoUrl" name="product_photo_url" class="form-control photo-url-input" data-i18n-placeholder="warranties.photo_url_placeholder" placeholder="Or paste a photo URL">
                                     </div>
 
                                     <div class="form-group">
@@ -530,7 +531,7 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="purchasePrice" data-i18n="warranties.purchase_price_optional">Purchase Price (Optional)</label>
+                        <label for="purchasePrice" class="label-with-help"><span data-i18n="warranties.purchase_price_optional">Purchase Price (Optional)</span> <i class="fas fa-info-circle field-help-icon" data-i18n-title="warranties.purchase_price_tooltip" title="The price you paid for the product itself, not the cost of the warranty. If the warranty was included with the product, enter the product's price."></i></label>
                         <div class="price-input-wrapper" id="addPriceInputWrapper">
                             <span class="currency-symbol" id="addCurrencySymbol">$</span>
                             <input type="number" id="purchasePrice" name="purchase_price" class="form-control" min="0" step="0.01" placeholder="0.00">
@@ -924,7 +925,7 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="editPurchasePrice" data-i18n="warranties.purchase_price_optional">Purchase Price (Optional)</label>
+                            <label for="editPurchasePrice" class="label-with-help"><span data-i18n="warranties.purchase_price_optional">Purchase Price (Optional)</span> <i class="fas fa-info-circle field-help-icon" data-i18n-title="warranties.purchase_price_tooltip" title="The price you paid for the product itself, not the cost of the warranty. If the warranty was included with the product, enter the product's price."></i></label>
                             <div class="price-input-wrapper" id="editPriceInputWrapper">
                                 <span class="currency-symbol" id="editCurrencySymbol">$</span>
                                 <input type="number" id="editPurchasePrice" name="purchase_price" class="form-control" min="0" step="0.01" placeholder="0.00">
@@ -954,6 +955,7 @@
                             <div id="editProductPhotoPreview" class="photo-preview" style="display: none;">
                                 <img id="editProductPhotoImg" src="" alt="Product Photo Preview" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 10px;">
                             </div>
+                            <input type="url" id="editProductPhotoUrl" name="product_photo_url" class="form-control photo-url-input" data-i18n-placeholder="warranties.photo_url_placeholder" placeholder="Or paste a photo URL">
                             <div id="currentProductPhoto" class="mt-10"></div>
                             <button type="button" id="deleteProductPhotoBtn" class="btn btn-danger btn-sm mt-2" style="display:none;"><i class="fas fa-trash"></i> <span data-i18n="warranties.delete_photo">Delete Photo</span></button>
                             
@@ -1334,9 +1336,9 @@
         <div class="loading-spinner"></div>
     </div>
     
-    <script type="module" src="js/index.js?v=20260518004"></script>
+    <script type="module" src="js/index.js?v=20261101001"></script>
     <script src="auth.js?v=20250119001"></script>
-    <script src="script.js?v=20261101002"></script>
+    <script src="script.js?v=20261101003"></script>
     <script>
         // Lightweight UI logic for Filter/Sort popovers (no change to core logic)
         document.addEventListener('DOMContentLoaded', function () {

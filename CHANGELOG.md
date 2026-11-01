@@ -2,6 +2,15 @@
 
 ## 1.0.5 - Unreleased
 
+- **Product photo by URL (#207):** the add and edit forms now accept a photo URL next to the upload and camera options. The server downloads the image once, checks that it really is an image (PNG, JPG, WebP or GIF), and stores it like an uploaded photo, so cards and thumbnails work exactly as with an upload. Fetches are guarded: public http(s) addresses only, a size cap, a timeout, and a redirect limit. An uploaded file still wins when both are given.
+  - _Files: `backend/warranties_routes.py`, `frontend/index.html`, `frontend/status.html`, `frontend/js/components/addWarrantyForm.js`, `frontend/js/components/editModal.js`, `frontend/style.css`, `locales/en/translation.json`, `tests/test_photo_url.py`_
+- **Duplicate warranty action:** every warranty card gains a Duplicate button that opens the Add Warranty form prefilled with the original's details (name, purchase date or duration, price, vendor, model, serial numbers, warranty type, notes and tags), ready to adjust and save as a new warranty. It covers the common case behind the overlapping-warranties requests: a manufacturer warranty and an extended warranty on the same product no longer need everything retyped. Photos, documents and claims are not copied.
+  - _Files: `frontend/js/components/warrantyRenderer.js`, `frontend/js/components/addWarrantyForm.js`, `frontend/js/controllers/warrantyListController.js`, `locales/en/translation.json`_
+- **Purchase Price tooltip (#223):** the Purchase Price label in the add and edit forms now carries a help icon explaining that the field is the price paid for the product, not the cost of the warranty, and that a warranty included with a product simply takes the product's price. Translated in all 20 locales.
+  - _Files: `frontend/index.html`, `frontend/status.html`, `frontend/style.css`, `locales/en/translation.json`_
+- **Form labels no longer show "undefined" while translations load:** labels built in the first moments after page load could render the literal text "undefined" (most visibly the serial number placeholder and its add button, when the Add Warranty form was opened immediately). Every translation lookup in the frontend now falls back to the English string when the translation is not ready yet, across the form, list and component scripts.
+  - _Files: `frontend/script.js`, `frontend/js/components/addWarrantyForm.js`, `frontend/js/components/serialNumbers.js`, `frontend/js/components/warrantyActions.js`, `frontend/js/components/editModal.js`, `frontend/js/components/formTabs.js`, `frontend/js/components/importExport.js`, `frontend/js/components/notes.js`, `frontend/js/controllers/warrantyListController.js`_
+
 - **Dependency and runtime updates:** gunicorn 24.1.1 → 26.2.0 and gevent 24.11.1 → 26.9.0 (the new gevent ships Python 3.15 wheels, ending the from-source compile that slowed multi-arch Docker builds), python-dateutil 2.9.0 → 3.0.0, setuptools 84.0.0 → 84.2.1, and the Python 3.15 slim base image digest refreshed.
   - _Files: `Dockerfile`, `backend/requirements.txt`, `.github/workflows/renovate.yml`_
 

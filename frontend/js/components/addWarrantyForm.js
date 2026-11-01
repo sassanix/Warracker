@@ -46,8 +46,8 @@ const state = {
 	tagListenerBound: false,
 };
 
-const SERIAL_PLACEHOLDER = () => (window.i18next ? window.i18next.t('warranties.enter_serial_number') : 'Enter serial number');
-const ADD_SERIAL_LABEL = () => (window.i18next ? window.i18next.t('warranties.add_serial_number') : 'Add Serial Number');
+const SERIAL_PLACEHOLDER = () => ((window.i18next && window.i18next.t('warranties.enter_serial_number') || 'Enter serial number'));
+const ADD_SERIAL_LABEL = () => ((window.i18next && window.i18next.t('warranties.add_serial_number') || 'Add Serial Number'));
 
 export function init() {
 	if (state.initialised) return;
@@ -268,10 +268,10 @@ export function validateTab(index) {
 		const value = control.value || '';
 		if (control.hasAttribute('required') && !value.trim()) {
 			isValid = false;
-			markInvalid(control, window.i18next ? window.i18next.t('messages.please_fill_out_this_field') : 'Please fill out this field.');
+			markInvalid(control, (window.i18next && window.i18next.t('messages.please_fill_out_this_field') || 'Please fill out this field.'));
 		} else if (!control.checkValidity()) {
 			isValid = false;
-			markInvalid(control, control.validationMessage || (window.i18next ? window.i18next.t('messages.field_is_invalid') : 'This field is invalid.'));
+			markInvalid(control, control.validationMessage || ((window.i18next && window.i18next.t('messages.field_is_invalid') || 'This field is invalid.')));
 		}
 	});
 	return isValid;
@@ -282,7 +282,7 @@ export function showValidationErrors(index) {
 	if (!content) return;
 	const firstInvalid = content.querySelector('.invalid');
 	if (firstInvalid) firstInvalid.focus();
-	showToast(window.i18next ? window.i18next.t('messages.correct_errors_in_tab') : 'Please correct the errors on this tab.', 'error', 4000);
+	showToast((window.i18next && window.i18next.t('messages.correct_errors_in_tab') || 'Please correct the errors on this tab.'), 'error', 4000);
 }
 
 function handleFormInput(event) {
@@ -393,7 +393,7 @@ export function updateSummary() {
 		if (serialValues.length) {
 			state.summary.serialNumbers.innerHTML = `<ul>${serialValues.map((sn) => `<li>${sn}</li>`).join('')}</ul>`;
 		} else {
-			state.summary.serialNumbers.textContent = window.i18next ? window.i18next.t('warranties.none') : 'None';
+			state.summary.serialNumbers.textContent = (window.i18next && window.i18next.t('warranties.none') || 'None');
 		}
 	}
 
@@ -403,7 +403,7 @@ export function updateSummary() {
 	const isLifetime = state.isLifetimeCheckbox?.checked;
 	if (state.summary.warrantyDuration) {
 		if (isLifetime) {
-			setTextContent(state.summary.warrantyDuration, window.i18next ? window.i18next.t('warranties.lifetime') : 'Lifetime');
+			setTextContent(state.summary.warrantyDuration, (window.i18next && window.i18next.t('warranties.lifetime') || 'Lifetime'));
 		} else if (state.durationMethodRadio?.checked) {
 			const years = Number.parseInt(getValue('warrantyDurationYears'), 10) || 0;
 			const months = Number.parseInt(getValue('warrantyDurationMonths'), 10) || 0;
@@ -422,7 +422,7 @@ export function updateSummary() {
 
 	const warrantyTypeSelect = document.getElementById('warrantyType');
 	const warrantyTypeCustom = document.getElementById('warrantyTypeCustom');
-	let warrantyTypeText = window.i18next ? window.i18next.t('warranties.not_specified') : 'Not specified';
+	let warrantyTypeText = (window.i18next && window.i18next.t('warranties.not_specified') || 'Not specified');
 	if (warrantyTypeSelect?.value === 'other' && warrantyTypeCustom?.value.trim()) {
 		warrantyTypeText = warrantyTypeCustom.value.trim();
 	} else if (warrantyTypeSelect?.value) {
@@ -439,7 +439,7 @@ export function updateSummary() {
 			const position = getCurrencyPosition();
 			state.summary.purchasePrice.innerHTML = formatCurrencyHTML(purchasePrice, symbol, position);
 		} else {
-			state.summary.purchasePrice.textContent = window.i18next ? window.i18next.t('warranties.not_specified') : 'Not specified';
+			state.summary.purchasePrice.textContent = (window.i18next && window.i18next.t('warranties.not_specified') || 'Not specified');
 		}
 	}
 
@@ -458,9 +458,7 @@ function renderSummaryTags() {
 	const tags = getSelectedTags();
 	state.summary.tags.innerHTML = '';
 	if (!tags.length) {
-		state.summary.tags.textContent = window.i18next
-			? window.i18next.t('tags.no_selected', { defaultValue: 'No tags selected' })
-			: 'No tags selected';
+		state.summary.tags.textContent = (window.i18next && window.i18next.t('tags.no_selected', { defaultValue: 'No tags selected' }) || 'No tags selected');
 		return;
 	}
 	tags.forEach((tag) => {
@@ -519,7 +517,7 @@ export async function handleFormSubmit(event) {
 		const created = await createWarranty(formData);
 		console.log('[addWarrantyForm] Warranty created:', created);
 		hideLoadingSpinner();
-		showToast(window.i18next ? window.i18next.t('messages.warranty_added_successfully') : 'Warranty added successfully', 'success');
+		showToast((window.i18next && window.i18next.t('messages.warranty_added_successfully') || 'Warranty added successfully'), 'success');
 		state.modal?.classList.remove('active');
 		resetAddWarrantyWizard();
 		console.log('[addWarrantyForm] Loading warranties after creation...');
@@ -533,7 +531,7 @@ export async function handleFormSubmit(event) {
 	} catch (error) {
 		hideLoadingSpinner();
 		console.error('[addWarrantyForm] Failed to save warranty', error);
-		showToast(apiErrorMessage(error, window.i18next ? window.i18next.t('messages.failed_to_add_warranty') : 'Failed to add warranty'), 'error');
+		showToast(apiErrorMessage(error, (window.i18next && window.i18next.t('messages.failed_to_add_warranty') || 'Failed to add warranty')), 'error');
 	} finally {
 		isSubmitting = false;
 		console.log('[addWarrantyForm] Submission complete, flag reset');
@@ -592,6 +590,85 @@ function closeModal() {
 	resetAddWarrantyWizard();
 }
 
+export function openDuplicateForm(warranty) {
+	if (!warranty) return;
+	resetAddWarrantyWizard();
+	updateCurrencyDefaults();
+	const setValue = (id, value) => {
+		const el = document.getElementById(id);
+		if (el) el.value = value ?? '';
+	};
+	setValue('productName', warranty.product_name || '');
+	setValue('productUrl', warranty.product_url || '');
+	setValue('modelNumber', warranty.model_number || '');
+	setValue('vendor', warranty.vendor || '');
+	setValue('purchasePrice', warranty.purchase_price || '');
+	if (warranty.currency) setValue('currency', warranty.currency);
+	setValue('purchaseDate', warranty.purchase_date ? String(warranty.purchase_date).split('T')[0] : '');
+	const serials = Array.isArray(warranty.serial_numbers)
+		? warranty.serial_numbers
+			.map((sn) => {
+				if (!sn) return '';
+				if (typeof sn === 'object' && sn.serial_number) return sn.serial_number;
+				return String(sn);
+			})
+			.filter((value) => value && value.trim())
+		: [];
+	if (state.serialContainer && serials.length) {
+		state.serialContainer.innerHTML = '';
+		serials.forEach((serial) => addSerialNumberInput(serial));
+	}
+	const typeSelect = document.getElementById('warrantyType');
+	const customInput = document.getElementById('warrantyTypeCustom');
+	if (typeSelect) {
+		const optionExists = Array.from(typeSelect.options).some((option) => option.value === (warranty.warranty_type || ''));
+		if (optionExists) {
+			typeSelect.value = warranty.warranty_type || '';
+			if (customInput) {
+				customInput.style.display = 'none';
+				customInput.value = '';
+			}
+		} else {
+			typeSelect.value = 'other';
+			if (customInput) {
+				customInput.style.display = 'block';
+				customInput.value = warranty.warranty_type || '';
+			}
+		}
+	}
+	if (state.isLifetimeCheckbox) state.isLifetimeCheckbox.checked = Boolean(warranty.is_lifetime);
+	const years = warranty.warranty_duration_years || 0;
+	const months = warranty.warranty_duration_months || 0;
+	const days = warranty.warranty_duration_days || 0;
+	const useExact = !warranty.is_lifetime && (warranty.original_input_method === 'exact_date'
+		|| (years === 0 && months === 0 && days === 0 && Boolean(warranty.expiration_date)));
+	if (state.durationMethodRadio) state.durationMethodRadio.checked = !useExact;
+	if (state.exactDateMethodRadio) state.exactDateMethodRadio.checked = useExact;
+	if (useExact) {
+		if (state.exactDateInput) state.exactDateInput.value = warranty.expiration_date ? String(warranty.expiration_date).split('T')[0] : '';
+	} else {
+		setValue('warrantyDurationYears', years || '');
+		setValue('warrantyDurationMonths', months || '');
+		setValue('warrantyDurationDays', days || '');
+	}
+	handleLifetimeChange();
+	handleWarrantyMethodChange();
+	setValue('notes', warranty.notes || '');
+	const tags = Array.isArray(warranty.tags)
+		? warranty.tags.map((tag) => ({ id: tag.id, name: tag.name, color: tag.color }))
+		: [];
+	setSelectedTags(tags);
+	if (Array.isArray(window.selectedTags)) window.selectedTags = tags;
+	renderSelectedTags();
+	updateSummary();
+	state.modal?.classList.add('active');
+	showToast((window.i18next && window.i18next.t('messages.details_copied') || 'Details copied. Adjust anything that differs, then save.'), 'success');
+}
+
+if (typeof window !== 'undefined') {
+	window.openDuplicateForm = openDuplicateForm;
+}
+
 function updateCurrencyDefaults() {
 	const currencySelect = document.getElementById('currency');
 	const preferred = getCurrencyCode();
@@ -607,8 +684,8 @@ function appendBasicFields(formData) {
 	const getValue = (id) => (document.getElementById(id)?.value || '').trim();
 	const productName = getValue('productName');
 	const purchaseDate = getValue('purchaseDate');
-	if (!productName) throw new Error(window.i18next ? window.i18next.t('messages.product_name_required') : 'Product name is required');
-	if (!purchaseDate) throw new Error(window.i18next ? window.i18next.t('messages.purchase_date_required') : 'Purchase date is required');
+	if (!productName) throw new Error((window.i18next && window.i18next.t('messages.product_name_required') || 'Product name is required'));
+	if (!purchaseDate) throw new Error((window.i18next && window.i18next.t('messages.purchase_date_required') || 'Purchase date is required'));
 	formData.append('product_name', productName);
 	formData.append('purchase_date', purchaseDate);
 	let productUrl = getValue('productUrl');
@@ -665,6 +742,7 @@ function appendFiles(formData, storageOptions = {}) {
 		}
 	};
 	appendFile(state.fileInputs.productPhoto, 'product_photo');
+	formData.append('product_photo_url', document.getElementById('productPhotoUrl')?.value || '');
 	if (storageOptions.invoiceStorage !== 'paperless') {
 		appendFile(state.fileInputs.invoice, 'invoice');
 	}
@@ -704,7 +782,7 @@ function appendWarrantyMethod(formData) {
 		const months = Number.parseInt(document.getElementById('warrantyDurationMonths')?.value || '0', 10) || 0;
 		const days = Number.parseInt(document.getElementById('warrantyDurationDays')?.value || '0', 10) || 0;
 		if (years === 0 && months === 0 && days === 0) {
-			throw new Error(window.i18next ? window.i18next.t('messages.warranty_duration_required') : 'Warranty duration is required');
+			throw new Error((window.i18next && window.i18next.t('messages.warranty_duration_required') || 'Warranty duration is required'));
 		}
 		formData.append('warranty_duration_years', years);
 		formData.append('warranty_duration_months', months);
@@ -714,14 +792,14 @@ function appendWarrantyMethod(formData) {
 		const expiration = state.exactDateInput.value;
 		const purchase = document.getElementById('purchaseDate')?.value;
 		if (purchase && expiration <= purchase) {
-			throw new Error(window.i18next ? window.i18next.t('messages.expiration_date_after_purchase_date') : 'Expiration date must be after purchase date');
+			throw new Error((window.i18next && window.i18next.t('messages.expiration_date_after_purchase_date') || 'Expiration date must be after purchase date'));
 		}
 		formData.append('exact_expiration_date', expiration);
 		formData.append('warranty_duration_years', 0);
 		formData.append('warranty_duration_months', 0);
 		formData.append('warranty_duration_days', 0);
 	} else {
-		throw new Error(window.i18next ? window.i18next.t('messages.exact_expiration_date_required') : 'Exact expiration date is required');
+		throw new Error((window.i18next && window.i18next.t('messages.exact_expiration_date_required') || 'Exact expiration date is required'));
 	}
 }
 
@@ -734,7 +812,7 @@ function validateWarrantySelection() {
 		const months = Number.parseInt(document.getElementById('warrantyDurationMonths')?.value || '0', 10) || 0;
 		const days = Number.parseInt(document.getElementById('warrantyDurationDays')?.value || '0', 10) || 0;
 		if (years === 0 && months === 0 && days === 0) {
-			showToast(window.i18next ? window.i18next.t('messages.warranty_duration_required') : 'Warranty duration is required', 'error');
+			showToast((window.i18next && window.i18next.t('messages.warranty_duration_required') || 'Warranty duration is required'), 'error');
 			state.durationFields?.classList.add('invalid-duration');
 			switchToTab(1);
 			return false;
@@ -745,14 +823,14 @@ function validateWarrantySelection() {
 	if (state.exactDateInput?.value) {
 		const purchase = document.getElementById('purchaseDate')?.value;
 		if (purchase && state.exactDateInput.value <= purchase) {
-			showToast(window.i18next ? window.i18next.t('messages.expiration_date_after_purchase_date') : 'Expiration date must be after purchase date', 'error');
+			showToast((window.i18next && window.i18next.t('messages.expiration_date_after_purchase_date') || 'Expiration date must be after purchase date'), 'error');
 			switchToTab(1);
 			state.exactDateInput.focus();
 			return false;
 		}
 		return true;
 	}
-	showToast(window.i18next ? window.i18next.t('messages.exact_expiration_date_required') : 'Exact expiration date is required', 'error');
+	showToast((window.i18next && window.i18next.t('messages.exact_expiration_date_required') || 'Exact expiration date is required'), 'error');
 	switchToTab(1);
 	return false;
 }
@@ -860,7 +938,7 @@ function updateFileSummary(summaryElement, entry, urlValue = '', paperlessInputI
 	if (urlValue) {
 		summaryElement.textContent = `URL: ${urlValue}`;
 	} else if (!entry?.input?.files?.[0]) {
-		summaryElement.textContent = window.i18next ? window.i18next.t('warranties.not_specified') : 'Not specified';
+		summaryElement.textContent = (window.i18next && window.i18next.t('warranties.not_specified') || 'Not specified');
 	}
 }
 

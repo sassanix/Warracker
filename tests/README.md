@@ -44,6 +44,10 @@ CI runs the same suite on every pull request
   other users get the global-view-shared types (photo, invoice,
   manual) but never "other documents" or claim documents; missing
   files return a JSON 404.
+- `test_photo_url.py` — product photo by URL (#207): the server
+  downloads the image once and stores it like an upload; redirects are
+  followed, non-images are rejected, an uploaded file wins over a URL,
+  and the SSRF guard rejects non-public hosts.
 - `test_statistics.py` — void status drops a warranty out of Total
   Value and the active counts and into the voided count (#250);
   Total Value counts no-currency and NULL-currency rows as the

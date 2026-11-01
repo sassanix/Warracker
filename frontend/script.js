@@ -1277,7 +1277,7 @@ function processWarrantyData(warranty) {
     // --- Lifetime Handling ---
     if (processedWarranty.is_lifetime) {
         processedWarranty.status = 'active';
-        processedWarranty.statusText = window.i18next ? window.i18next.t('warranties.lifetime') : 'Lifetime';
+        processedWarranty.statusText = (window.i18next && window.i18next.t('warranties.lifetime') || 'Lifetime');
         processedWarranty.daysRemaining = Infinity;
         // Ensure duration components are 0 for lifetime
         processedWarranty.warranty_duration_years = 0;
@@ -1294,23 +1294,15 @@ function processWarrantyData(warranty) {
 
         if (daysRemaining < 0) {
             processedWarranty.status = 'expired';
-            processedWarranty.statusText = window.i18next ? window.i18next.t('warranties.expired') : 'Expired';
+            processedWarranty.statusText = (window.i18next && window.i18next.t('warranties.expired') || 'Expired');
         } else if (daysRemaining < expiringSoonDays) {
             processedWarranty.status = 'expiring';
-            const dayText = window.i18next ? 
-                window.i18next.t('warranties.day', {count: daysRemaining}) :
-                `day${daysRemaining !== 1 ? 's' : ''}`;
-            processedWarranty.statusText = window.i18next ? 
-                window.i18next.t('warranties.days_remaining', {days: daysRemaining, dayText: dayText}) :
-                `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining`;
+            const dayText = (window.i18next && window.i18next.t('warranties.day', {count: daysRemaining}) || `day${daysRemaining !== 1 ? 's' : ''}`);
+            processedWarranty.statusText = (window.i18next && window.i18next.t('warranties.days_remaining', {days: daysRemaining, dayText: dayText}) || `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining`);
         } else {
             processedWarranty.status = 'active';
-            const dayText = window.i18next ? 
-                window.i18next.t('warranties.day', {count: daysRemaining}) :
-                `day${daysRemaining !== 1 ? 's' : ''}`;
-            processedWarranty.statusText = window.i18next ? 
-                window.i18next.t('warranties.days_remaining', {days: daysRemaining, dayText: dayText}) :
-                `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining`;
+            const dayText = (window.i18next && window.i18next.t('warranties.day', {count: daysRemaining}) || `day${daysRemaining !== 1 ? 's' : ''}`);
+            processedWarranty.statusText = (window.i18next && window.i18next.t('warranties.days_remaining', {days: daysRemaining, dayText: dayText}) || `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining`);
         }
         
         // Preserve original duration values to detect input method
@@ -1351,14 +1343,14 @@ function processWarrantyData(warranty) {
         }
     } else {
         processedWarranty.status = 'unknown';
-        processedWarranty.statusText = window.i18next ? window.i18next.t('warranties.unknown_status') : 'Unknown Status';
+        processedWarranty.statusText = (window.i18next && window.i18next.t('warranties.unknown_status') || 'Unknown Status');
         processedWarranty.daysRemaining = null;
     }
 
     // Void (issue #250) takes precedence over the date-derived status
     if (processedWarranty.is_voided) {
         processedWarranty.status = 'void';
-        processedWarranty.statusText = window.i18next ? window.i18next.t('warranties.void') : 'Void';
+        processedWarranty.statusText = (window.i18next && window.i18next.t('warranties.void') || 'Void');
     }
 
     console.log('Processed warranty data result:', processedWarranty);
@@ -1695,15 +1687,15 @@ async function renderWarranties(warrantiesToRender) {
         let statusText = warranty.statusText || 'Unknown Status';
         // If showing archived-only view or item itself is archived within All view
         if (isArchivedView || warranty.is_archived) {
-            const archivedTextRaw = window.i18next ? window.i18next.t('warranties.archived') : 'Archived';
+            const archivedTextRaw = (window.i18next && window.i18next.t('warranties.archived') || 'Archived');
             const archivedLabel = archivedTextRaw && archivedTextRaw !== 'warranties.archived' ? archivedTextRaw : 'Archived';
             statusClass = 'archived';
             statusText = archivedLabel;
         }
         // Format warranty duration text
-        let warrantyDurationText = window.i18next ? window.i18next.t('warranties.na') : 'N/A';
+        let warrantyDurationText = (window.i18next && window.i18next.t('warranties.na') || 'N/A');
         if (isLifetime) {
-            warrantyDurationText = window.i18next ? window.i18next.t('warranties.lifetime') : 'Lifetime';
+            warrantyDurationText = (window.i18next && window.i18next.t('warranties.lifetime') || 'Lifetime');
         } else {
             // Use display_duration values if available, otherwise fall back to warranty_duration values
             const years = warranty.display_duration_years !== undefined ? warranty.display_duration_years : (warranty.warranty_duration_years || 0);
@@ -1716,15 +1708,15 @@ async function renderWarranties(warrantiesToRender) {
                 if (calculatedDuration) {
                     let parts = [];
                     if (calculatedDuration.years > 0) {
-                        const yearText = window.i18next ? window.i18next.t('warranties.year', {count: calculatedDuration.years}) : `year${calculatedDuration.years !== 1 ? 's' : ''}`;
+                        const yearText = (window.i18next && window.i18next.t('warranties.year', {count: calculatedDuration.years}) || `year${calculatedDuration.years !== 1 ? 's' : ''}`);
                         parts.push(`${calculatedDuration.years} ${yearText}`);
                     }
                     if (calculatedDuration.months > 0) {
-                        const monthText = window.i18next ? window.i18next.t('warranties.month', {count: calculatedDuration.months}) : `month${calculatedDuration.months !== 1 ? 's' : ''}`;
+                        const monthText = (window.i18next && window.i18next.t('warranties.month', {count: calculatedDuration.months}) || `month${calculatedDuration.months !== 1 ? 's' : ''}`);
                         parts.push(`${calculatedDuration.months} ${monthText}`);
                     }
                     if (calculatedDuration.days > 0) {
-                        const dayText = window.i18next ? window.i18next.t('warranties.day', {count: calculatedDuration.days}) : `day${calculatedDuration.days !== 1 ? 's' : ''}`;
+                        const dayText = (window.i18next && window.i18next.t('warranties.day', {count: calculatedDuration.days}) || `day${calculatedDuration.days !== 1 ? 's' : ''}`);
                         parts.push(`${calculatedDuration.days} ${dayText}`);
                     }
                     if (parts.length > 0) {
@@ -1735,15 +1727,15 @@ async function renderWarranties(warrantiesToRender) {
                 // Use the stored/calculated duration fields
                 let parts = [];
                 if (years > 0) {
-                    const yearText = window.i18next ? window.i18next.t('warranties.year', {count: years}) : `year${years !== 1 ? 's' : ''}`;
+                    const yearText = (window.i18next && window.i18next.t('warranties.year', {count: years}) || `year${years !== 1 ? 's' : ''}`);
                     parts.push(`${years} ${yearText}`);
                 }
                 if (months > 0) {
-                    const monthText = window.i18next ? window.i18next.t('warranties.month', {count: months}) : `month${months !== 1 ? 's' : ''}`;
+                    const monthText = (window.i18next && window.i18next.t('warranties.month', {count: months}) || `month${months !== 1 ? 's' : ''}`);
                     parts.push(`${months} ${monthText}`);
                 }
                 if (days > 0) {
-                    const dayText = window.i18next ? window.i18next.t('warranties.day', {count: days}) : `day${days !== 1 ? 's' : ''}`;
+                    const dayText = (window.i18next && window.i18next.t('warranties.day', {count: days}) || `day${days !== 1 ? 's' : ''}`);
                     parts.push(`${days} ${dayText}`);
                 }
                 if (parts.length > 0) {
@@ -1751,7 +1743,7 @@ async function renderWarranties(warrantiesToRender) {
                 }
             }
         }
-        const expirationDateText = isLifetime ? (window.i18next ? window.i18next.t('warranties.lifetime') : 'Lifetime') : formatDate(expirationDate);
+        const expirationDateText = isLifetime ? ((window.i18next && window.i18next.t('warranties.lifetime') || 'Lifetime')) : formatDate(expirationDate);
         
         // Calculate product age
         const productAge = calculateProductAge(warranty.purchase_date);
@@ -1763,7 +1755,7 @@ async function renderWarranties(warrantiesToRender) {
         // Prepare user info HTML for global view
         let userInfoHtml = '';
         if (isGlobalView && warranty.user_display_name) {
-            const ownerLabel = window.i18next ? window.i18next.t('warranties.owner') : 'Owner';
+            const ownerLabel = (window.i18next && window.i18next.t('warranties.owner') || 'Owner');
             userInfoHtml = `<div><strong>${ownerLabel}:</strong> <span>${warranty.user_display_name}</span></div>`;
         }
         
@@ -1783,7 +1775,7 @@ async function renderWarranties(warrantiesToRender) {
         // Remove the button, and instead prepare a notes link for document-links-row
         let notesLinkHtml = '';
         if (hasNotes) {
-            const notesLabel = window.i18next ? window.i18next.t('warranties.notes') : 'Notes';
+            const notesLabel = (window.i18next && window.i18next.t('warranties.notes') || 'Notes');
             notesLinkHtml = `<a href="#" class="notes-link" data-id="${warranty.id}" title="View Notes"><i class='fas fa-sticky-note'></i> ${notesLabel}</a>`;
         }
         
@@ -1886,12 +1878,12 @@ async function renderWarranties(warrantiesToRender) {
                     ${photoThumbnailHtml}
                     <div class="warranty-info">
                         ${userInfoHtml}
-                        <div><i class="fas fa-calendar"></i> ${window.i18next ? window.i18next.t('warranties.age') : 'Age'}: <span>${productAge}</span></div>
-                        <div><i class="fas fa-file-alt"></i> ${window.i18next ? window.i18next.t('warranties.warranty') : 'Warranty'}: <span>${warrantyDurationText}</span></div>
-                        <div><i class="fas fa-wrench"></i> ${window.i18next ? window.i18next.t('warranties.warranty_ends') : 'Warranty Ends'}: <span>${expirationDateText}</span></div>
-                        ${warranty.purchase_price ? `<div><i class="fas fa-coins"></i> ${window.i18next ? window.i18next.t('warranties.price') : 'Price'}: <span>${formatCurrencyHTML(warranty.purchase_price, getCurrencySymbol(), getCurrencyPosition())}</span></div>` : ''}
+                        <div><i class="fas fa-calendar"></i> ${(window.i18next && window.i18next.t('warranties.age') || 'Age')}: <span>${productAge}</span></div>
+                        <div><i class="fas fa-file-alt"></i> ${(window.i18next && window.i18next.t('warranties.warranty') || 'Warranty')}: <span>${warrantyDurationText}</span></div>
+                        <div><i class="fas fa-wrench"></i> ${(window.i18next && window.i18next.t('warranties.warranty_ends') || 'Warranty Ends')}: <span>${expirationDateText}</span></div>
+                        ${warranty.purchase_price ? `<div><i class="fas fa-coins"></i> ${(window.i18next && window.i18next.t('warranties.price') || 'Price')}: <span>${formatCurrencyHTML(warranty.purchase_price, getCurrencySymbol(), getCurrencyPosition())}</span></div>` : ''}
                         ${validSerialNumbers.length > 0 ? `
-                            <div><i class="fas fa-barcode"></i> ${window.i18next ? window.i18next.t('warranties.serial_number') : 'Serial Number'}: <span>${validSerialNumbers[0]}</span></div>
+                            <div><i class="fas fa-barcode"></i> ${(window.i18next && window.i18next.t('warranties.serial_number') || 'Serial Number')}: <span>${validSerialNumbers[0]}</span></div>
                             ${validSerialNumbers.length > 1 ? `
                                 <div style="margin-left: 28px;">
                                     <ul style="margin-top: 5px;">
@@ -1900,9 +1892,9 @@ async function renderWarranties(warrantiesToRender) {
                                 </div>
                             ` : ''}
                         ` : ''}
-                        ${warranty.model_number ? `<div><i class="fas fa-tag"></i> ${window.i18next ? window.i18next.t('warranties.model_number') : 'Model Number'}: <span>${warranty.model_number}</span></div>` : ''}
-                        ${warranty.vendor ? `<div><i class="fas fa-store"></i> ${window.i18next ? window.i18next.t('warranties.vendor') : 'Vendor'}: <span>${warranty.vendor}</span></div>` : ''}
-                        ${warranty.warranty_type ? `<div><i class="fas fa-shield-alt"></i> ${window.i18next ? window.i18next.t('warranties.type') : 'Type'}: <span>${warranty.warranty_type}</span></div>` : ''}
+                        ${warranty.model_number ? `<div><i class="fas fa-tag"></i> ${(window.i18next && window.i18next.t('warranties.model_number') || 'Model Number')}: <span>${warranty.model_number}</span></div>` : ''}
+                        ${warranty.vendor ? `<div><i class="fas fa-store"></i> ${(window.i18next && window.i18next.t('warranties.vendor') || 'Vendor')}: <span>${warranty.vendor}</span></div>` : ''}
+                        ${warranty.warranty_type ? `<div><i class="fas fa-shield-alt"></i> ${(window.i18next && window.i18next.t('warranties.type') || 'Type')}: <span>${warranty.warranty_type}</span></div>` : ''}
                     </div>
                 </div>
                 ${hasDocuments ? `
@@ -1910,7 +1902,7 @@ async function renderWarranties(warrantiesToRender) {
                     <div class="document-links-inner-container">
                         ${warranty.product_url ? `
                             <a href="${warranty.product_url}" class="product-link" target="_blank">
-                                <i class="fas fa-globe"></i> ${window.i18next ? window.i18next.t('warranties.product_website') : 'Product Website'}
+                                <i class="fas fa-globe"></i> ${(window.i18next && window.i18next.t('warranties.product_website') || 'Product Website')}
                             </a>
                         ` : ''}
                         ${generateDocumentLink(warranty, 'invoice')}
@@ -1949,12 +1941,12 @@ async function renderWarranties(warrantiesToRender) {
                     ${photoThumbnailHtml}
                     <div class="warranty-info">
                         ${userInfoHtml}
-                        <div><i class="fas fa-calendar"></i> ${window.i18next ? window.i18next.t('warranties.age') : 'Age'}: <span>${productAge}</span></div>
-                        <div><i class="fas fa-file-alt"></i> ${window.i18next ? window.i18next.t('warranties.warranty') : 'Warranty'}: <span>${warrantyDurationText}</span></div>
-                        <div><i class="fas fa-wrench"></i> ${window.i18next ? window.i18next.t('warranties.warranty_ends') : 'Warranty Ends'}: <span>${expirationDateText}</span></div>
-                        ${warranty.purchase_price ? `<div><i class="fas fa-coins"></i> ${window.i18next ? window.i18next.t('warranties.price') : 'Price'}: <span>${formatCurrencyHTML(warranty.purchase_price, getCurrencySymbol(), getCurrencyPosition())}</span></div>` : ''}
+                        <div><i class="fas fa-calendar"></i> ${(window.i18next && window.i18next.t('warranties.age') || 'Age')}: <span>${productAge}</span></div>
+                        <div><i class="fas fa-file-alt"></i> ${(window.i18next && window.i18next.t('warranties.warranty') || 'Warranty')}: <span>${warrantyDurationText}</span></div>
+                        <div><i class="fas fa-wrench"></i> ${(window.i18next && window.i18next.t('warranties.warranty_ends') || 'Warranty Ends')}: <span>${expirationDateText}</span></div>
+                        ${warranty.purchase_price ? `<div><i class="fas fa-coins"></i> ${(window.i18next && window.i18next.t('warranties.price') || 'Price')}: <span>${formatCurrencyHTML(warranty.purchase_price, getCurrencySymbol(), getCurrencyPosition())}</span></div>` : ''}
                         ${validSerialNumbers.length > 0 ? `
-                            <div><i class="fas fa-barcode"></i> ${window.i18next ? window.i18next.t('warranties.serial_number') : 'Serial Number'}: <span>${validSerialNumbers[0]}</span></div>
+                            <div><i class="fas fa-barcode"></i> ${(window.i18next && window.i18next.t('warranties.serial_number') || 'Serial Number')}: <span>${validSerialNumbers[0]}</span></div>
                             ${validSerialNumbers.length > 1 ? `
                                 <div style="margin-left: 28px;">
                                     <ul style="margin-top: 5px;">
@@ -1963,9 +1955,9 @@ async function renderWarranties(warrantiesToRender) {
                                 </div>
                             ` : ''}
                         ` : ''}
-                        ${warranty.model_number ? `<div><i class=\"fas fa-tag\"></i> ${window.i18next ? window.i18next.t('warranties.model_number') : 'Model Number'}: <span>${warranty.model_number}</span></div>` : ''}
-                        ${warranty.vendor ? `<div><i class="fas fa-store"></i> ${window.i18next ? window.i18next.t('warranties.vendor') : 'Vendor'}: <span>${warranty.vendor}</span></div>` : ''}
-                        ${warranty.warranty_type ? `<div><i class="fas fa-shield-alt"></i> ${window.i18next ? window.i18next.t('warranties.type') : 'Type'}: <span>${warranty.warranty_type}</span></div>` : ''}
+                        ${warranty.model_number ? `<div><i class=\"fas fa-tag\"></i> ${(window.i18next && window.i18next.t('warranties.model_number') || 'Model Number')}: <span>${warranty.model_number}</span></div>` : ''}
+                        ${warranty.vendor ? `<div><i class="fas fa-store"></i> ${(window.i18next && window.i18next.t('warranties.vendor') || 'Vendor')}: <span>${warranty.vendor}</span></div>` : ''}
+                        ${warranty.warranty_type ? `<div><i class="fas fa-shield-alt"></i> ${(window.i18next && window.i18next.t('warranties.type') || 'Type')}: <span>${warranty.warranty_type}</span></div>` : ''}
                     </div>
                 </div>
                 ${hasDocuments ? `
@@ -1973,7 +1965,7 @@ async function renderWarranties(warrantiesToRender) {
                     <div class="document-links-inner-container">
                         ${warranty.product_url ? `
                             <a href="${warranty.product_url}" class="product-link" target="_blank">
-                                <i class="fas fa-globe"></i> ${window.i18next ? window.i18next.t('warranties.product_website') : 'Product Website'}
+                                <i class="fas fa-globe"></i> ${(window.i18next && window.i18next.t('warranties.product_website') || 'Product Website')}
                             </a>
                         ` : ''}
                         ${generateDocumentLink(warranty, 'invoice')}
@@ -2012,12 +2004,12 @@ async function renderWarranties(warrantiesToRender) {
                     ${photoThumbnailHtml}
                     <div class="warranty-info">
                         ${userInfoHtml}
-                        <div><i class="fas fa-calendar"></i> ${window.i18next ? window.i18next.t('warranties.age') : 'Age'}: <span>${productAge}</span></div>
-                        <div><i class="fas fa-file-alt"></i> ${window.i18next ? window.i18next.t('warranties.warranty') : 'Warranty'}: <span>${warrantyDurationText}</span></div>
-                        <div><i class="fas fa-wrench"></i> ${window.i18next ? window.i18next.t('warranties.warranty_ends') : 'Warranty Ends'}: <span>${expirationDateText}</span></div>
-                        ${warranty.purchase_price ? `<div><i class="fas fa-coins"></i> ${window.i18next ? window.i18next.t('warranties.price') : 'Price'}: <span>${formatCurrencyHTML(warranty.purchase_price, getCurrencySymbol(), getCurrencyPosition())}</span></div>` : ''}
+                        <div><i class="fas fa-calendar"></i> ${(window.i18next && window.i18next.t('warranties.age') || 'Age')}: <span>${productAge}</span></div>
+                        <div><i class="fas fa-file-alt"></i> ${(window.i18next && window.i18next.t('warranties.warranty') || 'Warranty')}: <span>${warrantyDurationText}</span></div>
+                        <div><i class="fas fa-wrench"></i> ${(window.i18next && window.i18next.t('warranties.warranty_ends') || 'Warranty Ends')}: <span>${expirationDateText}</span></div>
+                        ${warranty.purchase_price ? `<div><i class="fas fa-coins"></i> ${(window.i18next && window.i18next.t('warranties.price') || 'Price')}: <span>${formatCurrencyHTML(warranty.purchase_price, getCurrencySymbol(), getCurrencyPosition())}</span></div>` : ''}
                         ${validSerialNumbers.length > 0 ? `
-                            <div><i class="fas fa-barcode"></i> ${window.i18next ? window.i18next.t('warranties.serial_number') : 'Serial Number'}: <span>${validSerialNumbers[0]}</span></div>
+                            <div><i class="fas fa-barcode"></i> ${(window.i18next && window.i18next.t('warranties.serial_number') || 'Serial Number')}: <span>${validSerialNumbers[0]}</span></div>
                             ${validSerialNumbers.length > 1 ? `
                                 <div style="margin-left: 28px;">
                                     <ul style="margin-top: 5px;">
@@ -2026,9 +2018,9 @@ async function renderWarranties(warrantiesToRender) {
                                 </div>
                             ` : ''}
                         ` : ''}
-                        ${warranty.model_number ? `<div><i class=\"fas fa-tag\"></i> ${window.i18next ? window.i18next.t('warranties.model_number') : 'Model Number'}: <span>${warranty.model_number}</span></div>` : ''}
-                        ${warranty.vendor ? `<div><i class="fas fa-store"></i> ${window.i18next ? window.i18next.t('warranties.vendor') : 'Vendor'}: <span>${warranty.vendor}</span></div>` : ''}
-                        ${warranty.warranty_type ? `<div><i class="fas fa-shield-alt"></i> ${window.i18next ? window.i18next.t('warranties.type') : 'Type'}: <span>${warranty.warranty_type}</span></div>` : ''}
+                        ${warranty.model_number ? `<div><i class=\"fas fa-tag\"></i> ${(window.i18next && window.i18next.t('warranties.model_number') || 'Model Number')}: <span>${warranty.model_number}</span></div>` : ''}
+                        ${warranty.vendor ? `<div><i class="fas fa-store"></i> ${(window.i18next && window.i18next.t('warranties.vendor') || 'Vendor')}: <span>${warranty.vendor}</span></div>` : ''}
+                        ${warranty.warranty_type ? `<div><i class="fas fa-shield-alt"></i> ${(window.i18next && window.i18next.t('warranties.type') || 'Type')}: <span>${warranty.warranty_type}</span></div>` : ''}
                     </div>
                 </div>
                 <div class="warranty-status-row status-${statusClass}">
@@ -2039,7 +2031,7 @@ async function renderWarranties(warrantiesToRender) {
                     <div class="document-links-inner-container">
                         ${warranty.product_url ? `
                             <a href="${warranty.product_url}" class="product-link" target="_blank">
-                                <i class="fas fa-globe"></i> ${window.i18next ? window.i18next.t('warranties.product_website') : 'Product Website'}
+                                <i class="fas fa-globe"></i> ${(window.i18next && window.i18next.t('warranties.product_website') || 'Product Website')}
                             </a>
                         ` : ''}
                         ${generateDocumentLink(warranty, 'invoice')}
@@ -3514,7 +3506,7 @@ async function openClaimsModal(warrantyId) {
         // Find warranty info
         const warranty = warranties.find(w => w.id === warrantyId);
         if (!warranty) {
-            showToast(window.i18next ? window.i18next.t('claims.warranty_not_found') : 'Warranty not found', 'error');
+            showToast((window.i18next && window.i18next.t('claims.warranty_not_found') || 'Warranty not found'), 'error');
             return;
         }
         
@@ -3620,13 +3612,13 @@ function renderClaims() {
     
     if (currentClaims.length === 0) {
         const noClaimsMessage = currentClaimsCanEdit 
-            ? (window.i18next ? window.i18next.t('claims.no_claims_message') : 'Click "Add New Claim" to get started')
+            ? ((window.i18next && window.i18next.t('claims.no_claims_message') || 'Click "Add New Claim" to get started'))
             : 'No claims have been filed for this warranty';
             
         claimsListBody.innerHTML = `
             <div class="no-claims-message" style="text-align: center; padding: 40px;">
                 <i class="fas fa-clipboard-list" style="font-size: 3rem; color: var(--medium-gray); margin-bottom: 1rem;"></i>
-                <h4 style="color: var(--text-color); margin-bottom: 0.5rem;">${window.i18next ? window.i18next.t('claims.no_claims_yet') : 'No Claims Yet'}</h4>
+                <h4 style="color: var(--text-color); margin-bottom: 0.5rem;">${(window.i18next && window.i18next.t('claims.no_claims_yet') || 'No Claims Yet')}</h4>
                 <p style="color: var(--dark-gray); margin-bottom: 0;">${noClaimsMessage}</p>
             </div>
         `;
@@ -3686,7 +3678,7 @@ function renderClaims() {
             
             if (e.target.closest('.delete-claim-btn')) {
                 const claimId = parseInt(e.target.closest('.delete-claim-btn').dataset.claimId);
-                if (confirm(window.i18next ? window.i18next.t('claims.confirm_delete_claim') : 'Are you sure you want to delete this claim?')) {
+                if (confirm((window.i18next && window.i18next.t('claims.confirm_delete_claim') || 'Are you sure you want to delete this claim?'))) {
                     deleteClaim(claimId);
                 }
             }
@@ -3705,7 +3697,7 @@ function openClaimFormModal(claim = null) {
     
     // Update title
     if (claimFormTitle) {
-        claimFormTitle.textContent = claim ? (window.i18next ? window.i18next.t('claims.edit_claim') : 'Edit Claim') : (window.i18next ? window.i18next.t('claims.add_new_claim') : 'Add New Claim');
+        claimFormTitle.textContent = claim ? ((window.i18next && window.i18next.t('claims.edit_claim') || 'Edit Claim')) : ((window.i18next && window.i18next.t('claims.add_new_claim') || 'Add New Claim'));
     }
     
     // Reset form
@@ -3782,7 +3774,7 @@ async function handleClaimFormSubmit(event) {
             throw new Error(error.error || 'Failed to save claim');
         }
         
-        showToast(isEdit ? (window.i18next ? window.i18next.t('claims.claim_updated_successfully') : 'Claim updated successfully') : (window.i18next ? window.i18next.t('claims.claim_created_successfully') : 'Claim created successfully'), 'success');
+        showToast(isEdit ? ((window.i18next && window.i18next.t('claims.claim_updated_successfully') || 'Claim updated successfully')) : ((window.i18next && window.i18next.t('claims.claim_created_successfully') || 'Claim created successfully')), 'success');
         closeClaimFormModal();
         
         // Reload claims
@@ -3815,7 +3807,7 @@ async function deleteClaim(claimId) {
             throw new Error(error.error || 'Failed to delete claim');
         }
         
-        showToast(window.i18next ? window.i18next.t('claims.claim_deleted_successfully') : 'Claim deleted successfully', 'success');
+        showToast((window.i18next && window.i18next.t('claims.claim_deleted_successfully') || 'Claim deleted successfully'), 'success');
         
         // Reload claims
         await loadClaims(currentClaimsWarrantyId);
@@ -4069,7 +4061,7 @@ function generateDocumentLink(warranty, docType) {
             paperlessId: warranty.paperless_invoice_id,
             url: warranty.invoice_url,
             icon: 'fas fa-file-invoice',
-            label: window.i18next ? window.i18next.t('warranties.invoice_receipt_short', 'Invoice') : 'Invoice',
+            label: (window.i18next && window.i18next.t('warranties.invoice_receipt_short', 'Invoice') || 'Invoice'),
             className: 'invoice-link'
         },
         manual: {
@@ -4077,7 +4069,7 @@ function generateDocumentLink(warranty, docType) {
             paperlessId: warranty.paperless_manual_id,
             url: warranty.manual_url,
             icon: 'fas fa-book',
-            label: window.i18next ? window.i18next.t('warranties.product_manual', 'Manual') : 'Manual',
+            label: (window.i18next && window.i18next.t('warranties.product_manual', 'Manual') || 'Manual'),
             className: 'manual-link'
         },
         other: {
@@ -4085,7 +4077,7 @@ function generateDocumentLink(warranty, docType) {
             paperlessId: warranty.paperless_other_id,
             url: warranty.other_document_url,
             icon: 'fas fa-file-alt',
-            label: window.i18next ? window.i18next.t('warranties.files', 'Files') : 'Files',
+            label: (window.i18next && window.i18next.t('warranties.files', 'Files') || 'Files'),
             className: 'other-document-link'
         },
         photo: {
@@ -4093,7 +4085,7 @@ function generateDocumentLink(warranty, docType) {
             paperlessId: warranty.paperless_photo_id,
             url: null,
             icon: 'fas fa-image',
-            label: window.i18next ? window.i18next.t('warranties.product_photo', 'Photo') : 'Photo',
+            label: (window.i18next && window.i18next.t('warranties.product_photo', 'Photo') || 'Photo'),
             className: 'photo-link'
         }
     };

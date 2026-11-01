@@ -12,6 +12,10 @@ from dateutil.parser import parse as date_parse
 import mimetypes
 from flask import Response
 import uuid
+import socket
+import ipaddress
+import urllib.parse
+import requests
 from werkzeug.exceptions import RequestEntityTooLarge
 
 # Add pytz import for timezone functionality
@@ -47,6 +51,84 @@ def unique_upload_filename(original_name, infix=""):
     safe = secure_filename(original_name)
     stamp = datetime.now().strftime('%Y%m%d%H%M%S')
     return f"{stamp}_{uuid.uuid4().hex[:8]}_{infix}{safe}"
+
+def _photo_url_host_is_public(hostname):
+    """SSRF guard for photo-by-URL: every address the host resolves to must
+    be a public (global) IP. Skipped only when the deployment explicitly sets
+    ALLOW_PRIVATE_PHOTO_URLS (used by the test suite with a local server)."""
+    if current_app.config.get('ALLOW_PRIVATE_PHOTO_URLS'):
+        return True
+    try:
+        infos = socket.getaddrinfo(hostname, None)
+    except Exception:
+        return False
+    if not infos:
+        return False
+    for info in infos:
+        try:
+            addr = ipaddress.ip_address(info[4][0])
+        except ValueError:
+            return False
+        if not addr.is_global:
+            return False
+    return True
+
+def _detect_image_extension(data):
+    """Magic-byte image sniffing (the upload path checks extensions only;
+    a fetched file has no trustworthy name, so check the content)."""
+    if data[:8] == b'\x89PNG\r\n\x1a\n':
+        return '.png'
+    if data[:3] == b'\xff\xd8\xff':
+        return '.jpg'
+    if data[:6] in (b'GIF87a', b'GIF89a'):
+        return '.gif'
+    if len(data) >= 12 and data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+        return '.webp'
+    return None
+
+def download_product_photo(url):
+    """Fetch an image from a user-supplied URL for use as a product photo.
+    Returns (bytes, extension). Raises ValueError with a user-facing message."""
+    current = (url or '').strip()
+    if not current:
+        raise ValueError("Photo URL is empty.")
+    max_bytes = current_app.config.get('MAX_CONTENT_LENGTH') or 32 * 1024 * 1024
+    for _ in range(4):
+        parsed = urllib.parse.urlparse(current)
+        if parsed.scheme not in ('http', 'https') or not parsed.hostname:
+            raise ValueError("Photo URL must be a valid http(s) URL.")
+        if not _photo_url_host_is_public(parsed.hostname):
+            raise ValueError("Photo URL must point to a public address.")
+        try:
+            resp = requests.get(current, timeout=10, stream=True, allow_redirects=False,
+                                headers={'User-Agent': 'Warracker photo fetch'})
+        except requests.RequestException:
+            raise ValueError("Could not fetch the photo URL.")
+        if resp.status_code in (301, 302, 303, 307, 308):
+            location = resp.headers.get('Location')
+            resp.close()
+            if not location:
+                raise ValueError("Could not fetch the photo URL.")
+            current = urllib.parse.urljoin(current, location)
+            continue
+        if resp.status_code != 200:
+            resp.close()
+            raise ValueError("Could not fetch the photo URL.")
+        chunks, total = [], 0
+        try:
+            for chunk in resp.iter_content(chunk_size=65536):
+                total += len(chunk)
+                if total > max_bytes:
+                    raise ValueError("Photo URL file is too large.")
+                chunks.append(chunk)
+        finally:
+            resp.close()
+        data = b''.join(chunks)
+        ext = _detect_image_extension(data)
+        if not ext:
+            raise ValueError("Product photo must be an image file (PNG, JPG, JPEG, WEBP, GIF)")
+        return data, ext
+    raise ValueError("Too many redirects fetching the photo URL.")
 
 # Map of currency symbols to ISO codes (mirrors frontend js/lib/currency.js).
 # Used to resolve a user's preferred currency symbol to a code for new warranties.
@@ -496,6 +578,26 @@ def add_warranty():
                     return jsonify({"error": f"Failed to save product_photo: {str(e)}"}), 500
         elif paperless_photo_id:
             logger.info(f"Product photo stored in Paperless-ngx with ID: {paperless_photo_id}")
+
+        # Product photo by URL (#207): only when no file was uploaded and the
+        # photo is not coming from Paperless. The image is downloaded once and
+        # stored like an upload, so every later view uses the normal path.
+        product_photo_url = (request.form.get('product_photo_url') or '').strip()
+        if not db_product_photo_path and not paperless_photo_id and product_photo_url:
+            try:
+                photo_bytes, photo_ext = download_product_photo(product_photo_url)
+            except ValueError as e:
+                return jsonify({"error": str(e)}), 400
+            filename = unique_upload_filename(f"downloaded{photo_ext}", "photo_")
+            product_photo_path_on_disk = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+            try:
+                with open(product_photo_path_on_disk, 'wb') as fh:
+                    fh.write(photo_bytes)
+                db_product_photo_path = os.path.join('uploads', filename)
+                logger.info(f"Successfully saved product_photo from URL: {db_product_photo_path}")
+            except Exception as e:
+                logger.error(f"Error saving product_photo from URL {filename}: {e}")
+                return jsonify({"error": f"Failed to save product_photo: {str(e)}"}), 500
 
 
 
@@ -1156,6 +1258,36 @@ def update_warranty(warranty_id):
                         except Exception as e:
                             logger.error(f"Error deleting product_photo (delete request): {e}")
                 db_product_photo_path = None  # Set to None to clear in DB
+
+            # Product photo by URL (#207): replace the photo with a downloaded
+            # image when no file was uploaded and no delete was requested.
+            product_photo_url = (request.form.get('product_photo_url') or '').strip()
+            if (not db_product_photo_path and not paperless_photo_id and product_photo_url
+                    and request.form.get('delete_product_photo', 'false').lower() != 'true'):
+                try:
+                    photo_bytes, photo_ext = download_product_photo(product_photo_url)
+                except ValueError as e:
+                    return jsonify({"error": str(e)}), 400
+                cur.execute('SELECT product_photo_path FROM warranties WHERE id = %s', (warranty_id,))
+                old_product_photo_path = cur.fetchone()[0]
+                if old_product_photo_path:
+                    full_path = os.path.join('/data', old_product_photo_path)
+                    if os.path.exists(full_path):
+                        try:
+                            os.remove(full_path)
+                            logger.info(f"Deleted old product_photo: {full_path}")
+                        except Exception as e:
+                            logger.error(f"Error deleting old product_photo: {e}")
+                filename = unique_upload_filename(f"downloaded{photo_ext}", "photo_")
+                product_photo_path_on_disk = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                try:
+                    with open(product_photo_path_on_disk, 'wb') as fh:
+                        fh.write(photo_bytes)
+                    db_product_photo_path = os.path.join('uploads', filename)
+                    logger.info(f"Successfully saved updated product_photo from URL: {db_product_photo_path}")
+                except Exception as e:
+                    logger.error(f"Error saving updated product_photo from URL {filename}: {e}")
+                    return jsonify({"error": f"Failed to save product_photo: {str(e)}"}), 500
 
             # Prepare update parameters
             update_params = {
