@@ -8,10 +8,18 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
-# Database connection check (with retry)
+# Database connection check (with retry). A plain TCP probe from Python
+# replaces pg_isready, so the image no longer needs postgresql-client.
 log "Waiting for database connection..."
 for i in {1..30}; do
-    if pg_isready -h "${DB_HOST:-localhost}" -p "${DB_PORT:-5432}" -U "${DB_USER:-postgres}" > /dev/null 2>&1; then
+    if python -c "
+import os, socket, sys
+try:
+    with socket.create_connection((os.environ.get('DB_HOST', 'localhost'), int(os.environ.get('DB_PORT', '5432'))), timeout=2):
+        sys.exit(0)
+except OSError:
+    sys.exit(1)
+" > /dev/null 2>&1; then
         log "Database is ready!"
         break
     fi

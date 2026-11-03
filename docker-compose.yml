@@ -49,7 +49,7 @@ services:
     restart: unless-stopped
     command: >
       bash -c "
-        exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+        exec /opt/venv/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
       "
     
   warrackerdb:

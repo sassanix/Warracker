@@ -13,12 +13,24 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Upgrade pip
-RUN pip install --no-cache-dir --upgrade pip
+# Install Python dependencies into a virtualenv. The runtime stage copies
+# only the venv, so the image does not carry a second copy of the Python
+# interpreter and standard library from the builder's /usr/local.
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Install Python dependencies (system-wide installation)
 COPY backend/requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip && \
+    pip install --no-compile -r /tmp/requirements.txt
+
+# Strip what the runtime never uses: bytecode caches (the app runs with
+# PYTHONDONTWRITEBYTECODE=1), the packages' own test suites, and pip itself.
+RUN find /opt/venv -type d -name "__pycache__" -prune -exec rm -rf {} + && \
+    find /opt/venv -type d \( -name "tests" -o -name "test" \) -prune -exec rm -rf {} + && \
+    rm -rf /opt/venv/lib/python*/site-packages/pip \
+           /opt/venv/lib/python*/site-packages/pip-*.dist-info \
+           /opt/venv/bin/pip*
 
 
 FROM python:3.15-slim-trixie@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913 AS runtime
@@ -38,10 +50,8 @@ RUN groupadd -r -g 999 warracker && \
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         nginx \
-        supervisor \
         logrotate \
         cron \
-        postgresql-client \
         gettext-base \
         curl \
         ca-certificates \
@@ -51,8 +61,11 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Copy Python dependencies from builder (copy entire /usr/local for version-agnostic)
-COPY --from=builder /usr/local /usr/local
+# Copy the Python virtualenv from the builder (supervisord, gunicorn and
+# pybabel all run from it; supervisor is now the pip package, so the runtime
+# no longer needs Debian's supervisor package and its system Python)
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Configure directories with proper permissions
 RUN mkdir -p /app /var/www/html /var/log/supervisor /run/nginx && \
@@ -113,4 +126,4 @@ EXPOSE 80
 # ENTRYPOINT runs setup tasks then executes supervisor
 # Supervisor needs to run as root to manage services with different users
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+CMD ["/opt/venv/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

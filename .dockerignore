@@ -11,3 +11,9 @@ scripts/
 *.pyc
 __pycache__/
 .env
+
+# Ignore CI and test files (never copied into the image, keep the build
+# context small)
+.github/
+tests/
+.pytest_cache/
