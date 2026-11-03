@@ -64,6 +64,31 @@ fi
 
 log "Setup completed successfully!"
 
+# Print a banner to the container log once the app answers its health
+# check, so a healthy startup is easy to spot. Runs in the background:
+# the supervisor start below is not delayed by it, and if the app never
+# becomes healthy the banner simply never prints.
+print_banner_when_ready() {
+    local health_url="http://localhost/api/health"
+    if [ "${DISABLE_NGINX:-false}" = "true" ]; then
+        health_url="http://localhost:5000/api/health"
+    fi
+    for i in {1..45}; do
+        if curl -fs "$health_url" > /dev/null 2>&1; then
+            cat <<'BANNER'
+█     █                               █
+█  ▄  █  ▀▀▀▄ █▀▀▀▄ █▀▀▀▄  ▀▀▀▄ ▄▀▀▀▄ █  ▄▀ ▄▀▀▀▄ █▀▀▀▄
+█ ▄▀▄ █ ▄▀▀▀█ █     █     ▄▀▀▀█ █     █▀▀▄  █▀▀▀▀ █
+▀▄▀ ▀▄▀ ▀▄▄▄█ █     █     ▀▄▄▄█ ▀▄▄▄▀ █   █ ▀▄▄▄▀ █
+BANNER
+            log "Warracker is up and healthy."
+            return 0
+        fi
+        sleep 2
+    done
+}
+print_banner_when_ready &
+
 # Execute the CMD (supervisor) by replacing this shell process
 log "Starting supervisor..."
 exec "$@"
