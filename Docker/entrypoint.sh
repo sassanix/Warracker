@@ -1,16 +1,47 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "=== Warracker Startup ==="
-
 # Logging function
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
+# Version, read from the version checker shipped with the frontend so
+# the log header always names the build that is actually starting.
+APP_VERSION="unknown"
+if [ -f /var/www/html/version-checker.js ]; then
+    APP_VERSION=$(grep -o "currentVersion = '[^']*'" /var/www/html/version-checker.js | head -1 | cut -d"'" -f2 || true)
+    if [ -z "$APP_VERSION" ]; then
+        APP_VERSION="unknown"
+    fi
+fi
+
+echo "=== Warracker ${APP_VERSION} ==="
+
+# Configuration summary: the values support questions ask for first
+# when a user pastes their startup log. Passwords are never printed.
+DB_DISPLAY_HOST="${DB_HOST:-localhost}"
+DB_DISPLAY_PORT="${DB_PORT:-5432}"
+DB_DISPLAY_NAME="${DB_NAME:-warranty_db}"
+DB_DISPLAY_USER="${DB_USER:-warranty_user}"
+log "Database: ${DB_DISPLAY_HOST}:${DB_DISPLAY_PORT}, database ${DB_DISPLAY_NAME}, user ${DB_DISPLAY_USER}"
+if [ "${DISABLE_NGINX:-false}" = "true" ]; then
+    log "Web: nginx disabled, gunicorn serves directly on port 5000"
+else
+    log "Web: nginx on port 80, upload limit ${NGINX_MAX_BODY_SIZE_VALUE:-32M}"
+fi
+log "Memory mode: ${WARRACKER_MEMORY_MODE:-optimized}"
+if [ -n "${FRONTEND_URL:-}" ]; then
+    log "Frontend URL (used for login redirects): ${FRONTEND_URL}"
+elif [ -n "${APP_BASE_URL:-}" ]; then
+    log "Frontend URL (used for login redirects): ${APP_BASE_URL} (from APP_BASE_URL)"
+else
+    log "Frontend URL (used for login redirects): not set, the built-in default http://localhost:8080 will be used"
+fi
+
 # Database connection check (with retry). A plain TCP probe from Python
 # replaces pg_isready, so the image no longer needs postgresql-client.
-log "Waiting for database connection..."
+log "Waiting for database connection to ${DB_DISPLAY_HOST}:${DB_DISPLAY_PORT}..."
 for i in {1..30}; do
     if python -c "
 import os, socket, sys
@@ -24,18 +55,30 @@ except OSError:
         break
     fi
     if [ $i -eq 30 ]; then
-        log "ERROR: Database not available after 30 attempts"
+        log "ERROR: Could not reach the database at ${DB_DISPLAY_HOST}:${DB_DISPLAY_PORT} after 30 attempts (about 60 seconds)."
+        log "ERROR: Check that the database container is running and that DB_HOST and DB_PORT point to it, then restart this container."
         exit 1
+    fi
+    if [ $((i % 5)) -eq 0 ]; then
+        log "Still waiting for database (attempt $i of 30)..."
     fi
     sleep 2
 done
 
-# Migrations and permissions
+# Migrations and permissions. Each critical step is guarded so a
+# failure stops startup with one clear line naming the step, instead
+# of the script simply ending after a traceback.
 log "Running database migrations..."
-python /app/migrations/apply_migrations.py
+if ! python /app/migrations/apply_migrations.py; then
+    log "ERROR: Database migrations failed, startup stopped. The messages above show the cause."
+    exit 1
+fi
 
 log "Fixing permissions (database and upload folder)..."
-python /app/fix_permissions.py
+if ! python /app/fix_permissions.py; then
+    log "ERROR: Fixing permissions failed, startup stopped. The messages above show the cause."
+    exit 1
+fi
 
 # Translation compilation
 log "Compiling translations..."
