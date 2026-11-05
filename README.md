@@ -260,7 +260,7 @@ We welcome contributions and appreciate your interest in improving this project!
 
 ## Join Our Community
 
-[![Join our Discord server!](https://invidget.switchblade.xyz/PGxVS3U2Nw)](https://discord.gg/PGxVS3U2Nw)
+[![Join our Discord server!](https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/PGxVS3U2Nw)
 
 Want to discuss the project or need help? Join our Discord community!
 
