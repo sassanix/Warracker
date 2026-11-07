@@ -859,6 +859,84 @@ input.invalid {
   gap: 8px;
 }
 
+/* Grid view: the warranty name gets the full header width.
+   Higher specificity than the .product-name-header .warranty-title rule
+   below, which reserves room for the old six-button action row. */
+.warranties-list.grid-view .warranty-title {
+  max-width: none;
+  flex: 1 1 auto;
+  min-width: 0;
+  /* Wrap to a second line instead of truncating long names mid-word;
+     anything beyond two lines still ellipsizes. */
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.25;
+}
+
+.grid-view .warranty-actions {
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+/* Grid view card overflow (kebab) menu */
+.card-overflow {
+  position: relative;
+  display: flex;
+}
+
+.overflow-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 200px;
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  padding: 6px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+}
+
+.overflow-menu[hidden] {
+  display: none;
+}
+
+.overflow-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-color);
+  font-size: 0.92rem;
+  cursor: pointer;
+  text-align: left;
+  transition: var(--transition);
+}
+
+.overflow-item i {
+  width: 16px;
+  text-align: center;
+  color: var(--dark-gray);
+}
+
+.overflow-item:hover {
+  background-color: rgba(128, 128, 128, 0.12);
+}
+
+.overflow-item.delete-btn,
+.overflow-item.delete-btn i {
+  color: var(--danger-color);
+}
+
 .action-btn {
   background: none;
   border: none;

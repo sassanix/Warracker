@@ -342,7 +342,50 @@ function buildClaimsMeta(warranty) {
 	return { className: 'action-btn claims-link', title: 'Claims' };
 }
 
-function buildActionButtons(warranty, { canEdit, isArchivedView, claimsMeta }) {
+function buildGridOverflowMenu(warranty, { isArchivedView }) {
+	const archived = isArchivedView || warranty.is_archived;
+	const items = [];
+	if (archived) {
+		items.push(`
+			<button class="overflow-item unarchive-btn" data-id="${warranty.id}">
+				<i class="fas fa-box-open"></i><span>${t('warranties.unarchive_warranty', 'Unarchive warranty')}</span>
+			</button>`);
+	} else {
+		items.push(`
+			<button class="overflow-item archive-btn" data-id="${warranty.id}">
+				<i class="fas fa-archive"></i><span>${t('warranties.archive_warranty', 'Archive warranty')}</span>
+			</button>`);
+		items.push(warranty.is_voided
+			? `
+			<button class="overflow-item unvoid-btn" data-id="${warranty.id}">
+				<i class="fas fa-undo"></i><span>${t('warranties.unvoid_warranty', 'Unvoid warranty')}</span>
+			</button>`
+			: `
+			<button class="overflow-item void-btn" data-id="${warranty.id}">
+				<i class="fas fa-ban"></i><span>${t('warranties.void_warranty', 'Void warranty')}</span>
+			</button>`);
+	}
+	items.push(`
+		<button class="overflow-item duplicate-btn" data-id="${warranty.id}">
+			<i class="fas fa-copy"></i><span>${t('warranties.duplicate_warranty', 'Duplicate warranty')}</span>
+		</button>`);
+	items.push(`
+		<button class="overflow-item delete-btn" data-id="${warranty.id}">
+			<i class="fas fa-trash"></i><span>${t('warranties.delete', 'Delete Warranty')}</span>
+		</button>`);
+	return `
+		<div class="card-overflow">
+			<button class="action-btn overflow-btn" title="${t('warranties.more_actions', 'More actions')}" data-id="${warranty.id}" aria-haspopup="true" aria-expanded="false">
+				<i class="fas fa-ellipsis-v"></i>
+			</button>
+			<div class="overflow-menu" role="menu" hidden>
+				${items.join('')}
+			</div>
+		</div>
+	`;
+}
+
+function buildActionButtons(warranty, { canEdit, isArchivedView, claimsMeta, view }) {
 	if (!canEdit) {
 		return `
 			<button class="${claimsMeta.className}" title="${claimsMeta.title}" data-id="${warranty.id}">
@@ -352,6 +395,22 @@ function buildActionButtons(warranty, { canEdit, isArchivedView, claimsMeta }) {
 				<i class="fas fa-eye" style="color: #666;"></i>
 			</span>
 		`;
+	}
+	if (view === 'grid') {
+		const archived = isArchivedView || warranty.is_archived;
+		return `
+		<button class="${claimsMeta.className}" title="${claimsMeta.title}" data-id="${warranty.id}">
+			<i class="fas fa-clipboard-list"></i>
+		</button>
+		${archived
+			? ''
+			: `
+				<button class="action-btn edit-btn" title="Edit" data-id="${warranty.id}">
+					<i class="fas fa-edit"></i>
+				</button>
+			`}
+		${buildGridOverflowMenu(warranty, { isArchivedView })}
+	`;
 	}
 	return `
 		<button class="${claimsMeta.className}" title="${claimsMeta.title}" data-id="${warranty.id}">
@@ -564,7 +623,7 @@ export function renderWarrantiesList(warranties, options = {}) {
 		const userInfoHtml = buildUserInfo(warranty, isGlobalView);
 		const canEdit = resolveCanEdit(warranty, isGlobalView);
 		const claimsMeta = buildClaimsMeta(warranty);
-		const actionButtons = buildActionButtons(warranty, { canEdit, isArchivedView, claimsMeta });
+		const actionButtons = buildActionButtons(warranty, { canEdit, isArchivedView, claimsMeta, view: currentView });
 
 		const card = document.createElement('div');
 		card.className = cardClassName(warranty, currentView, statusClass);

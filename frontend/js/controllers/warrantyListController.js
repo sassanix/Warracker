@@ -770,8 +770,29 @@ export function initEventListeners() {
 
 	// List delegated events (claims/edit/delete/notes/archive/unarchive) - controller owns this exclusively
 	const list = document.getElementById('warrantiesList');
+	const closeAllOverflowMenus = () => {
+		document.querySelectorAll('.overflow-menu:not([hidden])').forEach((menu) => {
+			menu.hidden = true;
+			menu.closest('.card-overflow')?.querySelector('.overflow-btn')?.setAttribute('aria-expanded', 'false');
+		});
+	};
 	if (list && !list._wlcDelegated) {
 		list.addEventListener('click', (e) => {
+			if (e.target.closest('.overflow-btn')) {
+				e.preventDefault();
+				const btn = e.target.closest('.overflow-btn');
+				const menu = btn.closest('.card-overflow')?.querySelector('.overflow-menu');
+				const willOpen = menu ? menu.hidden : false;
+				closeAllOverflowMenus();
+				if (menu && willOpen) {
+					menu.hidden = false;
+					btn.setAttribute('aria-expanded', 'true');
+				}
+				return;
+			}
+			if (e.target.closest('.overflow-item')) {
+				closeAllOverflowMenus();
+			}
 			if (e.target.closest('.claims-link')) {
 				e.preventDefault();
 				const id = parseInt(e.target.closest('.claims-link')?.dataset?.id);
@@ -850,6 +871,12 @@ export function initEventListeners() {
 			}
 		});
 		list._wlcDelegated = true;
+	}
+	if (!document._wlcOverflowCloser) {
+		document.addEventListener('click', (e) => {
+			if (!e.target.closest('.card-overflow')) closeAllOverflowMenus();
+		});
+		document._wlcOverflowCloser = true;
 	}
 }
 
