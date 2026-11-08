@@ -78,14 +78,22 @@ The essential features are reliable and ready for everyday use. Development is o
 
 **Home Page**
 
-<img width="1214" height="928" alt="Warracker home page with warranty cards" src="https://github.com/user-attachments/assets/0c13e416-42ea-4378-ae50-7addee435e00" />
+<img src="images/dashboard-grid-2026.png" alt="Warracker home page in grid view with a product photo on every card and every warranty status: Active, Expiring Soon, Expired, Void and Archived" />
 
-<img width="1208" height="927" alt="Warracker home page, table view" src="https://github.com/user-attachments/assets/4c5fdd5d-ff43-427d-82a5-45121dd21373" />
+<img src="images/table-view-2026.png" alt="Warracker home page, table view" />
 
 
 **Status Dashboard**
 
 <img src="images/status-dashboard-2026.png" alt="Warracker status dashboard with summary cards including Total Value and Void">
+
+**Dark Mode**
+
+<img src="images/dashboard-grid-dark-2026.png" alt="Warracker home page in grid view, dark mode" />
+
+<img src="images/table-view-dark-2026.png" alt="Warracker home page, table view, dark mode" />
+
+<img src="images/status-dashboard-dark-2026.png" alt="Warracker status dashboard, dark mode" />
 
 
 ## 🛠️Technology Stack
