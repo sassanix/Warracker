@@ -279,7 +279,7 @@ function generateDocumentLink(warranty, docType) {
 
 	if (hasUrl) {
 		if (linksHtml) linksHtml += ' ';
-		linksHtml += `<a href="${config.url}" target="_blank" class="document-url-link ${config.className}">
+		linksHtml += `<a href="${escapeHtml(sanitizeUrl(config.url))}" target="_blank" rel="noopener noreferrer" class="document-url-link ${config.className}">
 			<i class="fas fa-link"></i> ${config.label} ${t('warranties.link', 'Link')}
 		</a>`;
 	}

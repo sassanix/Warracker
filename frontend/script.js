@@ -2491,14 +2491,19 @@ async function openEditModal(warranty) {
         addSerialNumberInput(editSerialNumbersContainer);
     } else {
         // Add the first serial number with an "Add Another" button only (no remove button)
+        // The serial value is assigned through the input's value property, never
+        // interpolated into innerHTML: a serial containing a quote could otherwise
+        // break out of the value attribute (stored XSS, e.g. via the status page's
+        // edit modal under global view).
         const firstInput = document.createElement('div');
         firstInput.className = 'serial-number-input';
         firstInput.innerHTML = `
-            <input type="text" name="serial_numbers[]" class="form-control" placeholder="${i18next.t('warranties.enter_serial_number')}" value="${validSerialNumbers[0]}">
+            <input type="text" name="serial_numbers[]" class="form-control" placeholder="${i18next.t('warranties.enter_serial_number')}">
             <button type="button" class="btn btn-sm btn-primary add-serial-number">
                 <i class="fas fa-plus"></i> ${i18next.t('warranties.add_serial_number')}
             </button>
         `;
+        firstInput.querySelector('input').value = validSerialNumbers[0];
 
         // Add event listener for the Add button
         firstInput.querySelector('.add-serial-number').addEventListener('click', function(e) {
@@ -2513,11 +2518,12 @@ async function openEditModal(warranty) {
             const newInput = document.createElement('div');
             newInput.className = 'serial-number-input';
             newInput.innerHTML = `
-                <input type="text" name="serial_numbers[]" class="form-control" placeholder="${i18next.t('warranties.enter_serial_number')}" value="${validSerialNumbers[i]}">
+                <input type="text" name="serial_numbers[]" class="form-control" placeholder="${i18next.t('warranties.enter_serial_number')}">
                 <button type="button" class="btn btn-sm btn-danger remove-serial-number">
                     <i class="fas fa-minus"></i> ${i18next.t('actions.delete')}
                 </button>
             `;
+            newInput.querySelector('input').value = validSerialNumbers[i];
 
             // Add remove button functionality
             newInput.querySelector('.remove-serial-number').addEventListener('click', function() {

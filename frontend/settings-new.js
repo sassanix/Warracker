@@ -2069,11 +2069,19 @@ async function loadUsers() {
                 idCell.style.cssText = 'padding: 12px 8px; color: var(--text-color); border-right: 1px solid var(--border-color); font-weight: 500;';
                 row.appendChild(idCell);
                 
-                // Username with crown
+                // Username with crown. The username is user-controlled, so it
+                // is rendered as text, never via innerHTML (stored-XSS fix);
+                // the owner crown is built as a DOM node for the same reason.
                 const usernameCell = document.createElement('td');
-                const crownIcon = user.is_owner ? ' <i class="fas fa-crown" title="Application Owner" style="color: #f39c12; margin-left: 5px;"></i>' : '';
                 console.log(`DEBUG: User ${user.username} (ID: ${user.id}) - is_owner: ${user.is_owner}, adding crown: ${!!user.is_owner}`);
-                usernameCell.innerHTML = user.username + crownIcon;
+                usernameCell.textContent = user.username;
+                if (user.is_owner) {
+                    const crownIcon = document.createElement('i');
+                    crownIcon.className = 'fas fa-crown';
+                    crownIcon.title = 'Application Owner';
+                    crownIcon.style.cssText = 'color: #f39c12; margin-left: 5px;';
+                    usernameCell.appendChild(crownIcon);
+                }
                 usernameCell.style.cssText = 'padding: 12px 8px; color: var(--text-color); border-right: 1px solid var(--border-color); font-weight: 500;';
                 row.appendChild(usernameCell);
                 
