@@ -6583,13 +6583,25 @@ function getCurrencyCode() {
     // Fallback: Try to derive currency code from symbol
     const symbol = getCurrencySymbol();
     const symbolToCurrencyMap = {
-        '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY', '₹': 'INR', '₩': 'KRW',
-        'CHF': 'CHF', 'C$': 'CAD', 'A$': 'AUD', 'kr': 'SEK', 'zł': 'PLN', 
-        'Kč': 'CZK', 'Ft': 'HUF', '₽': 'RUB', 'R$': 'BRL', '₦': 'NGN',
-        '₪': 'ILS', '₺': 'TRY', '₨': 'PKR', '৳': 'BDT', '฿': 'THB',
-        '₫': 'VND', 'RM': 'MYR', 'S$': 'SGD', 'Rp': 'IDR', '₱': 'PHP',
-        'NT$': 'TWD', 'HK$': 'HKD', '₮': 'MNT', '₸': 'KZT', '₼': 'AZN',
-        '₾': 'GEL', '₴': 'UAH', 'NZ$': 'NZD'
+        '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY',
+        '₹': 'INR', '₩': 'KRW', 'CHF': 'CHF', 'C$': 'CAD',
+        'A$': 'AUD', 'kr': 'SEK', 'zł': 'PLN', 'Kč': 'CZK',
+        'Ft': 'HUF', '₽': 'RUB', 'R$': 'BRL', '₦': 'NGN',
+        '₪': 'ILS', '₺': 'TRY', '₨': 'PKR', '৳': 'BDT',
+        '฿': 'THB', '₫': 'VND', 'RM': 'MYR', 'S$': 'SGD',
+        'Rp': 'IDR', '₱': 'PHP', 'NT$': 'TWD', 'HK$': 'HKD',
+        '₮': 'MNT', '₸': 'KZT', '₼': 'AZN', '₾': 'GEL',
+        '₴': 'UAH', 'NZ$': 'NZD', 'лв': 'BGN', 'lei': 'RON',
+        'kn': 'HRK', 'S/': 'PEN', 'Bs': 'VES', 'R': 'ZAR',
+        'KSh': 'KES', '₵': 'GHS', 'DH': 'MAD', 'DT': 'TND',
+        'AED': 'AED', 'SR': 'SAR', 'QR': 'QAR', 'KD': 'KWD',
+        'BD': 'BHD', 'OR': 'OMR', 'JD': 'JOD', 'LL': 'LBP',
+        '﷼': 'IRR', 'Nu': 'BTN', '₭': 'LAK', '៛': 'KHR',
+        'MOP': 'MOP', 'soʻm': 'UZS', 'SM': 'TJS', 'с': 'KGS',
+        'T': 'TMT', '؋': 'AFN', '֏': 'AMD', 'Br': 'BYN',
+        'дин': 'RSD', 'ден': 'MKD', 'KM': 'BAM', 'FJ$': 'FJD',
+        'SI$': 'SBD', 'T$': 'TOP', 'VT': 'VUV', 'WS$': 'WST',
+        '₣': 'XPF'
     };
     
     if (symbolToCurrencyMap[symbol]) {

@@ -133,10 +133,25 @@ def download_product_photo(url):
 # Map of currency symbols to ISO codes (mirrors frontend js/lib/currency.js).
 # Used to resolve a user's preferred currency symbol to a code for new warranties.
 SYMBOL_TO_CURRENCY_CODE = {
-    '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY', '₹': 'INR', '₩': 'KRW',
-    'CHF': 'CHF', 'C$': 'CAD', 'A$': 'AUD', 'kr': 'SEK', 'zł': 'PLN',
-    'Kč': 'CZK', 'Ft': 'HUF', '₽': 'RUB', 'R$': 'BRL', '₪': 'ILS',
-    '₺': 'TRY', 'NZ$': 'NZD',
+    '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY',
+    '₹': 'INR', '₩': 'KRW', 'CHF': 'CHF', 'C$': 'CAD',
+    'A$': 'AUD', 'kr': 'SEK', 'zł': 'PLN', 'Kč': 'CZK',
+    'Ft': 'HUF', '₽': 'RUB', 'R$': 'BRL', '₪': 'ILS',
+    '₺': 'TRY', 'NZ$': 'NZD', 'лв': 'BGN', 'lei': 'RON',
+    'kn': 'HRK', 'S/': 'PEN', 'Bs': 'VES', 'R': 'ZAR',
+    '₦': 'NGN', 'KSh': 'KES', '₵': 'GHS', 'DH': 'MAD',
+    'DT': 'TND', 'AED': 'AED', 'SR': 'SAR', 'QR': 'QAR',
+    'KD': 'KWD', 'BD': 'BHD', 'OR': 'OMR', 'JD': 'JOD',
+    'LL': 'LBP', '﷼': 'IRR', '₨': 'PKR', '৳': 'BDT',
+    'Nu': 'BTN', '฿': 'THB', '₫': 'VND', '₭': 'LAK',
+    '៛': 'KHR', 'RM': 'MYR', 'S$': 'SGD', 'Rp': 'IDR',
+    '₱': 'PHP', 'NT$': 'TWD', 'HK$': 'HKD', 'MOP': 'MOP',
+    '₮': 'MNT', '₸': 'KZT', 'soʻm': 'UZS', 'SM': 'TJS',
+    'с': 'KGS', 'T': 'TMT', '؋': 'AFN', '֏': 'AMD',
+    '₼': 'AZN', '₾': 'GEL', '₴': 'UAH', 'Br': 'BYN',
+    'дин': 'RSD', 'ден': 'MKD', 'KM': 'BAM', 'FJ$': 'FJD',
+    'SI$': 'SBD', 'T$': 'TOP', 'VT': 'VUV', 'WS$': 'WST',
+    '₣': 'XPF'
 }
 
 def get_user_currency_code(user_id):
@@ -1705,13 +1720,25 @@ def import_warranties():
                             user_symbol = currency_result[0]
                             # Map common currency symbols to currency codes (same as frontend logic)
                             symbol_to_currency_map = {
-                                '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY', '₹': 'INR', '₩': 'KRW',
-                                'CHF': 'CHF', 'C$': 'CAD', 'A$': 'AUD', 'kr': 'SEK', 'zł': 'PLN', 
-                                'Kč': 'CZK', 'Ft': 'HUF', '₽': 'RUB', 'R$': 'BRL', '₦': 'NGN',
-                                '₪': 'ILS', '₺': 'TRY', '₨': 'PKR', '৳': 'BDT', '฿': 'THB',
-                                '₫': 'VND', 'RM': 'MYR', 'S$': 'SGD', 'Rp': 'IDR', '₱': 'PHP',
-                                'NT$': 'TWD', 'HK$': 'HKD', '₮': 'MNT', '₸': 'KZT', '₼': 'AZN',
-                                '₾': 'GEL', '₴': 'UAH', 'NZ$': 'NZD'
+                                '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY',
+                                '₹': 'INR', '₩': 'KRW', 'CHF': 'CHF', 'C$': 'CAD',
+                                'A$': 'AUD', 'kr': 'SEK', 'zł': 'PLN', 'Kč': 'CZK',
+                                'Ft': 'HUF', '₽': 'RUB', 'R$': 'BRL', '₦': 'NGN',
+                                '₪': 'ILS', '₺': 'TRY', '₨': 'PKR', '৳': 'BDT',
+                                '฿': 'THB', '₫': 'VND', 'RM': 'MYR', 'S$': 'SGD',
+                                'Rp': 'IDR', '₱': 'PHP', 'NT$': 'TWD', 'HK$': 'HKD',
+                                '₮': 'MNT', '₸': 'KZT', '₼': 'AZN', '₾': 'GEL',
+                                '₴': 'UAH', 'NZ$': 'NZD', 'лв': 'BGN', 'lei': 'RON',
+                                'kn': 'HRK', 'S/': 'PEN', 'Bs': 'VES', 'R': 'ZAR',
+                                'KSh': 'KES', '₵': 'GHS', 'DH': 'MAD', 'DT': 'TND',
+                                'AED': 'AED', 'SR': 'SAR', 'QR': 'QAR', 'KD': 'KWD',
+                                'BD': 'BHD', 'OR': 'OMR', 'JD': 'JOD', 'LL': 'LBP',
+                                '﷼': 'IRR', 'Nu': 'BTN', '₭': 'LAK', '៛': 'KHR',
+                                'MOP': 'MOP', 'soʻm': 'UZS', 'SM': 'TJS', 'с': 'KGS',
+                                'T': 'TMT', '؋': 'AFN', '֏': 'AMD', 'Br': 'BYN',
+                                'дин': 'RSD', 'ден': 'MKD', 'KM': 'BAM', 'FJ$': 'FJD',
+                                'SI$': 'SBD', 'T$': 'TOP', 'VT': 'VUV', 'WS$': 'WST',
+                                '₣': 'XPF'
                             }
                             
                             if user_symbol in symbol_to_currency_map:

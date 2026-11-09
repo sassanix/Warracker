@@ -24,10 +24,24 @@ logger = logging.getLogger(__name__)
 # Issue #192: the Total Value card sums only the default currency.
 CURRENCY_SYMBOL_TO_CODE = {
     '$': 'USD', '\u20ac': 'EUR', '\u00a3': 'GBP', '\u00a5': 'JPY',
-    '\u20b9': 'INR', '\u20a9': 'KRW', 'CHF': 'CHF', 'C$': 'CAD', 'A$': 'AUD',
-    'kr': 'SEK', 'z\u0142': 'PLN', 'K\u010d': 'CZK', 'Ft': 'HUF',
-    '\u20bd': 'RUB', 'R$': 'BRL', '\u20aa': 'ILS', '\u20ba': 'TRY',
-    'NZ$': 'NZD',
+    '\u20b9': 'INR', '\u20a9': 'KRW', 'CHF': 'CHF', 'C$': 'CAD',
+    'A$': 'AUD', 'kr': 'SEK', 'z\u0142': 'PLN', 'K\u010d': 'CZK',
+    'Ft': 'HUF', '\u20bd': 'RUB', 'R$': 'BRL', '\u20aa': 'ILS',
+    '\u20ba': 'TRY', 'NZ$': 'NZD', '\u043b\u0432': 'BGN', 'lei': 'RON',
+    'kn': 'HRK', 'S/': 'PEN', 'Bs': 'VES', 'R': 'ZAR',
+    '\u20a6': 'NGN', 'KSh': 'KES', '\u20b5': 'GHS', 'DH': 'MAD',
+    'DT': 'TND', 'AED': 'AED', 'SR': 'SAR', 'QR': 'QAR',
+    'KD': 'KWD', 'BD': 'BHD', 'OR': 'OMR', 'JD': 'JOD',
+    'LL': 'LBP', '\ufdfc': 'IRR', '\u20a8': 'PKR', '\u09f3': 'BDT',
+    'Nu': 'BTN', '\u0e3f': 'THB', '\u20ab': 'VND', '\u20ad': 'LAK',
+    '\u17db': 'KHR', 'RM': 'MYR', 'S$': 'SGD', 'Rp': 'IDR',
+    '\u20b1': 'PHP', 'NT$': 'TWD', 'HK$': 'HKD', 'MOP': 'MOP',
+    '\u20ae': 'MNT', '\u20b8': 'KZT', 'so\u02bbm': 'UZS', 'SM': 'TJS',
+    '\u0441': 'KGS', 'T': 'TMT', '\u060b': 'AFN', '\u058f': 'AMD',
+    '\u20bc': 'AZN', '\u20be': 'GEL', '\u20b4': 'UAH', 'Br': 'BYN',
+    '\u0434\u0438\u043d': 'RSD', '\u0434\u0435\u043d': 'MKD', 'KM': 'BAM', 'FJ$': 'FJD',
+    'SI$': 'SBD', 'T$': 'TOP', 'VT': 'VUV', 'WS$': 'WST',
+    '\u20a3': 'XPF'
 }
 
 def get_user_currency_code(cur, user_id):
