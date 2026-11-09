@@ -11,7 +11,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: postgres:15@sha256:1aac5b49cefd627f02816141ca4ad012d6cc19460dfe02a9b5168a105be3fc53
         env:
           POSTGRES_USER: warranty_user
           POSTGRES_PASSWORD: ci-test-password
@@ -34,11 +34,11 @@ jobs:
       UPLOAD_FOLDER: /tmp/warracker-test-uploads
 
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
-          python-version: "3.13"
+          python-version: "3.13.18"
           cache: pip
 
       - name: Install dependencies
