@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.5 - Unreleased
+## 1.0.5 - 2026-11-09
 
 - **Collapsible card actions in grid view:** a grid card header carried six icon buttons (Claims, Edit, Archive, Void, Duplicate, Delete) next to the product name, and the name was capped at 200px, so long product names truncated while the buttons took more room than the title. The header now keeps Claims and Edit visible and moves Archive, Void/Unvoid, Duplicate and Delete into an overflow (kebab) menu whose items carry text labels, not just icons, which also helps touch users who never see the icon tooltips. Delete sits last in the menu in the danger color, so it takes one deliberate extra tap. The title cap is gone in grid view, and names wrap to a second line instead of truncating, so the full product name shows. List and table views are unchanged.
   - _Files: `frontend/js/components/warrantyRenderer.js`, `frontend/js/controllers/warrantyListController.js`, `frontend/style.css`, `locales/*/translation.json`_
