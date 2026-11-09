@@ -80,6 +80,8 @@ The essential features are reliable and ready for everyday use. Development is o
 
 <img src="images/dashboard-grid-2026.png" alt="Warracker home page in grid view with a product photo on every card and every warranty status: Active, Expiring Soon, Expired, Void and Archived" />
 
+<img src="images/grid-menu-2026.png" alt="Warracker grid view card with the overflow menu open, showing Archive, Void, Duplicate and Delete actions with text labels" />
+
 <img src="images/table-view-2026.png" alt="Warracker home page, table view" />
 
 
