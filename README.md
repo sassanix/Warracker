@@ -98,7 +98,7 @@ More screenshots, including the table view, the card menu, and dark mode, are in
 
 ## 🗺️Roadmap
 
-The current release is **1.0.5**. What's planned next — 1.0.6 and the feature requests under consideration — lives on the [Roadmap](https://github.com/sassanix/Warracker/wiki/Roadmap) page in the wiki. Shipped work is in the [changelog](CHANGELOG.md) and the [releases](https://github.com/sassanix/Warracker/releases).
+The current release is **1.0.6**. What's planned next, 1.0.7 and the feature requests under consideration, lives on the [Roadmap](https://github.com/sassanix/Warracker/wiki/Roadmap) page in the wiki. Shipped work is in the [changelog](CHANGELOG.md) and the [releases](https://github.com/sassanix/Warracker/releases).
 
 ## 🚀Setup
 

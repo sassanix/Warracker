@@ -2,8 +2,8 @@
 
 1.0.5 keeps the defaults working but warns at startup about any of
 DB_USER / DB_PASSWORD / DB_ADMIN_USER / DB_ADMIN_PASSWORD that are not
-set explicitly; 1.0.6 removes the defaults and makes them required.
-These tests pin the softened behavior so the 1.0.6 flip is a
+set explicitly; 1.0.7 removes the defaults and makes them required.
+These tests pin the softened behavior so the 1.0.7 flip is a
 deliberate change, not a surprise.
 """
 import logging
@@ -35,7 +35,7 @@ def test_warns_naming_all_unset_vars(bare_app, monkeypatch, caplog):
     assert len(messages) == 1
     for var in DB_VARS:
         assert var in messages[0]
-    assert "1.0.6" in messages[0]
+    assert "1.0.7" in messages[0]
 
 
 def test_warns_only_for_the_unset_vars(bare_app, monkeypatch, caplog):
@@ -80,7 +80,7 @@ def test_production_init_starts_on_defaults(bare_app, monkeypatch, caplog):
 
 
 def test_builtin_defaults_still_present():
-    """Pins the 1.0.5 state; 1.0.6 removes these defaults on purpose.
+    """Pins the 1.0.5 state; 1.0.7 removes these defaults on purpose.
 
     The class attributes are bound from the environment at import
     time, so read them in a subprocess with the four variables

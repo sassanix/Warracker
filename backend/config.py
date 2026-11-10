@@ -85,7 +85,7 @@ class Config:
     def _warn_unset_db_vars(app):
         # Built-in DB credential defaults are deprecated: installs should set
         # all four variables explicitly. Warn for one release cycle (1.0.5);
-        # the defaults are removed and the variables become required in 1.0.6.
+        # the defaults are removed and the variables become required in 1.0.7.
         if app.config.get('TESTING'):
             return
         unset_vars = [
@@ -96,7 +96,7 @@ class Config:
             logger.warning(
                 "DEPRECATION WARNING: %s not set explicitly, so built-in default "
                 "database credentials are in use. These defaults are deprecated and "
-                "will be removed in version 1.0.6, when all four variables will be "
+                "will be removed in version 1.0.7, when all four variables will be "
                 "required. Set them in your environment or .env file.",
                 ', '.join(unset_vars))
 
