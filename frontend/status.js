@@ -429,7 +429,15 @@
         if (voidedEl) voidedEl.textContent = statusData.voided || 0;
         if (totalValueEl) {
             const val = parseFloat(statusData.total_value || 0);
-            totalValueEl.textContent = userCurrencySymbol + val.toFixed(2);
+            // Use the shared currency formatter (same one the warranty
+            // cards use) so the total honors the currency position
+            // setting, spacing, and locale grouping (#294).
+            if (typeof formatCurrencyHTML === 'function') {
+                const position = typeof getCurrencyPosition === 'function' ? getCurrencyPosition() : 'left';
+                totalValueEl.innerHTML = formatCurrencyHTML(val, userCurrencySymbol, position);
+            } else {
+                totalValueEl.textContent = userCurrencySymbol + val.toFixed(2);
+            }
         }
     }
 

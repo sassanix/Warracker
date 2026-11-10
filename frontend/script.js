@@ -6729,8 +6729,11 @@ function getCurrencyPosition() {
 }
 
 function formatCurrencyHTML(amount, symbol, position) {
-    const formattedAmount = parseFloat(amount).toFixed(2);
-    
+    const formattedAmount = (parseFloat(amount) || 0).toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+
     if (position === 'right') {
         return `<span>${formattedAmount}</span><span class="currency-symbol currency-right">${symbol}</span>`;
     } else {

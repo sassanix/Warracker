@@ -1782,7 +1782,10 @@ input:checked + .toggle-slider:before {
 
 .status-card[data-status="total_value"] .count {
     font-size: 1.4rem;
-    white-space: nowrap;
+    /* Large totals must stay inside the card: allow the value to
+       wrap (amount and symbol are separate spans) instead of
+       overflowing on one nowrap line (#294). */
+    overflow-wrap: anywhere;
 }
 
 .info-popover {

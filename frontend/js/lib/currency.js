@@ -83,7 +83,10 @@ export function getCurrencyPosition() {
 }
 
 export function formatCurrencyHTML(amount, symbol, position) {
-	const formatted = Number.parseFloat(amount || 0).toFixed(2);
+	const formatted = Number.parseFloat(amount || 0).toLocaleString(undefined, {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	});
 	if (position === 'right') {
 		return `<span>${formatted}</span><span class="currency-symbol currency-right">${symbol}</span>`;
 	}
