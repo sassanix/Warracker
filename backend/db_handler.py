@@ -16,11 +16,19 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 DB_HOST = os.environ.get('DB_HOST', 'warrackerdb')
 DB_PORT = os.environ.get('DB_PORT', '5432')
 DB_NAME = os.environ.get('DB_NAME', 'warranty_db')
-DB_USER = os.environ.get('DB_USER', 'warranty_user')
-DB_PASSWORD = os.environ.get('DB_PASSWORD', 'warranty_password')
+DB_USER = os.environ.get('DB_USER')
+DB_PASSWORD = os.environ.get('DB_PASSWORD')
+
+def _require_db_credentials():
+    if not DATABASE_URL and (not DB_USER or not DB_PASSWORD):
+        raise RuntimeError(
+            "Missing required database environment variables: "
+            "DB_USER and DB_PASSWORD must be set when DATABASE_URL is not used."
+        )
 
 def _connection_kwargs():
     """psycopg2 connection kwargs: DATABASE_URL wins over DB_* parts."""
+    _require_db_credentials()
     if DATABASE_URL:
         return {'dsn': DATABASE_URL}
     return {
@@ -67,6 +75,8 @@ def init_db_pool(max_retries=5, retry_delay=5):
     if connection_pool is not None and pool_pid == current_pid:
         logger.info("[DB_HANDLER] Database connection pool already initialized for this process.")
         return connection_pool
+
+    _require_db_credentials()
 
     while attempt < max_retries:
         try:

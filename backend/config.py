@@ -2,6 +2,7 @@
 import os
 import logging
 from datetime import timedelta
+from urllib.parse import unquote, urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +39,10 @@ class Config:
     # Database Configuration
     DB_HOST = os.environ.get('DB_HOST', 'warrackerdb')
     DB_NAME = os.environ.get('DB_NAME', 'warranty_db')
-    DB_USER = os.environ.get('DB_USER', 'warranty_user')
-    DB_PASSWORD = os.environ.get('DB_PASSWORD', 'warranty_password')
-    DB_ADMIN_USER = os.environ.get('DB_ADMIN_USER', 'warracker_admin')
-    DB_ADMIN_PASSWORD = os.environ.get('DB_ADMIN_PASSWORD', 'default_admin_password')
+    DB_USER = os.environ.get('DB_USER')
+    DB_PASSWORD = os.environ.get('DB_PASSWORD')
+    DB_ADMIN_USER = os.environ.get('DB_ADMIN_USER')
+    DB_ADMIN_PASSWORD = os.environ.get('DB_ADMIN_PASSWORD')
     
     # File Upload Configuration
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', '/data/uploads')
@@ -81,30 +82,47 @@ class Config:
     MAX_COOKIE_SIZE = 4093  # Slightly under 4KB limit
     USE_X_SENDFILE = False  # Serve files directly via Flask; nginx is not configured to handle X-Sendfile
     
+    DB_VARS = ('DB_USER', 'DB_PASSWORD', 'DB_ADMIN_USER', 'DB_ADMIN_PASSWORD')
+
     @staticmethod
-    def _warn_unset_db_vars(app):
-        # Built-in DB credential defaults are deprecated: installs should set
-        # all four variables explicitly. Warn for one release cycle (1.0.5);
-        # the defaults are removed and the variables become required in 1.0.7.
+    def _missing_db_vars(app):
+        """Return required database credential variables with no value.
+
+        DATABASE_URL can supply the application user and password, as it
+        already takes precedence in the database handlers. The separate
+        admin credentials remain required because migrations use them to
+        manage the application role.
+        """
         if app.config.get('TESTING'):
-            return
-        unset_vars = [
-            var for var in ('DB_USER', 'DB_PASSWORD', 'DB_ADMIN_USER', 'DB_ADMIN_PASSWORD')
-            if not os.environ.get(var)
-        ]
-        if unset_vars:
-            logger.warning(
-                "DEPRECATION WARNING: %s not set explicitly, so built-in default "
-                "database credentials are in use. These defaults are deprecated and "
-                "will be removed in version 1.0.7, when all four variables will be "
-                "required. Set them in your environment or .env file.",
-                ', '.join(unset_vars))
+            return []
+
+        values = {var: app.config.get(var) for var in Config.DB_VARS}
+        database_url = os.environ.get('DATABASE_URL')
+        if database_url:
+            parsed = urlparse(database_url)
+            if parsed.username and not values['DB_USER']:
+                values['DB_USER'] = unquote(parsed.username)
+            if parsed.password and not values['DB_PASSWORD']:
+                values['DB_PASSWORD'] = unquote(parsed.password)
+
+        return [var for var, value in values.items() if not value]
+
+    @staticmethod
+    def _validate_db_vars(app):
+        missing_vars = Config._missing_db_vars(app)
+        if missing_vars:
+            raise RuntimeError(
+                "Missing required database environment variables: "
+                + ', '.join(missing_vars)
+                + ". Set DB_USER, DB_PASSWORD, DB_ADMIN_USER, and "
+                "DB_ADMIN_PASSWORD in your environment or .env file."
+            )
 
     @staticmethod
     def init_app(app):
         """Initialize configuration-specific settings."""
+        Config._validate_db_vars(app)
         Config._check_secret_key()
-        Config._warn_unset_db_vars(app)
 
         if not os.path.exists(Config.UPLOAD_FOLDER):
             try:

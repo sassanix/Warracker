@@ -23,7 +23,7 @@ echo "=== Warracker ${APP_VERSION} ==="
 DB_DISPLAY_HOST="${DB_HOST:-localhost}"
 DB_DISPLAY_PORT="${DB_PORT:-5432}"
 DB_DISPLAY_NAME="${DB_NAME:-warranty_db}"
-DB_DISPLAY_USER="${DB_USER:-warranty_user}"
+DB_DISPLAY_USER="${DB_USER:-not set}"
 log "Database: ${DB_DISPLAY_HOST}:${DB_DISPLAY_PORT}, database ${DB_DISPLAY_NAME}, user ${DB_DISPLAY_USER}"
 if [ "${DISABLE_NGINX:-false}" = "true" ]; then
     log "Web: nginx disabled, gunicorn serves directly on port 5000"

@@ -30,6 +30,8 @@ jobs:
       DB_NAME: warranty_test_suite
       DB_USER: warranty_user
       DB_PASSWORD: ci-test-password
+      DB_ADMIN_USER: warranty_user
+      DB_ADMIN_PASSWORD: ci-test-password
       SECRET_KEY: ci-test-secret-key
       UPLOAD_FOLDER: /tmp/warracker-test-uploads
 

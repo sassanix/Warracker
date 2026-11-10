@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.7 - Unreleased
+
+- **Database credential defaults removed (#221, by Nam0101):** the built-in defaults for `DB_USER`, `DB_PASSWORD`, `DB_ADMIN_USER`, and `DB_ADMIN_PASSWORD` are gone, completing the deprecation announced in 1.0.5. The app, the migration runner, and the permissions script now stop with a clear message naming any missing variable instead of falling back to known credentials. `DATABASE_URL` still works as before: a URL containing a username and password supplies the app credentials, and the two admin variables remain required because migrations use them. Both shipped Docker Compose files, the env examples, and the Unraid template set all four explicitly, so installs that follow them need no action. The Unraid template also no longer prefills a default admin password.
+  - _Files: `backend/config.py`, `backend/db_handler.py`, `backend/fix_permissions.py`, `backend/migrations/apply_migrations.py`, `Docker/entrypoint.sh`, `env.example`, `unraid/warracker.xml`, `tests/conftest.py`, `.github/workflows/tests.yml`, `tests/test_db_credentials_required.py`_
+
 ## 1.0.6 - 2026-11-10
 
 - **Docker image fails to start, fixed (#293):** the 1.0.5 image crashes on boot with "ModuleNotFoundError: No module named 'packaging'" and gunicorn never starts. The gevent worker class gunicorn loads imports the packaging module, but gunicorn declares packaging only in its optional "gevent" extra, and the requirements file installs plain gunicorn, so pip never installed it. The 1.0.4 image worked because it copied the builder's whole /usr/local, which happened to carry packaging along; the 1.0.5 image diet copies only the virtualenv, which exposed the missing pin. packaging is now pinned explicitly in the requirements file, and a regression test guards the pin. Verified in clean virtualenvs built from the old and new requirements: the old set reproduces the ModuleNotFoundError on worker load, the new set loads the worker.

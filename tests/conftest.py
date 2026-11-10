@@ -32,6 +32,8 @@ os.environ.setdefault("DB_PORT", "5432")
 os.environ.setdefault("DB_NAME", "warranty_test_suite")
 os.environ.setdefault("DB_USER", "warranty_user")
 os.environ.setdefault("DB_PASSWORD", "warranty_password")
+os.environ.setdefault("DB_ADMIN_USER", os.environ["DB_USER"])
+os.environ.setdefault("DB_ADMIN_PASSWORD", os.environ["DB_PASSWORD"])
 os.environ.setdefault("SECRET_KEY", "warracker-test-secret-key-0123456789")
 # Cap uploads at 1 MB so the 413 path is testable with a small file.
 os.environ.setdefault("MAX_UPLOAD_MB", "1")

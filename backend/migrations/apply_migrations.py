@@ -38,8 +38,8 @@ def _db_parts():
             'host': p.hostname or 'localhost',
             'port': str(p.port) if p.port else '5432',
             'name': (p.path or '').lstrip('/') or 'warranty_db',
-            'user': unquote(p.username) if p.username else 'warranty_user',
-            'password': unquote(p.password) if p.password else 'warranty_password',
+            'user': unquote(p.username) if p.username else None,
+            'password': unquote(p.password) if p.password else None,
         }
         # Preserve URL query options (e.g. ?sslmode=require) instead of
         # silently dropping them (issue #108 follow-up).
@@ -51,8 +51,8 @@ def _db_parts():
         'host': os.environ.get('DB_HOST', 'localhost'),
         'port': os.environ.get('DB_PORT', '5432'),
         'name': os.environ.get('DB_NAME', 'warranty_db'),
-        'user': os.environ.get('DB_USER', 'warranty_user'),
-        'password': os.environ.get('DB_PASSWORD', 'warranty_password'),
+        'user': os.environ.get('DB_USER'),
+        'password': os.environ.get('DB_PASSWORD'),
     }
 
 _DB = _db_parts()
@@ -61,11 +61,31 @@ DB_PORT = _DB['port']
 DB_NAME = _DB['name']
 DB_USER = _DB['user']
 DB_PASSWORD = _DB['password']
-DB_ADMIN_USER = os.environ.get('DB_ADMIN_USER', 'warracker_admin')
-DB_ADMIN_PASSWORD = os.environ.get('DB_ADMIN_PASSWORD', 'change_this_password_in_production')
+DB_ADMIN_USER = os.environ.get('DB_ADMIN_USER')
+DB_ADMIN_PASSWORD = os.environ.get('DB_ADMIN_PASSWORD')
+
+def _validate_db_credentials():
+    missing = []
+    if not DB_USER:
+        missing.append('DB_USER')
+    if not DB_PASSWORD:
+        missing.append('DB_PASSWORD')
+    if not DB_ADMIN_USER:
+        missing.append('DB_ADMIN_USER')
+    if not DB_ADMIN_PASSWORD:
+        missing.append('DB_ADMIN_PASSWORD')
+    if missing:
+        raise RuntimeError(
+            "Missing required database environment variables: "
+            + ', '.join(missing)
+            + ". Set all four variables in your environment or .env file; "
+            "DATABASE_URL must include a username and password when it is "
+            "used instead of DB_USER and DB_PASSWORD."
+        )
 
 def get_db_connection(max_attempts=5, attempt_delay=5):
     """Get a connection to the PostgreSQL database with retry logic"""
+    _validate_db_credentials()
     for attempt in range(1, max_attempts + 1):
         try:
             logger.info(f"Attempting to connect to database (attempt {attempt}/{max_attempts})")
