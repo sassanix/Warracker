@@ -12,7 +12,7 @@ PyJWT==2.15.1
 email-validator==2.3.0
 APScheduler==3.11.3
 python-dateutil==3.0.0
-Authlib==1.9.2
+Authlib==1.9.5
 requests==2.34.2
 gevent==26.9.0
 psycogreen==1.0.2
