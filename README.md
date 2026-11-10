@@ -80,22 +80,12 @@ The essential features are reliable and ready for everyday use. Development is o
 
 <img src="images/dashboard-grid-2026.png" alt="Warracker home page in grid view with a product photo on every card and every warranty status: Active, Expiring Soon, Expired, Void and Archived" />
 
-<img src="images/grid-menu-2026.png" alt="Warracker grid view card with the overflow menu open, showing Archive, Void, Duplicate and Delete actions with text labels" />
-
-<img src="images/table-view-2026.png" alt="Warracker home page, table view" />
-
 
 **Status Dashboard**
 
 <img src="images/status-dashboard-2026.png" alt="Warracker status dashboard with summary cards including Total Value and Void">
 
-**Dark Mode**
-
-<img src="images/dashboard-grid-dark-2026.png" alt="Warracker home page in grid view, dark mode" />
-
-<img src="images/table-view-dark-2026.png" alt="Warracker home page, table view, dark mode" />
-
-<img src="images/status-dashboard-dark-2026.png" alt="Warracker status dashboard, dark mode" />
+More screenshots, including the table view, the card menu, and dark mode, are in the [User Guide](https://github.com/sassanix/Warracker/wiki/User-Guide).
 
 
 ## 🛠️Technology Stack
