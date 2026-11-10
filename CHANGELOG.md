@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.6 - Unreleased
+
+- **Docker image fails to start, fixed (#293):** the 1.0.5 image crashes on boot with "ModuleNotFoundError: No module named 'packaging'" and gunicorn never starts. The gevent worker class gunicorn loads imports the packaging module, but gunicorn declares packaging only in its optional "gevent" extra, and the requirements file installs plain gunicorn, so pip never installed it. The 1.0.4 image worked because it copied the builder's whole /usr/local, which happened to carry packaging along; the 1.0.5 image diet copies only the virtualenv, which exposed the missing pin. packaging is now pinned explicitly in the requirements file, and a regression test guards the pin. Verified in clean virtualenvs built from the old and new requirements: the old set reproduces the ModuleNotFoundError on worker load, the new set loads the worker.
+  - _Files: `backend/requirements.txt`, `tests/test_requirements_packaging.py`_
+
 ## 1.0.5 - 2026-11-09
 
 - **Collapsible card actions in grid view:** a grid card header carried six icon buttons (Claims, Edit, Archive, Void, Duplicate, Delete) next to the product name, and the name was capped at 200px, so long product names truncated while the buttons took more room than the title. The header now keeps Claims and Edit visible and moves Archive, Void/Unvoid, Duplicate and Delete into an overflow (kebab) menu whose items carry text labels, not just icons, which also helps touch users who never see the icon tooltips. Delete sits last in the menu in the danger color, so it takes one deliberate extra tap. The title cap is gone in grid view, and names wrap to a second line instead of truncating, so the full product name shows. List and table views are unchanged.
