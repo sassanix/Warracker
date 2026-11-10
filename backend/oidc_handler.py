@@ -16,10 +16,33 @@ except ImportError:
     from db_handler import get_db_connection, release_db_connection
     from auth_utils import generate_token
 
+import requests
+
 import logging
 logger = logging.getLogger(__name__) # Or use current_app.logger inside routes
 
 oidc_bp = Blueprint('oidc', __name__) # url_prefix will be set when registering in app.py
+
+def _provider_supports_pkce(issuer_url):
+    """True when the provider discovery document advertises PKCE S256.
+
+    PKCE is enabled per provider (#288): providers whose discovery
+    document does not list S256 keep the plain authorization code flow,
+    so an IdP without PKCE support is not broken. Any discovery failure
+    also falls back to no PKCE, with a warning, rather than blocking
+    sign-in entirely.
+    """
+    metadata_url = f"{issuer_url.rstrip('/')}/.well-known/openid-configuration"
+    try:
+        response = requests.get(metadata_url, timeout=5)
+        response.raise_for_status()
+        methods = response.json().get('code_challenge_methods_supported') or []
+    except (requests.RequestException, ValueError, AttributeError) as e:
+        logger.warning(
+            f"[FACTORY OIDC_INIT] Could not read OIDC discovery document at "
+            f"{metadata_url} ({e}); continuing without PKCE.")
+        return False
+    return 'S256' in methods
 
 def init_oidc_client(current_app_instance, db_conn_func, db_release_func):
     """Function to initialize OIDC client based on settings"""
@@ -77,12 +100,21 @@ def init_oidc_client(current_app_instance, db_conn_func, db_release_func):
         if client_id and client_secret and issuer_url:
             logger.info(f"[FACTORY OIDC_INIT] Registering OIDC client '{provider_name}' with Authlib.")
 
+            pkce_enabled = _provider_supports_pkce(issuer_url)
+            current_app_instance.config['OIDC_PKCE_ENABLED'] = pkce_enabled
+            client_kwargs = {'scope': scope}
+            if pkce_enabled:
+                client_kwargs['code_challenge_method'] = 'S256'
+            logger.info(
+                f"[FACTORY OIDC_INIT] PKCE (S256) for provider '{provider_name}': "
+                f"{'enabled' if pkce_enabled else 'not advertised by the provider, disabled'}.")
+
             oauth.register(
                 name=provider_name,
                 client_id=client_id,
                 client_secret=client_secret,
                 server_metadata_url=f"{issuer_url.rstrip('/')}/.well-known/openid-configuration",
-                client_kwargs={'scope': scope},
+                client_kwargs=client_kwargs,
                 override=True
             )
             logger.info(f"[FACTORY OIDC_INIT] OIDC client '{provider_name}' registered successfully.")
