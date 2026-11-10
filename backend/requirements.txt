@@ -17,6 +17,6 @@ requests==2.34.2
 gevent==26.9.0
 psycogreen==1.0.2
 supervisor==4.3.0
-apprise==1.13.1
+apprise==2.2.0
 Flask-Babel==4.0.0
 Babel==2.18.0
