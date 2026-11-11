@@ -59,7 +59,7 @@ Full guides live in the [Warracker Wiki](https://github.com/sassanix/Warracker/w
 | 🔑 **[OIDC SSO](https://github.com/sassanix/Warracker/wiki/Authentication#-oidc-single-sign-on)** | Single sign-on with providers like Google, GitHub, and Keycloak                                          |
 | 📊 **[Status Dashboard](https://github.com/sassanix/Warracker/wiki/User-Guide#-status-dashboard)** | Visual analytics and stats with charts, tables, and global/user views — including Total Value (in your default currency) and Archived summary cards, plus CSV export of the filtered view |
 | 📦 **[Paperless-ngx Integration](https://github.com/sassanix/Warracker/wiki/Paperless-ngx)** | Store/manage documents directly in Paperless-ngx with file-level control                                 |
-| 📖 **Localization Support**      | [Full multilingual UI with 20 languages](https://github.com/sassanix/Warracker/wiki/User-Guide#languages), RTL support, instant language switching, and native name display |
+| 📖 **Localization Support**      | [Full multilingual UI with 20 languages](https://github.com/sassanix/Warracker/wiki/User-Guide#-languages), RTL support, instant language switching, and native name display |
 
 
 ---
