@@ -163,6 +163,15 @@ export async function loadWarranties(isAuthenticatedOverride) {
 		updateWarrantiesPanelTitle(scope === 'global');
 
 		const primary = await listWarranties({ scope, archived: filters.status === 'archived' });
+
+		// The user may have logged out while the primary fetch was in flight.
+		// The token is read fresh on every request, so the follow-up archived
+		// fetch below would go out without credentials and draw a stray 401.
+		// Stop here instead of fetching or rendering for a logged-out user.
+		if (!authService.isAuthenticated()) {
+			return;
+		}
+
 		let combined = Array.isArray(primary) ? primary : [];
 
 		let lastLoadedArchived = filters.status === 'archived';
