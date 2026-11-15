@@ -228,6 +228,20 @@
         }
     }
 
+    // Editing is owner and admin only: the update endpoint rejects anyone
+    // else, so the Edit button is disabled for other viewers rather than
+    // promising an edit that fails on save.
+    function canEditWarranty(warrantyUserId) {
+        try {
+            const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+            if (userInfo.is_admin) return true;
+            return userInfo.id !== undefined && userInfo.id !== null &&
+                Number(warrantyUserId) === Number(userInfo.id);
+        } catch {
+            return false;
+        }
+    }
+
     /**
      * Get the appropriate localStorage key prefix based on user type
      * @returns {string} The prefix to use for localStorage keys
@@ -571,6 +585,7 @@
         } else {
             allWarranties = recentWarrantiesData.map(warranty => ({
                 id: warranty.id || String(Math.random()).slice(2, 11), // Ensure ID is a string for consistency
+                user_id: warranty.user_id,
                 product_name: warranty.product_name || warranty.name || 'Unknown Product',
                 purchase_date: warranty.purchase_date,
                 expiration_date: warranty.expiration_date,
@@ -986,7 +1001,10 @@
             }
             dHtml += '</div>'; // end warranty-details-content
             dHtml += '<div class="warranty-details-actions" style="margin-top: 15px; text-align: right;">';
-            dHtml += `<button class="btn btn-primary edit-warranty-status-btn" data-warranty-id="${warrantyDetails.id}">Edit Warranty</button></div>`;
+            const canEdit = canEditWarranty(warrantyDetails.user_id);
+            dHtml += canEdit
+                ? `<button class="btn btn-primary edit-warranty-status-btn" data-warranty-id="${warrantyDetails.id}">Edit Warranty</button></div>`
+                : `<button class="btn btn-primary edit-warranty-status-btn" data-warranty-id="${warrantyDetails.id}" disabled title="View only - not your warranty">Edit Warranty</button></div>`;
             
             detailsCell.innerHTML = dHtml;
             detailsRow.appendChild(detailsCell);

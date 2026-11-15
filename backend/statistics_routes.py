@@ -221,7 +221,7 @@ def get_statistics():
             logger.info(f"Fetching all warranties for user {user_id}...")
             cur.execute(f"""
                 SELECT
-                    id, product_name, purchase_date, 
+                    id, user_id, product_name, purchase_date,
                     warranty_duration_years, warranty_duration_months, warranty_duration_days,
                     expiration_date, invoice_path, manual_path, other_document_path, product_url, purchase_price, is_lifetime,
                     model_number, notes, currency, vendor, warranty_type,
@@ -450,9 +450,9 @@ def get_global_statistics():
             # Get all warranties with user information
             cur.execute("""
                 SELECT
-                    w.id, w.product_name, w.purchase_date, 
+                    w.id, w.user_id, w.product_name, w.purchase_date,
                     w.warranty_duration_years, w.warranty_duration_months, w.warranty_duration_days,
-                    w.expiration_date, w.invoice_path, w.manual_path, w.other_document_path, 
+                    w.expiration_date, w.invoice_path, w.manual_path, w.other_document_path,
                     w.product_url, w.purchase_price, w.is_lifetime,
                     u.username, u.email, u.first_name, u.last_name,
                     w.model_number, w.notes, w.currency, w.vendor, w.warranty_type,

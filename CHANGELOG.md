@@ -12,6 +12,8 @@
   - _Files: `frontend/js/controllers/warrantyListController.js`_
 - **Status page detail now honors global view:** with global view on, a plain user could see another user's warranty row on the status page but expanding it failed, because the detail endpoint restricted non-admins to their own warranties and ignored the global view setting, so no detail panel or Edit button appeared. The endpoint now follows the same rule as the warranty list: with global view enabled and not restricted to admins, any authenticated user may view any warranty. With global view off, or restricted to admins, non-owners are still turned away as before. Editing another user's warranty remains owner and admin only.
   - _Files: `backend/warranties_routes.py`, `tests/test_debug_warranty_global_view.py`_
+- **Edit button greyed out for warranties you cannot edit:** now that the status page detail panel opens for another user's warranty under global view, its Edit button no longer promises an edit that fails on save. For a viewer who is neither the owner nor an admin, the button renders greyed out and disabled and does nothing on click. Owners and admins keep a working Edit button. The same disabled state applies to the Edit Warranty button in the notes modal, which opens from warranty cards. The main page cards already showed no Edit button for other users' warranties, so they are unchanged, and the server side restriction on editing is unchanged. The statistics payloads now carry the owner id for each warranty so the status page can make that decision from its cached list.
+  - _Files: `frontend/status.js`, `frontend/js/components/notes.js`, `frontend/style.css`, `backend/statistics_routes.py`_
 
 ## 1.0.6 - 2026-11-10
 

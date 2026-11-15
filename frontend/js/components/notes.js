@@ -38,6 +38,17 @@ function getToken() {
 	return callIfExists(window.auth?.getToken) || localStorage.getItem('auth_token');
 }
 
+// Editing is owner and admin only: the update endpoint rejects anyone
+// else, so the Edit Warranty button is disabled for other viewers rather
+// than promising an edit that fails on save. When ownership cannot be
+// determined, keep the previous behavior.
+function canEditWarranty(warranty) {
+	if (!warranty || warranty.user_id === undefined || warranty.user_id === null) return true;
+	const currentUser = callIfExists(window.auth?.getCurrentUser) || null;
+	if (!currentUser) return true;
+	return Boolean(currentUser.is_admin) || Number(warranty.user_id) === Number(currentUser.id);
+}
+
 function ensureModal() {
 	let modal = document.getElementById('notesModal');
 	if (!modal) {
@@ -276,6 +287,15 @@ export function showNotesModal(notes, warrantyOrId = null) {
 	if (!refs.modal) return;
 	refs.content.textContent = contentText || '';
 	refs.textarea.value = contentText || '';
+	if (refs.editWarrantyBtn) {
+		const canEdit = canEditWarranty(warranty);
+		refs.editWarrantyBtn.disabled = !canEdit;
+		if (canEdit) {
+			refs.editWarrantyBtn.removeAttribute('title');
+		} else {
+			refs.editWarrantyBtn.title = 'View only - not your warranty';
+		}
+	}
 	exitEditMode();
 	refs.modal.classList.add('active');
 }

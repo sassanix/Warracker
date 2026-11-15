@@ -26,6 +26,16 @@
   color: #fff !important;
   border-color: var(--primary-dark) !important;
 }
+/* Greyed out when the viewer cannot edit (another user's warranty under global view) */
+.edit-warranty-status-btn:disabled,
+.edit-warranty-status-btn:disabled:hover,
+.edit-warranty-status-btn:disabled:focus {
+  background: transparent !important;
+  color: var(--text-muted, #909090) !important;
+  border-color: var(--text-muted, #909090) !important;
+  opacity: 0.7;
+  cursor: not-allowed;
+}
 /* ===== GLOBAL STYLES ===== */
 :root {
   /* Icon spacing for LTR/RTL: applies to icons next to text */
@@ -624,6 +634,12 @@ input.invalid {
 
 .btn-primary:hover {
   background-color: var(--primary-dark);
+}
+
+/* Disabled buttons read as greyed out and inert, e.g. Edit actions the viewer cannot use */
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .btn-secondary {
