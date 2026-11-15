@@ -2293,8 +2293,21 @@ def get_warranty_debug(warranty_id):
         
         conn = get_db_connection()
         with conn.cursor() as cur:
+            # Admins may view any warranty. Non-admins may too when global
+            # view is enabled and not restricted to admins, matching the
+            # list and claims endpoints and the shared-instance design:
+            # with global view on, any user sees all users' information.
+            # Otherwise a non-admin is restricted to their own warranties.
+            can_view_all = is_admin
+            if not is_admin:
+                cur.execute("SELECT key, value FROM site_settings WHERE key IN ('global_view_enabled', 'global_view_admin_only')")
+                settings = {row[0]: row[1] for row in cur.fetchall()}
+                global_view_enabled = settings.get('global_view_enabled', 'true').lower() == 'true'
+                admin_only = settings.get('global_view_admin_only', 'false').lower() == 'true'
+                can_view_all = global_view_enabled and not admin_only
+
             # Check if warranty exists and user has access to it
-            if is_admin:
+            if can_view_all:
                 cur.execute('''
                     SELECT w.id, w.product_name, w.purchase_date, w.expiration_date, w.invoice_path, w.manual_path, w.other_document_path, 
                            w.product_url, w.notes, w.purchase_price, w.user_id, w.created_at, w.updated_at, w.is_lifetime, 
