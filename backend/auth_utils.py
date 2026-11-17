@@ -110,7 +110,13 @@ def token_required(f):
                 'oidc_managed': user[5] is not None
             })
 
-        return f(*args, **kwargs)
+        try:
+            return f(*args, **kwargs)
+        except HTTPException:
+            raise
+        except Exception:
+            current_app.logger.exception(f"Unhandled error in {request.path}")
+            return jsonify({'message': 'Authentication error!'}), 500
 
     return decorated
 
