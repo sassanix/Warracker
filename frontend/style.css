@@ -1775,6 +1775,11 @@ input:checked + .toggle-slider:before {
 .status-card[data-status="total_value"] {
     cursor: pointer;
     position: relative;
+    /* The hover lift transform makes this card a stacking context, which
+       traps its popover below the charts that follow it in the page, no
+       matter how high the popover's own z-index is. A z-index on the card
+       keeps the card, and the popover inside it, above the charts. */
+    z-index: 2;
 }
 
 .status-card[data-status="total_value"]:focus-visible {
