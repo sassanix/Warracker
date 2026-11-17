@@ -40,16 +40,39 @@ def _connection_kwargs():
         'password': DB_PASSWORD,
     }
 
+def _env_number(name, default, cast, minimum):
+    """Read a numeric setting from the environment.
+
+    Falls back to the default (with a warning) when the value is not a finite
+    number or is below the minimum, so a typo can't stop the app from starting.
+    """
+    raw = os.environ.get(name, '').strip()
+    if not raw:
+        return default
+    try:
+        value = cast(raw)
+    except ValueError:
+        logger.warning(f"[DB_HANDLER] Ignoring {name}={raw!r}: not a valid number. Using {default}.")
+        return default
+    if value != value or value in (float('inf'), float('-inf')) or value < minimum:
+        logger.warning(f"[DB_HANDLER] Ignoring {name}={raw!r}: must be a number of at least {minimum}. Using {default}.")
+        return default
+    return value
+
 # Connection pool settings (per worker process).
-# DB_POOL_MAX: most connections a worker holds at once.
-# DB_POOL_MIN: idle connections kept open. psycopg2 closes a returned connection
-#   when this many are already idle, so a value below DB_POOL_MAX means
-#   reconnecting under load; it defaults to DB_POOL_MAX.
+# DB_POOL_MAX: most connections a worker holds at once (default 4).
+# DB_POOL_MIN: idle connections kept open (default 1). psycopg2 closes a
+#   returned connection when this many are already idle, so under sustained
+#   load a value below DB_POOL_MAX means reconnecting; raise it to keep
+#   connections open at the cost of holding them while idle.
 # DB_POOL_WAIT_SECONDS: how long a request waits for a free connection before
-#   failing with "connection pool exhausted".
-DB_POOL_MAX = int(os.environ.get('DB_POOL_MAX', '10'))
-DB_POOL_MIN = min(int(os.environ.get('DB_POOL_MIN', str(DB_POOL_MAX))), DB_POOL_MAX)
-DB_POOL_WAIT_SECONDS = float(os.environ.get('DB_POOL_WAIT_SECONDS', '30'))
+#   failing with "connection pool exhausted" (default 30, 0 = don't wait).
+DB_POOL_MAX = _env_number('DB_POOL_MAX', 4, int, 1)
+DB_POOL_MIN = _env_number('DB_POOL_MIN', 1, int, 0)
+if DB_POOL_MIN > DB_POOL_MAX:
+    logger.warning(f"[DB_HANDLER] DB_POOL_MIN ({DB_POOL_MIN}) is above DB_POOL_MAX ({DB_POOL_MAX}). Using {DB_POOL_MAX}.")
+    DB_POOL_MIN = DB_POOL_MAX
+DB_POOL_WAIT_SECONDS = _env_number('DB_POOL_WAIT_SECONDS', 30.0, float, 0)
 
 connection_pool = None # Global connection pool for this module
 # Track the PID that created the current pool to detect post-fork reuse
