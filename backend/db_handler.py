@@ -1,11 +1,12 @@
 # backend/db_handler.py
 import os
 import psycopg2
-from psycopg2 import pool
+from psycopg2 import pool, extensions
 import logging
 import time
+import threading  # cooperative under gevent: gunicorn_config.py calls monkey.patch_all()
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +40,29 @@ def _connection_kwargs():
         'password': DB_PASSWORD,
     }
 
+# Connection pool settings (per worker process).
+# DB_POOL_MAX: most connections a worker holds at once.
+# DB_POOL_MIN: idle connections kept open. psycopg2 closes a returned connection
+#   when this many are already idle, so a value below DB_POOL_MAX means
+#   reconnecting under load; it defaults to DB_POOL_MAX.
+# DB_POOL_WAIT_SECONDS: how long a request waits for a free connection before
+#   failing with "connection pool exhausted".
+DB_POOL_MAX = int(os.environ.get('DB_POOL_MAX', '10'))
+DB_POOL_MIN = min(int(os.environ.get('DB_POOL_MIN', str(DB_POOL_MAX))), DB_POOL_MAX)
+DB_POOL_WAIT_SECONDS = float(os.environ.get('DB_POOL_WAIT_SECONDS', '30'))
+
 connection_pool = None # Global connection pool for this module
 # Track the PID that created the current pool to detect post-fork reuse
 pool_pid: Optional[int] = None
+# Caps checkouts at DB_POOL_MAX so callers wait for a free connection instead
+# of failing straight away.
+_pool_slots: Optional[threading.BoundedSemaphore] = None
+# Connections handed out by get_db_connection(), mapped to the pool and
+# semaphore they came from, so each is returned exactly once, to its own pool.
+_checked_out: Dict[int, Tuple[pool.AbstractConnectionPool, threading.BoundedSemaphore]] = {}
+# Serialises pool creation. Under gevent, the first requests on a new worker
+# (for example after a max_requests restart) would otherwise each create a pool.
+_init_lock = threading.Lock()
 
 def _close_stale_pool_if_forked(current_pid: int) -> None:
     """Close any existing pool if it was created in a different process.
@@ -51,7 +72,7 @@ def _close_stale_pool_if_forked(current_pid: int) -> None:
     the pool was created in a different PID, we proactively close it in this
     process so a fresh, per-process pool can be created.
     """
-    global connection_pool, pool_pid
+    global connection_pool, pool_pid, _pool_slots
     if connection_pool is not None and pool_pid is not None and pool_pid != current_pid:
         logger.warning(f"[DB_HANDLER] Detected PID change (pool pid {pool_pid} -> current pid {current_pid}). Closing stale pool and reinitializing...")
         try:
@@ -62,9 +83,11 @@ def _close_stale_pool_if_forked(current_pid: int) -> None:
         finally:
             connection_pool = None
             pool_pid = None
+            _pool_slots = None
+            _checked_out.clear()
 
 def init_db_pool(max_retries=5, retry_delay=5):
-    global connection_pool, pool_pid # Ensure we're modifying the global variable in this module
+    global connection_pool, pool_pid, _pool_slots # Ensure we're modifying the global variable in this module
     attempt = 0
     last_exception = None
     
@@ -81,9 +104,10 @@ def init_db_pool(max_retries=5, retry_delay=5):
     while attempt < max_retries:
         try:
             logger.info(f"[DB_HANDLER] Attempting to initialize database pool (attempt {attempt+1}/{max_retries})")
-            # Optimized connection pool for memory efficiency
-            connection_pool = pool.SimpleConnectionPool(
-                1, 4, # Reduced from 1,10 to 1,4 for memory efficiency
+            # ThreadedConnectionPool locks around getconn/putconn, which keeps
+            # concurrent greenlets from opening more than DB_POOL_MAX connections.
+            connection_pool = pool.ThreadedConnectionPool(
+                DB_POOL_MIN, DB_POOL_MAX,
                 **_connection_kwargs(),
                 # Memory optimization settings
                 connect_timeout=10,  # Connection timeout
@@ -98,8 +122,10 @@ def init_db_pool(max_retries=5, retry_delay=5):
                 keepalives_interval=10,
                 keepalives_count=5,
             )
-            logger.info("[DB_HANDLER] Database connection pool initialized successfully.")
+            logger.info(f"[DB_HANDLER] Database connection pool initialized successfully (min {DB_POOL_MIN}, max {DB_POOL_MAX}).")
             pool_pid = current_pid
+            _pool_slots = threading.BoundedSemaphore(DB_POOL_MAX)
+            _checked_out.clear()
             return connection_pool # Return the pool for external check if needed
         except Exception as e:
             last_exception = e
@@ -122,49 +148,68 @@ def get_db_connection():
     _close_stale_pool_if_forked(current_pid)
 
     if connection_pool is None or pool_pid != current_pid:
-        if connection_pool is None:
-            logger.info("[DB_HANDLER] Database connection pool not initialized in this process. Initializing now...")
-        else:
-            logger.warning("[DB_HANDLER] Pool PID mismatch detected. Reinitializing pool for current process...")
-        init_db_pool() # Attempt to initialize it for this PID
+        with _init_lock:
+            if connection_pool is None or pool_pid != current_pid:
+                if connection_pool is None:
+                    logger.info("[DB_HANDLER] Database connection pool not initialized in this process. Initializing now...")
+                else:
+                    logger.warning("[DB_HANDLER] Pool PID mismatch detected. Reinitializing pool for current process...")
+                init_db_pool() # Attempt to initialize it for this PID
         if connection_pool is None or pool_pid != current_pid: # If still invalid after attempt
             logger.critical("[DB_HANDLER] CRITICAL: Database pool initialization failed for current process.")
             raise Exception("Database connection pool is not initialized and could not be re-initialized.")
+    # Use the pool and its semaphore as a pair, even if the globals change
+    # before the connection is released.
+    the_pool, slots = connection_pool, _pool_slots
+    if not slots.acquire(timeout=DB_POOL_WAIT_SECONDS):
+        logger.error(f"[DB_HANDLER] Error getting connection from pool: connection pool exhausted (waited {DB_POOL_WAIT_SECONDS}s)")
+        raise pool.PoolError("connection pool exhausted")
     try:
-        return connection_pool.getconn()
+        conn = the_pool.getconn()
+        if conn.closed:  # closed by the server since it was last used: replace it
+            the_pool.putconn(conn, close=True)
+            conn = the_pool.getconn()
     except Exception as e:
+        slots.release()
         logger.error(f"[DB_HANDLER] Error getting connection from pool: {e}")
-        # As a last resort, try reinitializing once in case the pool was invalidated
-        try:
-            _close_stale_pool_if_forked(os.getpid())
-            init_db_pool()
-            return connection_pool.getconn()
-        except Exception:
-            # Re-raise original to preserve context
-            raise
+        raise
+    _checked_out[id(conn)] = (the_pool, slots)
+    return conn
 
 def release_db_connection(conn):
-    global connection_pool
-    if connection_pool:
-        try:
-            connection_pool.putconn(conn)
-        except Exception as e:
-            logger.error(f"[DB_HANDLER] Error releasing connection to pool: {e}. Connection state: {conn.closed if conn else 'N/A'}")
-            # If putconn fails, the connection might be broken or the pool is in a bad state.
-            # Attempt to close the connection directly as a fallback.
-            if conn and not conn.closed:
-                try:
-                    conn.close()
-                    logger.info("[DB_HANDLER] Connection closed directly after putconn failure.")
-                except Exception as close_err:
-                    logger.error(f"[DB_HANDLER] Error closing connection directly after putconn failed: {close_err}")
-    else:
-        logger.warning("[DB_HANDLER] Connection pool is None, cannot release connection to pool. Attempting to close directly.")
-        if conn and not conn.closed:
+    if conn is None:
+        return
+    key = id(conn)
+    owner = _checked_out.pop(key, None)
+    if owner is None:
+        # Already released (some code paths release twice). Returning or
+        # closing it again could close a connection another request now holds.
+        return
+    the_pool, slots = owner
+    try:
+        broken = conn.closed or conn.info.transaction_status == extensions.TRANSACTION_STATUS_UNKNOWN
+        if not broken and conn.info.transaction_status != extensions.TRANSACTION_STATUS_IDLE:
             try:
-                conn.close()
+                conn.rollback()
             except Exception as e:
-                logger.error(f"[DB_HANDLER] Error closing connection directly (pool was None): {e}")
+                logger.warning(f"[DB_HANDLER] Rollback on release failed, discarding connection: {e}")
+                broken = True
+        the_pool.putconn(conn, close=broken)
+    except Exception as e:
+        logger.error(f"[DB_HANDLER] Error releasing connection to pool: {e}. Discarding it.")
+        try:
+            the_pool.putconn(conn, close=True)
+        except Exception:
+            try:
+                if not conn.closed:
+                    conn.close()
+            except Exception:
+                pass
+    finally:
+        try:
+            slots.release()
+        except ValueError:
+            pass
 
 def get_site_setting(setting_name: str, default_value: str = '') -> str:
     """Get a site setting value from the database"""

@@ -61,7 +61,10 @@ def token_required(f):
             current_app.logger.warning(f"Invalid token used for: {request.path}")
             return jsonify({'message': 'Invalid or expired token!'}), 401
         
-        # Check if user exists
+        # Check if user exists.
+        # Release the connection before calling the route. Holding it, with
+        # its transaction open, for the whole request doubled the connections
+        # each request needed and could exhaust the pool under load.
         conn = None
         try:
             conn = db_handler.get_db_connection()
@@ -78,25 +81,7 @@ def token_required(f):
                     cur.execute('SELECT id, username, email, is_admin FROM users WHERE id = %s AND is_active = TRUE', (user_id,))
                     user = cur.fetchone()
                     has_owner_column = False
-                
-                if not user:
-                    return jsonify({'message': 'User not found or inactive!'}), 401
-                
-                # Add user info to request context
-                request.user = {
-                    'id': user[0],
-                    'username': user[1],
-                    'email': user[2],
-                    'is_admin': user[3],
-                }
-
-                if has_owner_column:
-                    request.user.update({
-                        'is_owner': user[4],
-                        'oidc_managed': user[5] is not None
-                    })
-                
-                return f(*args, **kwargs)
+            conn.rollback()  # end the read-only transaction before releasing
         except HTTPException:
             # Let HTTP errors (e.g. 413 from oversized uploads) propagate to
             # the app's error handlers instead of being masked as a 500 here.
@@ -107,7 +92,26 @@ def token_required(f):
         finally:
             if conn:
                 db_handler.release_db_connection(conn)
-    
+
+        if not user:
+            return jsonify({'message': 'User not found or inactive!'}), 401
+
+        # Add user info to request context
+        request.user = {
+            'id': user[0],
+            'username': user[1],
+            'email': user[2],
+            'is_admin': user[3],
+        }
+
+        if has_owner_column:
+            request.user.update({
+                'is_owner': user[4],
+                'oidc_managed': user[5] is not None
+            })
+
+        return f(*args, **kwargs)
+
     return decorated
 
 def admin_required(f):
