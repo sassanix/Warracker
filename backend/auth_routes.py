@@ -15,7 +15,7 @@ from psycopg2.extras import Json
 # Use relative imports for project modules
 try:
     from . import db_handler, notifications
-    from .auth_utils import generate_token, token_required, is_valid_email, is_valid_password, is_password_too_long
+    from .auth_utils import generate_token, token_required, is_valid_email, is_valid_password, is_password_too_long, acquire_first_user_lock
     from .localization import SUPPORTED_LANGUAGES
     from .rate_limit import (
         login_limited, record_login_failure, clear_login_failures,
@@ -23,7 +23,7 @@ try:
 except ImportError:
     # Fallback for development environment
     import db_handler, notifications
-    from auth_utils import generate_token, token_required, is_valid_email, is_valid_password, is_password_too_long
+    from auth_utils import generate_token, token_required, is_valid_email, is_valid_password, is_password_too_long, acquire_first_user_lock
     from localization import SUPPORTED_LANGUAGES
     from rate_limit import (
         login_limited, record_login_failure, clear_login_failures,
@@ -141,6 +141,14 @@ def register():
         password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
         
         with conn.cursor() as cur:
+            # AUTH-07: serialize on the first-user lock before the
+            # duplicate check and the count re-read. Two concurrent
+            # first registrations used to both see zero users and both
+            # become owners; the second one now waits, then sees one
+            # user and registers as a plain user. The bcrypt hash above
+            # already ran, so the lock is never held during hashing.
+            acquire_first_user_lock(cur)
+
             # Check if username or email already exists
             cur.execute('SELECT id FROM users WHERE username = %s OR email = %s', (username, email))
             existing_user = cur.fetchone()

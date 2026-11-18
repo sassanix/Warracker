@@ -13,6 +13,24 @@ try:
 except ImportError:
     import db_handler
 
+# AUTH-07: one advisory lock key serializing first-user provisioning.
+# Two concurrent first registrations (local or OIDC) both saw zero users
+# and both became owners. Taking this lock before the user-count check
+# makes the check-and-insert atomic across workers and processes.
+FIRST_USER_LOCK_KEY = 20261118
+
+
+def acquire_first_user_lock(cur):
+    """Take the transaction-scoped advisory lock for first-user checks.
+
+    pg_advisory_xact_lock blocks until held, then releases at commit or
+    rollback, so a connection returned to the pool can never hold it.
+    Call it inside the registration transaction, before re-reading the
+    user count and inserting.
+    """
+    cur.execute("SELECT pg_advisory_xact_lock(%s)", (FIRST_USER_LOCK_KEY,))
+
+
 def generate_token(user_id):
     """Generate a JWT token for the user.
 

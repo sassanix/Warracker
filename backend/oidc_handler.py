@@ -11,10 +11,12 @@ try:
     # Try relative imports (when modules are in same directory)
     from .extensions import oauth
     from .db_handler import get_db_connection, release_db_connection
+    from .auth_utils import acquire_first_user_lock
 except ImportError:
     # Fallback to direct imports
     from extensions import oauth
     from db_handler import get_db_connection, release_db_connection
+    from auth_utils import acquire_first_user_lock
 
 import requests
 
@@ -320,6 +322,10 @@ def oidc_callback_route():
                 if cur.fetchone():
                     username = f"{username}_{str(uuid.uuid4())[:4]}" # Short random suffix
 
+                # AUTH-07: serialize here, before the count that decides
+                # owner and admin. Two concurrent first OIDC logins used
+                # to both see zero users and both become owners.
+                acquire_first_user_lock(cur)
                 cur.execute('SELECT COUNT(*) FROM users')
                 user_count = cur.fetchone()[0]
 
