@@ -25,6 +25,13 @@ raw interpolation back, the suite fails before the payload does.
   escape quotes, so a quote-bearing tag name broke out of input value
   attributes. Every tag name and color interpolation must go through
   an escapeHtml that escapes quotes.
+- XSS-08: the Settings Paperless debug flow rendered the test
+  connection message (which relays the upstream HTTP reason phrase),
+  the stored Paperless URL, and handler error text raw into innerHTML,
+  so a hostile Paperless server's reason phrase executed in the
+  owner's browser. The test-connection and test-upload renders carry
+  the same server-controlled strings. All of them must go through the
+  file's escapeHtmlSafe helper.
 """
 import os
 
@@ -88,4 +95,35 @@ def test_xss05_legacy_tag_sites_escaped():
     assert "${tag.color}" not in src
     assert "${escapeHtml(tag.name)}" in src
     assert "${escapeHtml(tag.color)}" in src
+
+
+def test_xss08_paperless_debug_render_escaped():
+    src = _read("frontend/settings-new.js")
+    debug = src[src.index("async function debugPaperlessConfiguration"):src.index("async function testFileUpload")]
+    assert "${escapeHtmlSafe(result.paperless_url)" in debug
+    assert "${escapeHtmlSafe(result.test_connection_result.message" in debug
+    assert "${escapeHtmlSafe(result.paperless_handler_error)}" in debug
+    assert "${result.paperless_url" not in debug
+    assert "${result.test_connection_result.message" not in debug
+    assert "${result.paperless_handler_error}" not in debug
+
+
+def test_xss08_paperless_test_renders_escaped():
+    src = _read("frontend/settings-new.js")
+    section = src[src.index("async function testPaperlessConnection"):src.index("async function debugPaperlessConfiguration")]
+    assert "${result.message}" not in section
+    assert "${result.server_info}" not in section
+    # One raw ${error.message} remains, inside a showToast call, which
+    # renders via textContent; the innerHTML catch template is escaped.
+    assert section.count("${error.message}") == 1
+    assert "showToast(`Error testing connection: ${error.message}`" in section
+    assert "${escapeHtmlSafe(error.message)}" in section
+    assert "${escapeHtmlSafe(result.message)}" in section
+    assert "${escapeHtmlSafe(result.server_info)}" in section
+    upload = src[src.index("async function testFileUpload"):src.index("function isValidUrl")]
+    assert "${result.message}" not in upload
+    assert "${result.error}" not in upload
+    assert "${result.file_info.filename}" not in upload
+    assert "${escapeHtmlSafe(result.message)}" in upload
+    assert "${escapeHtmlSafe(result.error)}" in upload
 

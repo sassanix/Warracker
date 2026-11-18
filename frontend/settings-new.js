@@ -5027,15 +5027,15 @@ async function testPaperlessConnection() {
                     paperlessConnectionStatus.className = 'paperless-status-message show success';
                     paperlessConnectionStatus.innerHTML = `
                         <strong>✅ Connection Successful!</strong><br>
-                        ${result.message}
-                        ${result.server_info ? `<br><small>Server: ${result.server_info}</small>` : ''}
+                        ${escapeHtmlSafe(result.message)}
+                        ${result.server_info ? `<br><small>Server: ${escapeHtmlSafe(result.server_info)}</small>` : ''}
                     `;
                     showToast('Paperless-ngx connection test successful!', 'success');
                 } else {
                     paperlessConnectionStatus.className = 'paperless-status-message show error';
                     paperlessConnectionStatus.innerHTML = `
                         <strong>❌ Connection Failed!</strong><br>
-                        ${result.message}
+                        ${escapeHtmlSafe(result.message)}
                     `;
                     showToast('Paperless-ngx connection test failed', 'error');
                 }
@@ -5069,8 +5069,8 @@ async function testPaperlessConnection() {
                 paperlessConnectionStatus.className = 'paperless-status-message show success';
                 paperlessConnectionStatus.innerHTML = `
                     <strong>✅ Connection Successful!</strong><br>
-                    ${result.message}
-                    ${result.server_info ? `<br><small>Server: ${result.server_info}</small>` : ''}
+                    ${escapeHtmlSafe(result.message)}
+                    ${result.server_info ? `<br><small>Server: ${escapeHtmlSafe(result.server_info)}</small>` : ''}
                 `;
                 showToast('Paperless-ngx connection test successful!', 'success');
             } else {
@@ -5078,7 +5078,7 @@ async function testPaperlessConnection() {
                 paperlessConnectionStatus.className = 'paperless-status-message show error';
                 paperlessConnectionStatus.innerHTML = `
                     <strong>❌ Connection Failed!</strong><br>
-                    ${result.message}
+                    ${escapeHtmlSafe(result.message)}
                 `;
                 showToast('Paperless-ngx connection test failed', 'error');
             }
@@ -5092,7 +5092,7 @@ async function testPaperlessConnection() {
             paperlessConnectionStatus.className = 'paperless-status-message show error';
             paperlessConnectionStatus.innerHTML = `
                 <strong>❌ Connection Error!</strong><br>
-                ${error.message}
+                ${escapeHtmlSafe(error.message)}
             `;
         }
         
@@ -5125,18 +5125,18 @@ async function debugPaperlessConfiguration() {
         console.log('🔍 Paperless-ngx Debug Information:', result);
         
         let debugHtml = '<h5>📋 Paperless-ngx Debug Information</h5>';
-        debugHtml += `<strong>Enabled:</strong> ${result.paperless_enabled}<br>`;
-        debugHtml += `<strong>URL:</strong> ${result.paperless_url || 'Not set'}<br>`;
-        debugHtml += `<strong>API Token Set:</strong> ${result.paperless_api_token_set}<br>`;
-        debugHtml += `<strong>Handler Available:</strong> ${result.paperless_handler_available}<br>`;
-        
+        debugHtml += `<strong>Enabled:</strong> ${escapeHtmlSafe(result.paperless_enabled)}<br>`;
+        debugHtml += `<strong>URL:</strong> ${escapeHtmlSafe(result.paperless_url) || 'Not set'}<br>`;
+        debugHtml += `<strong>API Token Set:</strong> ${escapeHtmlSafe(result.paperless_api_token_set)}<br>`;
+        debugHtml += `<strong>Handler Available:</strong> ${escapeHtmlSafe(result.paperless_handler_available)}<br>`;
+
         if (result.test_connection_result) {
             debugHtml += `<strong>Connection Test:</strong> ${result.test_connection_result.success ? '✅ Success' : '❌ Failed'}<br>`;
-            debugHtml += `<strong>Message:</strong> ${result.test_connection_result.message || result.test_connection_result.error}<br>`;
+            debugHtml += `<strong>Message:</strong> ${escapeHtmlSafe(result.test_connection_result.message || result.test_connection_result.error)}<br>`;
         }
-        
+
         if (result.paperless_handler_error) {
-            debugHtml += `<strong>Handler Error:</strong> ${result.paperless_handler_error}<br>`;
+            debugHtml += `<strong>Handler Error:</strong> ${escapeHtmlSafe(result.paperless_handler_error)}<br>`;
         }
         
         // Show in connection status area or create a temporary area
@@ -5198,8 +5198,8 @@ async function testFileUpload() {
                 paperlessConnectionStatus.className = 'paperless-status-message show success';
                 paperlessConnectionStatus.innerHTML = `
                     <strong>✅ File Upload Test Successful!</strong><br>
-                    ${result.message}<br>
-                    <small>File: ${result.file_info.filename} (${result.file_info.size} bytes)</small>
+                    ${escapeHtmlSafe(result.message)}<br>
+                    <small>File: ${escapeHtmlSafe(result.file_info.filename)} (${escapeHtmlSafe(result.file_info.size)} bytes)</small>
                 `;
             }
         } else {
@@ -5209,7 +5209,7 @@ async function testFileUpload() {
                 paperlessConnectionStatus.className = 'paperless-status-message show error';
                 paperlessConnectionStatus.innerHTML = `
                     <strong>❌ File Upload Test Failed!</strong><br>
-                    ${result.error}
+                    ${escapeHtmlSafe(result.error)}
                 `;
             }
         }
