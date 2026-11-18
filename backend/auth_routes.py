@@ -49,6 +49,24 @@ def _hash_reset_token(token):
     return hashlib.sha256(token.encode('utf-8')).hexdigest()
 
 
+# AUTH-12: whether OIDC-only mode is on. Precedence mirrors the OIDC
+# handler: the OIDC_ONLY_MODE environment variable wins over the
+# site_settings value, which defaults to off. Only-mode is an
+# authentication boundary (maintainer ruling D1), so the local auth
+# endpoints consult this helper and refuse local flows while it is on.
+def _oidc_only_mode_enabled(cur):
+    env_value = os.environ.get('OIDC_ONLY_MODE')
+    if env_value is not None:
+        return env_value.lower() == 'true'
+    try:
+        cur.execute(
+            "SELECT value FROM site_settings WHERE key = 'oidc_only_mode'")
+        row = cur.fetchone()
+        return bool(row) and row[0].lower() == 'true'
+    except Exception:
+        return False
+
+
 @auth_bp.route('/register', methods=['POST'])
 def register():
     conn = None
@@ -79,7 +97,12 @@ def register():
             # Check if there are any users (first user can register regardless of setting)
             cur.execute('SELECT COUNT(*) FROM users')
             user_count = cur.fetchone()[0]
-            
+
+            # AUTH-12: OIDC-only mode forbids local registration outright,
+            # including the first user, who must be provisioned via OIDC.
+            if _oidc_only_mode_enabled(cur):
+                return jsonify({'message': 'Local registration is disabled. Please use single sign-on!'}), 403
+
             # If registration is disabled and this is not the first user, return error
             if not registration_enabled and user_count > 0:
                 return jsonify({'message': 'Registration is currently disabled!'}), 403
@@ -194,6 +217,12 @@ def login():
 
         conn = db_handler.get_db_connection()
         with conn.cursor() as cur:
+            # AUTH-12: OIDC-only mode forbids local sign-in outright. The
+            # check runs before the password verification, so no local
+            # credential is accepted while the mode is on.
+            if _oidc_only_mode_enabled(cur):
+                return jsonify({'message': 'Local sign-in is disabled. Please use single sign-on!'}), 403
+
             # Check if user exists - include is_admin in the query
             cur.execute('SELECT id, username, email, password_hash, is_active, is_admin FROM users WHERE username = %s OR email = %s', (username, username))
             user = cur.fetchone()
@@ -374,14 +403,21 @@ def request_password_reset():
         conn = db_handler.get_db_connection()
         with conn.cursor() as cur:
             # Check if user exists
-            cur.execute('SELECT id FROM users WHERE email = %s', (email,))
+            cur.execute('SELECT id, oidc_sub FROM users WHERE email = %s', (email,))
             user = cur.fetchone()
             
             if not user:
                 # Don't reveal if email exists or not for security
                 return jsonify({'message': 'If your email is registered, you will receive a password reset link.'}), 200
-            
+
             user_id = user[0]
+
+            # AUTH-12: under OIDC-only mode, an OIDC-managed account must
+            # never gain a local password from a reset. Answer with the
+            # same generic message and mint nothing, so the refusal does
+            # not reveal whether the address is registered or SSO-managed.
+            if user[1] is not None and _oidc_only_mode_enabled(cur):
+                return jsonify({'message': 'If your email is registered, you will receive a password reset link.'}), 200
             
             # Generate reset token. Only its hash is stored (AUTH-08), so
             # the database value alone can never complete a reset; the
@@ -714,6 +750,14 @@ def reset_password():
                 return jsonify({'message': 'Invalid or expired token!'}), 400
             
             user_id = token_info[0]
+
+            # AUTH-12: a reset token minted before OIDC-only mode was
+            # turned on must not complete for an OIDC-managed account.
+            # The generic message does not reveal why the token fails.
+            cur.execute('SELECT oidc_sub FROM users WHERE id = %s', (user_id,))
+            owner = cur.fetchone()
+            if owner and owner[0] is not None and _oidc_only_mode_enabled(cur):
+                return jsonify({'message': 'Invalid or expired token!'}), 400
             
             # Hash the new password
             password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
