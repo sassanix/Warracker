@@ -341,8 +341,17 @@ export async function openPaperlessDocument(paperlessId, warrantyContext = null)
 		}
 		const viewInApp = await getUserPaperlessViewPreference(warrantyContext);
 		if (viewInApp) {
-			const url = `/api/paperless-file/${paperlessId}?token=${encodeURIComponent(token)}`;
-			const win = window.open(url, '_blank');
+			// Fetch with the token in the Authorization header and open
+			// a blob URL: a token in the query string would persist in
+			// browser history and in the service worker cache (AUTH-02).
+			const fileResponse = await fetch(`/api/paperless-file/${paperlessId}`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			if (!fileResponse.ok) throw new Error('Failed to open document');
+			const blob = await fileResponse.blob();
+			const blobUrl = window.URL.createObjectURL(blob);
+			const win = window.open(blobUrl, '_blank');
+			setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
 			if (!win) showToast(window.t ? window.t('paperless.popup_blocked') : 'Please allow popups to view documents', 'warning');
 			return;
 		}

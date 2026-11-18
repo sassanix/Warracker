@@ -7639,15 +7639,30 @@ async function openPaperlessDocument(paperlessId, warrantyContext = null) {
     console.log(`[openPaperlessDocument] User preference view in app: ${viewInApp}`);
     
     if (viewInApp) {
-        // Open document in Warracker interface
+        // Open document in Warracker interface. Fetch with the token
+        // in the Authorization header and open a blob URL: a token in
+        // the query string would persist in browser history and in
+        // the service worker cache (AUTH-02).
         console.log(`[openPaperlessDocument] Opening document ${paperlessId} in Warracker interface`);
-        const documentUrl = `/api/paperless-file/${paperlessId}?token=${encodeURIComponent(token)}`;
-        
-        const newTab = window.open(documentUrl, '_blank');
-        if (!newTab) {
-            showToast('Please allow popups to view documents', 'warning');
-        } else {
-            showToast('Opening document in Warracker...', 'info');
+        try {
+            const fileResponse = await fetch(`/api/paperless-file/${paperlessId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!fileResponse.ok) {
+                throw new Error(`Failed to open document: ${fileResponse.status}`);
+            }
+            const blob = await fileResponse.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const newTab = window.open(blobUrl, '_blank');
+            setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+            if (!newTab) {
+                showToast('Please allow popups to view documents', 'warning');
+            } else {
+                showToast('Opening document in Warracker...', 'info');
+            }
+        } catch (fileError) {
+            console.error('[openPaperlessDocument] Failed to open document:', fileError);
+            showToast(`Error opening document: ${fileError.message}`, 'error');
         }
         return;
     }
