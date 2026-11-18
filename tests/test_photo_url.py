@@ -133,3 +133,105 @@ def test_update_with_photo_url(client, user_factory, warranty_factory,
     })
     assert r.status_code == 200, r.get_data(as_text=True)
     assert _photo_path(client, h, wid)
+
+
+# --- SSRF-02: translation addresses must not smuggle private IPv4s ---
+
+def test_nat64_embedded_private_is_not_public():
+    from backend.warranties_routes import _ip_address_is_public
+    import ipaddress
+    # The NAT64 well-known prefix embedding the cloud metadata address:
+    # is_global reports True for it, the guard must not.
+    assert not _ip_address_is_public(
+        ipaddress.ip_address("64:ff9b::a9fe:a9fe"))
+    # The whole prefix is rejected, even embedding a public IPv4.
+    assert not _ip_address_is_public(
+        ipaddress.ip_address("64:ff9b::808:808"))
+
+
+def test_translation_addresses_judged_by_embedded_ipv4():
+    from backend.warranties_routes import _ip_address_is_public
+    import ipaddress
+    assert not _ip_address_is_public(
+        ipaddress.ip_address("::ffff:10.0.0.1"))
+    assert _ip_address_is_public(ipaddress.ip_address("::ffff:8.8.8.8"))
+    # 6to4 and Teredo wrappers stay rejected (as before); a wrapper
+    # embedding a private IPv4 is rejected on the embedded check too.
+    assert not _ip_address_is_public(
+        ipaddress.ip_address("2002:0a00:0001::"))
+    assert not _ip_address_is_public(
+        ipaddress.ip_address("2001:0000:4136:e378:8000:63bf:f5ff:fffe"))
+
+
+def test_plain_addresses_unchanged():
+    from backend.warranties_routes import _ip_address_is_public
+    import ipaddress
+    assert _ip_address_is_public(ipaddress.ip_address("8.8.8.8"))
+    assert not _ip_address_is_public(ipaddress.ip_address("10.0.0.1"))
+    assert not _ip_address_is_public(ipaddress.ip_address("127.0.0.1"))
+    assert not _ip_address_is_public(ipaddress.ip_address("169.254.169.254"))
+    assert _ip_address_is_public(
+        ipaddress.ip_address("2001:4860:4860::8888"))
+
+
+def test_guard_rejects_host_resolving_to_nat64(monkeypatch, app):
+    """End to end through the resolver: a hostname whose only address is
+    a NAT64-embedded private IPv4 is refused by the photo fetch."""
+    import socket
+    from backend.warranties_routes import download_product_photo
+    real_getaddrinfo = socket.getaddrinfo
+
+    def _fake_getaddrinfo(host, port, *args, **kwargs):
+        if host == "nat64.example.invalid":
+            return [(socket.AF_INET6, socket.SOCK_STREAM, 0, "",
+                     ("64:ff9b::a9fe:a9fe", 0, 0, 0))]
+        return real_getaddrinfo(host, port, *args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", _fake_getaddrinfo)
+    app.config["ALLOW_PRIVATE_PHOTO_URLS"] = False
+    with app.app_context():
+        with pytest.raises(ValueError, match="public address"):
+            download_product_photo("http://nat64.example.invalid/photo.png")
+
+
+# --- SSRF-03: the fetch has a total deadline, not just a per-read timeout ---
+
+class _DripHandler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.0"
+
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "image/png")
+        self.end_headers()
+        try:
+            for _ in range(100):
+                self.wfile.write(b"\x89")
+                self.wfile.flush()
+                import time as _time
+                _time.sleep(0.3)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
+    def log_message(self, *args):
+        pass
+
+
+def test_slow_drip_fetch_times_out(app):
+    import time
+    from backend.warranties_routes import download_product_photo
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _DripHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        url = f"http://127.0.0.1:{server.server_address[1]}/drip.png"
+        app.config["ALLOW_PRIVATE_PHOTO_URLS"] = True
+        app.config["PHOTO_FETCH_TIMEOUT_SECONDS"] = 1
+        start = time.monotonic()
+        with app.app_context():
+            with pytest.raises(ValueError, match="Timed out"):
+                download_product_photo(url)
+        assert time.monotonic() - start < 10
+    finally:
+        app.config.pop("PHOTO_FETCH_TIMEOUT_SECONDS", None)
+        app.config["ALLOW_PRIVATE_PHOTO_URLS"] = False
+        server.shutdown()

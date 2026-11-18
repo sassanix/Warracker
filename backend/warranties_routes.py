@@ -13,6 +13,8 @@ import mimetypes
 from flask import Response
 import uuid
 import socket
+import threading
+import time
 import ipaddress
 import urllib.parse
 import requests
@@ -120,6 +122,37 @@ def unique_upload_filename(original_name, infix=""):
     stamp = datetime.now().strftime('%Y%m%d%H%M%S')
     return f"{stamp}_{uuid.uuid4().hex[:8]}_{infix}{safe}"
 
+# NAT64 well-known prefix (RFC 6052): the low 32 bits embed an IPv4
+# address, so 64:ff9b::/96 can smuggle a private IPv4 past is_global.
+_NAT64_WELL_KNOWN_PREFIX = ipaddress.ip_network('64:ff9b::/96')
+
+
+def _ip_address_is_public(addr):
+    """True when an address is a genuine public destination (SSRF-02).
+
+    ipaddress.is_global alone is not enough: on the interpreters tested
+    it reports True for the NAT64 well-known prefix embedding a private
+    IPv4 (64:ff9b::a9fe:a9fe, the cloud metadata address, passes). The
+    NAT64 prefix is rejected wholesale, and translation addresses
+    (IPv4-mapped, 6to4, Teredo) must pass both the wrapper check and
+    the check on the IPv4 they embed. Nothing previously allowed
+    becomes allowed; only translation tricks are removed.
+    """
+    if addr.version == 6:
+        if addr in _NAT64_WELL_KNOWN_PREFIX:
+            return False
+        mapped = addr.ipv4_mapped
+        if mapped is not None:
+            return addr.is_global and mapped.is_global
+        sixtofour = addr.sixtofour
+        if sixtofour is not None:
+            return addr.is_global and sixtofour.is_global
+        teredo = addr.teredo
+        if teredo is not None:
+            return addr.is_global and teredo[0].is_global and teredo[1].is_global
+    return addr.is_global
+
+
 def _photo_url_host_is_public(hostname):
     """SSRF guard for photo-by-URL: every address the host resolves to must
     be a public (global) IP. Skipped only when the deployment explicitly sets
@@ -137,7 +170,7 @@ def _photo_url_host_is_public(hostname):
             addr = ipaddress.ip_address(info[4][0])
         except ValueError:
             return False
-        if not addr.is_global:
+        if not _ip_address_is_public(addr):
             return False
     return True
 
@@ -154,6 +187,27 @@ def _detect_image_extension(data):
         return '.webp'
     return None
 
+def _interrupt_photo_fetch(resp):
+    """Interrupt a blocked streamed read (SSRF-03). Closing the response
+    does not wake a thread blocked in recv, and the pooled connection's
+    sock is already detached by the time the response streams, so the
+    socket is reached through the response's read buffer
+    (raw._fp.fp.raw._sock). Shutting it down makes the blocked read
+    return, so the deadline check fires. Best effort: any failure
+    leaves the per-chunk deadline check and the per-read timeout as
+    the backstop."""
+    try:
+        sock = resp.raw._fp.fp.raw._sock
+        if sock is not None:
+            sock.shutdown(socket.SHUT_RDWR)
+    except Exception:
+        pass
+    try:
+        resp.close()
+    except Exception:
+        pass
+
+
 def download_product_photo(url):
     """Fetch an image from a user-supplied URL for use as a product photo.
     Returns (bytes, extension). Raises ValueError with a user-facing message."""
@@ -161,14 +215,22 @@ def download_product_photo(url):
     if not current:
         raise ValueError("Photo URL is empty.")
     max_bytes = current_app.config.get('MAX_CONTENT_LENGTH') or 32 * 1024 * 1024
+    # SSRF-03: one total deadline for the whole fetch, redirects and body
+    # reads included. The per-read timeout alone let a server dripping
+    # one chunk every few seconds hold a fetch open indefinitely.
+    total_timeout = current_app.config.get('PHOTO_FETCH_TIMEOUT_SECONDS') or 60
+    deadline = time.monotonic() + total_timeout
     for _ in range(4):
         parsed = urllib.parse.urlparse(current)
         if parsed.scheme not in ('http', 'https') or not parsed.hostname:
             raise ValueError("Photo URL must be a valid http(s) URL.")
         if not _photo_url_host_is_public(parsed.hostname):
             raise ValueError("Photo URL must point to a public address.")
+        if time.monotonic() >= deadline:
+            raise ValueError("Timed out fetching the photo URL.")
         try:
-            resp = requests.get(current, timeout=10, stream=True, allow_redirects=False,
+            resp = requests.get(current, timeout=min(10, deadline - time.monotonic()),
+                                stream=True, allow_redirects=False,
                                 headers={'User-Agent': 'Warracker photo fetch'})
         except requests.RequestException:
             raise ValueError("Could not fetch the photo URL.")
@@ -183,14 +245,35 @@ def download_product_photo(url):
             resp.close()
             raise ValueError("Could not fetch the photo URL.")
         chunks, total = [], 0
+        # A per-chunk deadline check alone does not bound a slow drip:
+        # a read for a full chunk blocks until the chunk fills or the
+        # connection closes, so the check may never run. A timer shuts
+        # the socket down at the deadline, which unblocks the read;
+        # the post-loop check then turns a shutdown-caused end of
+        # stream into the timeout error instead of accepting bytes
+        # that arrived after the deadline.
+        timer = threading.Timer(
+            max(0.0, deadline - time.monotonic()),
+            _interrupt_photo_fetch, args=(resp,))
+        timer.daemon = True
+        timer.start()
         try:
             for chunk in resp.iter_content(chunk_size=65536):
+                if time.monotonic() >= deadline:
+                    raise ValueError("Timed out fetching the photo URL.")
                 total += len(chunk)
                 if total > max_bytes:
                     raise ValueError("Photo URL file is too large.")
                 chunks.append(chunk)
+        except requests.RequestException:
+            if time.monotonic() >= deadline:
+                raise ValueError("Timed out fetching the photo URL.")
+            raise ValueError("Could not fetch the photo URL.")
         finally:
+            timer.cancel()
             resp.close()
+        if time.monotonic() >= deadline:
+            raise ValueError("Timed out fetching the photo URL.")
         data = b''.join(chunks)
         ext = _detect_image_extension(data)
         if not ext:
