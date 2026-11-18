@@ -348,6 +348,62 @@ def validate_token():
             'message': 'Invalid token'
         }), 401
 
+@auth_bp.route('/oidc-exchange', methods=['POST'])
+def oidc_exchange():
+    """Exchange a single-use OIDC login code for a JWT (AUTH-03).
+
+    The SSO callback redirects with ?code= instead of putting the JWT
+    in the URL. The code lives 60 seconds, is deleted on first use, and
+    only its hash is stored, so a database read alone cannot redeem it.
+    No rate limiting here: the code space is 256 bits and a wrong guess
+    costs one indexed lookup.
+    """
+    data = request.get_json(silent=True) or {}
+    code = data.get('code')
+    if not code or not isinstance(code, str):
+        return jsonify({"error": "Invalid or expired login code!"}), 400
+    code_hash = hashlib.sha256(code.encode()).hexdigest()
+    conn = None
+    try:
+        conn = db_handler.get_db_connection()
+        with conn.cursor() as cur:
+            # Drop stale codes so the table stays small.
+            cur.execute(
+                "DELETE FROM oidc_login_codes "
+                "WHERE expires_at <= (NOW() AT TIME ZONE 'UTC')")
+            cur.execute(
+                "SELECT user_id, is_new_user FROM oidc_login_codes "
+                "WHERE code_hash = %s "
+                "AND expires_at > (NOW() AT TIME ZONE 'UTC')",
+                (code_hash,))
+            row = cur.fetchone()
+            if not row:
+                conn.rollback()
+                return jsonify({"error": "Invalid or expired login code!"}), 400
+            user_id, is_new_user = row
+            # Single use: delete before minting so a concurrent replay
+            # finds nothing.
+            cur.execute(
+                "DELETE FROM oidc_login_codes WHERE code_hash = %s",
+                (code_hash,))
+            token, session_jti = generate_token(user_id)
+            expires_at = datetime.now(UTC) + current_app.config['JWT_EXPIRATION_DELTA']
+            cur.execute(
+                'INSERT INTO user_sessions (user_id, session_token, expires_at, ip_address, user_agent, login_method) VALUES (%s, %s, %s, %s, %s, %s)',
+                (user_id, session_jti, expires_at, request.remote_addr,
+                 request.headers.get('User-Agent', ''), 'oidc')
+            )
+            conn.commit()
+        return jsonify({"token": token, "new_user": bool(is_new_user)}), 200
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        current_app.logger.error(f"OIDC code exchange failed: {e}")
+        return jsonify({"error": "Login failed!"}), 500
+    finally:
+        if conn:
+            db_handler.release_db_connection(conn)
+
 @auth_bp.route('/user', methods=['GET'])
 @token_required
 def get_user():

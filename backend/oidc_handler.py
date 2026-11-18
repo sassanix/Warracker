@@ -1,7 +1,9 @@
 # backend/oidc_handler.py
+import hashlib
 import os
+import secrets
 import uuid
-from datetime import datetime, UTC # Ensure timedelta is imported if used, though not in this snippet
+from datetime import datetime, UTC, timedelta # Ensure timedelta is imported if used, though not in this snippet
 from flask import Blueprint, jsonify, redirect, url_for, current_app, request, session
 
 # Import shared extensions and utilities
@@ -9,12 +11,10 @@ try:
     # Try relative imports (when modules are in same directory)
     from .extensions import oauth
     from .db_handler import get_db_connection, release_db_connection
-    from .auth_utils import generate_token
 except ImportError:
     # Fallback to direct imports
     from extensions import oauth
     from db_handler import get_db_connection, release_db_connection
-    from auth_utils import generate_token
 
 import requests
 
@@ -368,31 +368,31 @@ def oidc_callback_route():
                 )
 
             if user_id:
-                # Generate app-specific JWT (AUTH-01: the returned jti is
-                # stored as the session row so the token can be revoked)
-                app_session_token, session_jti = generate_token(user_id)
+                # AUTH-03: never put the JWT in the redirect URL (it
+                # would persist in browser history). Store a short-lived
+                # single-use code and let the frontend exchange it for
+                # the token over POST. Only the hash is stored, and the
+                # JWT plus its session row are minted at exchange time.
+                login_code = secrets.token_urlsafe(32)
+                code_hash = hashlib.sha256(login_code.encode()).hexdigest()
+                code_expires_at = datetime.now(UTC) + timedelta(seconds=60)
+                cur.execute(
+                    'INSERT INTO oidc_login_codes (code_hash, user_id, is_new_user, expires_at) VALUES (%s, %s, %s, %s)',
+                    (code_hash, user_id, is_new_user, code_expires_at)
+                )
 
                 # Update last login timestamp
                 cur.execute('UPDATE users SET last_login = %s WHERE id = %s', (datetime.now(UTC), user_id))
-
-                # Log OIDC session in user_sessions table
-                ip_address = request.remote_addr
-                user_agent = request.headers.get('User-Agent', '')
-                db_session_token = session_jti
-                expires_at = datetime.now(UTC) + current_app.config['JWT_EXPIRATION_DELTA']
-
-                cur.execute(
-                    'INSERT INTO user_sessions (user_id, session_token, expires_at, ip_address, user_agent, login_method) VALUES (%s, %s, %s, %s, %s, %s)',
-                    (user_id, db_session_token, expires_at, ip_address, user_agent, 'oidc')
-                )
                 conn.commit()
 
                 frontend_url = os.environ.get('FRONTEND_URL', current_app.config.get('APP_BASE_URL', 'http://localhost:8080')).rstrip('/')
-                redirect_target = f"{frontend_url}/auth-redirect.html?token={app_session_token}"
+                redirect_target = f"{frontend_url}/auth-redirect.html?code={login_code}"
                 if is_new_user:
                     redirect_target += "&new_user=true"
 
-                logger.info(f"[OIDC_HANDLER] /oidc/callback redirecting to frontend: {redirect_target}")
+                # Log the destination page only: the code is single-use,
+                # but it must not land in the logs either.
+                logger.info("[OIDC_HANDLER] /oidc/callback redirecting to frontend auth-redirect")
                 return redirect(redirect_target)
             else:
                 logger.error("[OIDC_HANDLER] /oidc/callback User ID not established after DB ops.")

@@ -97,7 +97,7 @@
             const loginLink = document.getElementById('loginLink');
             
             const params = new URLSearchParams(window.location.search);
-            const token = params.get('token');
+            const code = params.get('code');
             const oidcError = params.get('oidc_error');
             const newUser = params.get('new_user');
 
@@ -142,14 +142,39 @@
                 errorMessageEl.textContent = message;
                 errorMessageEl.style.display = 'block';
                 loginLink.style.display = 'inline';
-            } else if (token) {
-                localStorage.setItem('auth_token', token);
-                
-                // Fetch user info immediately after storing token to ensure it's available
-                // when the main app loads, preventing preference key mismatches
-                fetchUserInfoAndRedirect(token, newUser === 'true');
+            } else if (code) {
+                // AUTH-03: exchange the single-use code for the JWT over
+                // POST. The token never appears in the URL, so it cannot
+                // persist in browser history.
+                statusMessage.textContent = 'Exchanging login code...';
+                try {
+                    const exchange = await fetch('/api/auth/oidc-exchange', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code: code })
+                    });
+                    if (!exchange.ok) {
+                        throw new Error('Login code exchange failed');
+                    }
+                    const exchangeData = await exchange.json();
+                    const token = exchangeData.token;
+                    if (!token) {
+                        throw new Error('No token returned');
+                    }
+                    localStorage.setItem('auth_token', token);
+
+                    // Fetch user info immediately after storing token to ensure it's available
+                    // when the main app loads, preventing preference key mismatches
+                    fetchUserInfoAndRedirect(token, newUser === 'true');
+                } catch (error) {
+                    console.error('Error exchanging login code:', error);
+                    statusMessage.textContent = 'SSO Login Failed';
+                    errorMessageEl.textContent = 'The login code expired or was already used. Please try logging in again.';
+                    errorMessageEl.style.display = 'block';
+                    loginLink.style.display = 'inline';
+                }
             } else {
-                // No token and no error, unexpected state, redirect to login
+                // No code and no error, unexpected state, redirect to login
                 statusMessage.textContent = 'Redirecting to login...';
                 setTimeout(() => {
                     window.location.href = 'login.html';

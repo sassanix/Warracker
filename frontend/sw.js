@@ -1,4 +1,4 @@
-const CACHE_NAME = 'warracker-cache-v20260719002';
+const CACHE_NAME = 'warracker-cache-v20261118001';
 const urlsToCache = [
   // HTML pages
   './',
