@@ -170,6 +170,31 @@ def ensure_owner_exists():
         if conn:
             release_db_connection(conn)
 
+# Content-Security-Policy for every response Flask serves (CFG-07b).
+# The frontend uses inline scripts, inline event handlers, and inline
+# styles throughout, so script-src and style-src keep 'unsafe-inline';
+# the policy still pins the fetchable origins, blocks plugins and
+# foreign framing, and keeps form submissions and base URIs
+# same-origin. The two third-party allowances are load-bearing: the
+# About page loads the Buy Me a Coffee button script, which fetches
+# its font and images from the buymeacoffee and Google Fonts hosts,
+# and version-checker.js fetches the latest release from api.github.com.
+_CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' https://cdnjs.buymeacoffee.com; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "img-src 'self' data: blob: https://*.buymeacoffee.com; "
+    "font-src 'self' data: https://fonts.gstatic.com; "
+    "connect-src 'self' https://api.github.com; "
+    "frame-src 'self' https://*.buymeacoffee.com; "
+    "object-src 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self'; "
+    "frame-ancestors 'self'; "
+    "upgrade-insecure-requests"
+)
+
+
 def create_app(config_name=None):
     """Create and configure an instance of the Flask application."""
     # Configure logging FIRST
@@ -190,11 +215,18 @@ def create_app(config_name=None):
     app.wsgi_app = _ForwardedHeaderGuard(app.wsgi_app)
 
     @app.after_request
-    def _set_framing_protection(response):
+    def _set_security_headers(response):
         # CFG-07a: never render framed by another origin. SAMEORIGIN
         # keeps any same-origin framing working while blocking the
         # cross-origin clickjacking case.
         response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+        # CFG-07b: Content-Security-Policy, see the module constant.
+        response.headers.setdefault(
+            'Content-Security-Policy', _CONTENT_SECURITY_POLICY)
+        # CFG-07d: send the full URL only to the same origin, the bare
+        # origin cross-origin, and nothing on an HTTPS to HTTP drop.
+        response.headers.setdefault(
+            'Referrer-Policy', 'strict-origin-when-cross-origin')
         return response
     
     # Load configuration
