@@ -333,8 +333,13 @@ def transfer_ownership():
                 return jsonify({"message": "Ownership transfer feature is not available. Please run the database migration first."}), 500
             
             conn.commit()
-            
+
             logger.info(f"Ownership successfully transferred from {current_owner_id} to {new_owner_id}.")
+            # Audit the transfer (D3 residual): it changes is_owner on
+            # two accounts and previously wrote no audit entry.
+            create_audit_log('TRANSFER_OWNERSHIP', target_type='User',
+                             target_id=new_owner_id,
+                             details=f'Ownership transferred from user {current_owner_id} to user {new_owner_id}')
             return jsonify({"message": "Ownership transferred successfully."}), 200
 
     except Exception as e:
@@ -368,6 +373,59 @@ def fix_owner_role():
     except Exception as e:
         logger.error(f"Error in fix_owner_role endpoint: {e}")
         return jsonify({'success': False, 'message': 'Failed to fix the owner role. Check the server logs for details.'}), 500
+
+# Site setting keys the settings endpoint accepts (D3 residual). Any
+# other key in a PUT body is ignored and reported, so junk or
+# pre-seeded keys no longer persist silently. This is the union of
+# the keys the backend reads (direct queries, get_site_setting, and
+# the settings defaults), the keys the settings UI sends, and the
+# legacy admin_oidc_group key the OIDC handler still reads. Add a key
+# here before any new setting is written through this endpoint.
+SITE_SETTING_KEYS = frozenset({
+    'registration_enabled',
+    'email_base_url',
+    'global_view_enabled',
+    'global_view_admin_only',
+    'oidc_enabled',
+    'oidc_only_mode',
+    'oidc_skip_login_screen',
+    'oidc_provider_name',
+    'oidc_client_id',
+    'oidc_client_secret',
+    'oidc_issuer_url',
+    'oidc_scope',
+    'oidc_admin_group',
+    'admin_oidc_group',
+    'apprise_enabled',
+    'apprise_urls',
+    'apprise_expiration_days',
+    'apprise_notification_time',
+    'apprise_notification_mode',
+    'apprise_warranty_scope',
+    'apprise_title_prefix',
+    'paperless_enabled',
+    'paperless_url',
+    'paperless_api_token',
+})
+
+# Setting keys whose values must never appear in audit entries, beyond
+# the substring heuristic below. Apprise URLs embed credentials in the
+# URL itself (tokens, webhook ids, userinfo), and the key name matches
+# none of the heuristic substrings, so rotated credentials used to
+# persist in cleartext in historical audit entries (D3 residual).
+_SENSITIVE_SETTING_KEYS = frozenset({'apprise_urls'})
+
+
+def _setting_value_for_audit(key, value):
+    """Mask a setting value for an audit entry, or return it as-is."""
+    key_lower = str(key).lower()
+    if (key in _SENSITIVE_SETTING_KEYS
+            or 'secret' in key_lower
+            or 'token' in key_lower
+            or 'password' in key_lower):
+        return '********'
+    return value
+
 
 # ============================
 # Site Settings Routes
@@ -505,8 +563,17 @@ def update_site_settings():
             
             # Update settings
             updated_keys = []
+            ignored_keys = []
             requires_restart = False
             for key, value in data.items():
+                # Unknown keys are ignored, not persisted: without an
+                # allow-list, junk keys used to land in site_settings
+                # silently (D3 residual). Known keys still save.
+                if key not in SITE_SETTING_KEYS:
+                    ignored_keys.append(key)
+                    logger.warning(f"Ignoring unknown site setting key: {key}")
+                    continue
+
                 # Sanitize boolean-like string values
                 if key in ['registration_enabled', 'oidc_enabled', 'oidc_only_mode', 'oidc_skip_login_screen', 'global_view_enabled', 'global_view_admin_only', 'paperless_enabled']:
                     value = 'true' if str(value).lower() == 'true' else 'false'
@@ -556,18 +623,20 @@ def update_site_settings():
             elif requires_restart: # This case might be redundant if all oidc_ keys trigger the above
                 response_message += " An application restart is required for some settings to take full effect."
             
-            # Audit log for updated settings (mask sensitive values)
+            # Audit log for updated settings (mask sensitive values).
+            # Only persisted keys are audited; ignored keys get no
+            # entry, since nothing was stored for them.
             try:
-                for key, val in data.items():
-                    masked_val = val
-                    key_lower = str(key).lower()
-                    if 'secret' in key_lower or 'token' in key_lower or 'password' in key_lower:
-                        masked_val = '********'
+                for key in updated_keys:
+                    masked_val = _setting_value_for_audit(key, data[key])
                     create_audit_log('UPDATE_SETTING', target_type='SiteSetting', target_id=key, details=f'Set {key} to {masked_val}')
             except Exception as audit_err:
                 logger.warning(f"Failed to write audit logs for settings update: {audit_err}")
 
-            return jsonify({"message": response_message}), 200
+            response_body = {"message": response_message}
+            if ignored_keys:
+                response_body["ignored_keys"] = ignored_keys
+            return jsonify(response_body), 200
     except Exception as e:
         logger.error(f"Error updating site settings: {e}")
         if conn:
