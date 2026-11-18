@@ -145,7 +145,15 @@ def serve_file(filename):
         if not os.path.isfile(full_path):
             return jsonify({"message": "File not found"}), 404
 
-        return send_from_directory(current_app.config['UPLOAD_FOLDER'], file_path)
+        # FILE-01: these bytes are authorization-gated, so they must not
+        # sit in a shared cache for a year (the Flask default) and must
+        # not be content-sniffed. Match the /secure-file/ headers.
+        response = send_from_directory(current_app.config['UPLOAD_FOLDER'], file_path)
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        return response
     except Exception as e:
         logger.error(f"Error serving file {filename}: {e}")
         return jsonify({"message": "Error accessing file"}), 500

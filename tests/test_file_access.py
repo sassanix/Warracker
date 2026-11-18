@@ -109,3 +109,13 @@ def test_missing_file_returns_json_404(client, files_scenario):
 def test_file_requires_auth(client, files_scenario):
     r = client.get(f"/api/files/{files_scenario.paths['invoice_path']}")
     assert r.status_code == 401
+
+
+def test_served_file_is_not_cached_and_not_sniffed(client, files_scenario):
+    # FILE-01: the route the UI uses must match /secure-file/: no-store
+    # plus nosniff, not the one-year public cache Flask defaults to.
+    r = _get(client, files_scenario.owner, files_scenario.paths['invoice_path'])
+    assert r.status_code == 200
+    assert 'no-store' in r.headers.get('Cache-Control', '')
+    assert 'max-age=31536000' not in r.headers.get('Cache-Control', '')
+    assert r.headers.get('X-Content-Type-Options') == 'nosniff'
