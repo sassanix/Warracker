@@ -20,6 +20,21 @@ import {
 import { showToast, showLoadingSpinner, hideLoadingSpinner } from './ui.js';
 import { renderWarrantiesList } from './warrantyRenderer.js';
 
+// Escape user-controlled strings before injecting into innerHTML templates
+// (stored-XSS defense; safe for both element content and attribute
+// contexts, so tag names and colors cannot break out of markup).
+function escapeHtml(text) {
+  if (text === null || text === undefined) return '';
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  };
+  return String(text).replace(/[&<>"']/g, (m) => map[m]);
+}
+
 // Safe translation helper that works even if i18next isn't fully loaded
 function t(key, options = {}) {
   // Try window.i18next first (the actual i18next library)
@@ -116,7 +131,7 @@ function renderDropdownList(container, tags, selected, onSelect, searchTerm = ''
     createOption.className = 'tag-option create-tag';
     // Use i18next directly with fallback
     const createText = window.i18next?.t('tags.create_with_name', { name: searchTerm, defaultValue: `Create "${searchTerm}"` }) || `Create "${searchTerm}"`;
-    createOption.innerHTML = `<i class="fas fa-plus"></i> ${createText}`;
+    createOption.innerHTML = `<i class="fas fa-plus"></i> ${escapeHtml(createText)}`;
     createOption.addEventListener('click', async () => {
       try {
         const created = await createTag(searchTerm);
@@ -135,8 +150,8 @@ function renderDropdownList(container, tags, selected, onSelect, searchTerm = ''
     option.className = 'tag-option';
     const isSelected = selected.some((selectedTag) => selectedTag.id === tag.id);
     option.innerHTML = `
-      <span class="tag-color" style="background-color: ${tag.color}"></span>
-      ${tag.name}
+      <span class="tag-color" style="background-color: ${escapeHtml(tag.color)}"></span>
+      ${escapeHtml(tag.name)}
       <span class="tag-status">${isSelected ? '<i class="fas fa-check"></i>' : ''}</span>
     `;
     option.addEventListener('click', () => onSelect(tag, isSelected));
@@ -204,7 +219,7 @@ export function renderSelectedTags() {
     tagElement.style.backgroundColor = tag.color;
     tagElement.style.color = getContrastColor(tag.color);
     tagElement.innerHTML = `
-      ${tag.name}
+      ${escapeHtml(tag.name)}
       <span class="remove-tag" data-id="${tag.id}">&times;</span>
     `;
     tagElement.querySelector('.remove-tag').addEventListener('click', (event) => {
@@ -235,7 +250,7 @@ export function renderEditSelectedTags() {
     tagElement.style.backgroundColor = tag.color;
     tagElement.style.color = getContrastColor(tag.color);
     tagElement.innerHTML = `
-      ${tag.name}
+      ${escapeHtml(tag.name)}
       <span class="remove-tag" data-id="${tag.id}">&times;</span>
     `;
     tagElement.querySelector('.remove-tag').addEventListener('click', (event) => {
@@ -361,13 +376,13 @@ export function renderExistingTags() {
       row.innerHTML = `
         <td>
           <div class="tag-color-swatch-container">
-            <div class="tag-color-swatch" style="background-color: ${tag.color}" aria-label="${tag.name}"></div>
-            <input type="color" class="tag-color-input-hidden" value="${tag.color}" aria-label="${t('tags.pick_color', { defaultValue: 'Pick color' })}" />
+            <div class="tag-color-swatch" style="background-color: ${escapeHtml(tag.color)}" aria-label="${escapeHtml(tag.name)}"></div>
+            <input type="color" class="tag-color-input-hidden" value="${escapeHtml(tag.color)}" aria-label="${t('tags.pick_color', { defaultValue: 'Pick color' })}" />
           </div>
         </td>
         <td>
-          <span class="tag-name-display">${tag.name}</span>
-          <input type="text" class="form-control tag-name-input" value="${tag.name}" />
+          <span class="tag-name-display">${escapeHtml(tag.name)}</span>
+          <input type="text" class="form-control tag-name-input" value="${escapeHtml(tag.name)}" />
         </td>
         <td class="tag-actions">
           <div class="view-actions">

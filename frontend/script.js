@@ -1763,8 +1763,8 @@ async function renderWarranties(warrantiesToRender) {
         const tagsHtml = warranty.tags && warranty.tags.length > 0 
             ? `<div class="tags-row">
                 ${warranty.tags.map(tag => 
-                    `<span class="tag" style="background-color: ${tag.color}; color: ${getContrastColor(tag.color)}">
-                        ${tag.name}
+                    `<span class="tag" style="background-color: ${escapeHtml(tag.color)}; color: ${getContrastColor(tag.color)}">
+                        ${escapeHtml(tag.name)}
                     </span>`
                 ).join('')}
               </div>`
@@ -3852,13 +3852,20 @@ function closeClaimFormModal() {
 }
 
 /**
- * Escape HTML to prevent XSS
+ * Escape HTML to prevent XSS. This definition shadows the earlier one
+ * (later function declarations win), so it must escape quotes too:
+ * attribute contexts such as input value="..." depend on it.
  */
 function escapeHtml(text) {
     if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
 }
 
 // Add this function to handle edit tab functionality
@@ -4333,8 +4340,8 @@ function renderTagsList(searchTerm = '') {
         const isSelected = selectedTags.some(selected => selected.id === tag.id);
         
         option.innerHTML = `
-            <span class="tag-color" style="background-color: ${tag.color}"></span>
-            ${tag.name}
+            <span class="tag-color" style="background-color: ${escapeHtml(tag.color)}"></span>
+            ${escapeHtml(tag.name)}
             <span class="tag-status">${isSelected ? '<i class="fas fa-check"></i>' : ''}</span>
         `;
         
@@ -4399,8 +4406,8 @@ function renderEditTagsList(searchTerm = '') {
         const isSelected = editSelectedTags.some(selected => selected.id === tag.id);
         
         option.innerHTML = `
-            <span class="tag-color" style="background-color: ${tag.color}"></span>
-            ${tag.name}
+            <span class="tag-color" style="background-color: ${escapeHtml(tag.color)}"></span>
+            ${escapeHtml(tag.name)}
             <span class="tag-status">${isSelected ? '<i class="fas fa-check"></i>' : ''}</span>
         `;
         
@@ -4454,7 +4461,7 @@ function renderSelectedTags() {
         tagElement.style.color = getContrastColor(tag.color);
         
         tagElement.innerHTML = `
-            ${tag.name}
+            ${escapeHtml(tag.name)}
             <span class="remove-tag" data-id="${tag.id}">&times;</span>
         `;
         
@@ -4492,7 +4499,7 @@ function renderEditSelectedTags() {
             tagElement.style.color = getContrastColor(tag.color);
             
             tagElement.innerHTML = `
-                ${tag.name}
+                ${escapeHtml(tag.name)}
                 <span class="remove-tag" data-id="${tag.id}">&times;</span>
             `;
             
@@ -4681,8 +4688,8 @@ function renderExistingTags() {
             row.innerHTML = `
                 <td>
                     <div class="tag-color-swatch-container">
-                        <div class="tag-color-swatch" style="background-color: ${tag.color}" aria-label="${escapeHtml(tag.name)}"></div>
-                        <input type="color" class="tag-color-input-hidden" value="${tag.color}" aria-label="Pick color" />
+                        <div class="tag-color-swatch" style="background-color: ${escapeHtml(tag.color)}" aria-label="${escapeHtml(tag.name)}"></div>
+                        <input type="color" class="tag-color-input-hidden" value="${escapeHtml(tag.color)}" aria-label="Pick color" />
                     </div>
                 </td>
                 <td>

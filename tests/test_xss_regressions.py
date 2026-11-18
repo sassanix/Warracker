@@ -1,4 +1,4 @@
-"""Regression pins for the 1.0.5 stored-XSS fixes (audit XSS-01/02/04A).
+"""Regression pins for the stored-XSS fixes (audit XSS-01/02/04A/05).
 
 The vulnerable sinks are frontend rendering paths, so these tests pin
 the safe rendering patterns in the shipped sources: if anyone puts the
@@ -14,9 +14,17 @@ raw interpolation back, the suite fails before the payload does.
   escapeHtml(sanitizeUrl(...)) path, like the product link already did.
 - XSS-04A: the legacy edit modal (the only edit modal on the status
   page) interpolated serial numbers into an input's value attribute.
-  Serials must be assigned through the input's value property. Note
-  script.js's global escapeHtml is shadowed by a quote-less variant,
-  so escaping alone is not sufficient protection in attribute context.
+  Serials must be assigned through the input's value property. (At the
+  time, script.js's global escapeHtml was shadowed by a quote-less
+  variant, so escaping alone was not sufficient protection in
+  attribute context; the XSS-05 fix made both definitions escape
+  quotes, and the value-property assignment stays as defence in depth.)
+- XSS-05: tag names and colors were interpolated raw into innerHTML in
+  the module tag manager (picker, selected chips, Manage Tags) and the
+  legacy tag renders, and script.js's effective escapeHtml did not
+  escape quotes, so a quote-bearing tag name broke out of input value
+  attributes. Every tag name and color interpolation must go through
+  an escapeHtml that escapes quotes.
 """
 import os
 
@@ -48,4 +56,36 @@ def test_xss04a_edit_modal_serials_assigned_via_value_property():
     assert 'value="${validSerialNumbers[' not in src
     assert ".value = validSerialNumbers[0]" in src
     assert ".value = validSerialNumbers[i]" in src
+
+
+def test_xss05_tag_manager_escapes_names_and_colors():
+    src = _read("frontend/js/components/tagManager.js")
+    assert "${tag.name}" not in src
+    assert "${tag.color}" not in src
+    assert "${escapeHtml(tag.name)}" in src
+    assert "${escapeHtml(tag.color)}" in src
+    # The "Create ..." option interpolates the typed search term.
+    assert "${escapeHtml(createText)}" in src
+    # The module helper must escape quotes (attribute contexts).
+    assert "'\"': '&quot;'" in src
+
+
+def test_xss05_script_escapehtml_definitions_escape_quotes():
+    src = _read("frontend/script.js")
+    # Both function declarations must escape quotes: the later one
+    # shadows the earlier at every call site.
+    parts = src.split("function escapeHtml")
+    assert len(parts) == 3, "expected exactly two escapeHtml definitions"
+    for body in parts[1:]:
+        assert "&quot;" in body[:500]
+    # The old quote-less div.textContent implementation must be gone.
+    assert "div.textContent = text" not in src
+
+
+def test_xss05_legacy_tag_sites_escaped():
+    src = _read("frontend/script.js")
+    assert "${tag.name}" not in src
+    assert "${tag.color}" not in src
+    assert "${escapeHtml(tag.name)}" in src
+    assert "${escapeHtml(tag.color)}" in src
 
