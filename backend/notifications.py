@@ -7,6 +7,7 @@ including email notifications, scheduling, and Apprise integration.
 """
 
 import os
+import html
 import threading
 import time
 import atexit
@@ -181,16 +182,26 @@ def format_expiration_email(user, warranties, get_db_connection, release_db_conn
     
     # Ensure base URL doesn't end with a slash
     email_base_url = email_base_url.rstrip('/')
-    
+
+    # EMAIL-01: the recipient's own first name and product names are
+    # user-controlled strings. Escape them in the HTML part so markup
+    # typed into a name or product renders as text in the mailbox. The
+    # plain text part keeps the raw values. The base URL is escaped
+    # for its href attributes as well; it comes from an admin-written
+    # setting, and escaping keeps a stray quote or ampersand from
+    # breaking out of the attribute.
+    first_name_html = html.escape(str(user['first_name']))
+    email_base_url_html = html.escape(email_base_url, quote=True)
+
     # Create both plain text and HTML versions of the email body
     text_body = f"Hello {user['first_name']},\\n\\n"
     text_body += "The following warranties are expiring soon:\\n\\n"
-    
+
     html_body = f"""\
     <html>
       <head></head>
       <body>
-        <p>Hello {user['first_name']},</p>
+        <p>Hello {first_name_html},</p>
         <p>The following warranties are expiring soon:</p>
         <table border="1" style="border-collapse: collapse;">
           <thead>
@@ -204,9 +215,10 @@ def format_expiration_email(user, warranties, get_db_connection, release_db_conn
 
     for warranty in warranties:
         text_body += f"- {warranty['product_name']} (expires on {warranty['expiration_date']})\\n"
+        product_name_html = html.escape(str(warranty['product_name']))
         html_body += f"""\
             <tr>
-              <td style="padding: 8px;">{warranty['product_name']}</td>
+              <td style="padding: 8px;">{product_name_html}</td>
               <td style="padding: 8px;">{warranty['expiration_date']}</td>
             </tr>
         """
@@ -219,8 +231,8 @@ def format_expiration_email(user, warranties, get_db_connection, release_db_conn
     html_body += f"""\
           </tbody>
         </table>
-        <p>Log in to <a href="{email_base_url}">Warracker</a> to view details.</p> 
-        <p>Manage your notification settings <a href="{email_base_url}/settings-new.html">here</a>.</p>
+        <p>Log in to <a href="{email_base_url_html}">Warracker</a> to view details.</p> 
+        <p>Manage your notification settings <a href="{email_base_url_html}/settings-new.html">here</a>.</p>
       </body>
     </html>
     """
