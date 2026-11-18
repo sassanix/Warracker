@@ -1,4 +1,5 @@
 # backend/__init__.py
+import ipaddress
 import os
 import logging
 import psycopg2.errors
@@ -6,6 +7,67 @@ from flask import Flask, jsonify, current_app
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 logger = logging.getLogger(__name__)
+
+def _forwarded_headers_trusted(remote_addr):
+    """Whether X-Forwarded-* headers from this peer may be believed.
+
+    ProxyFix trusts forwarded headers from any peer, so with the app
+    directly exposed a spoofed X-Forwarded-For is stored as the login
+    IP (CFG-11). The shipped topology has nginx on loopback in front of
+    the app, and split deployments sit behind a LAN proxy, so only
+    loopback, private, and link-local peers are trusted by default.
+    TRUST_PROXY_HEADERS=true restores trust-everything for operators
+    behind a public-IP proxy; TRUST_PROXY_HEADERS=false trusts none.
+    """
+    override = os.environ.get('TRUST_PROXY_HEADERS', '').lower()
+    if override == 'true':
+        return True
+    if override == 'false':
+        return False
+    try:
+        addr = ipaddress.ip_address(remote_addr or '')
+    except ValueError:
+        return False
+    # Explicit networks, not is_private: ipaddress counts documentation
+    # ranges such as 203.0.113.0/24 as private, and those are not peers
+    # a proxy would ever connect from.
+    trusted = (
+        ipaddress.ip_network('127.0.0.0/8'),
+        ipaddress.ip_network('10.0.0.0/8'),
+        ipaddress.ip_network('172.16.0.0/12'),
+        ipaddress.ip_network('192.168.0.0/16'),
+        ipaddress.ip_network('169.254.0.0/16'),
+        ipaddress.ip_network('::1/128'),
+        ipaddress.ip_network('fc00::/7'),
+        ipaddress.ip_network('fe80::/10'),
+    )
+    return any(
+        addr.version == net.version and addr in net for net in trusted
+    )
+
+
+class _ForwardedHeaderGuard:
+    """Strip forwarded headers from untrusted peers, before ProxyFix.
+
+    Runs outside ProxyFix so a spoofed header never reaches it. Peers
+    trusted by _forwarded_headers_trusted pass through untouched.
+    """
+    _FORWARDED_HEADERS = (
+        'HTTP_X_FORWARDED_FOR',
+        'HTTP_X_FORWARDED_PROTO',
+        'HTTP_X_FORWARDED_HOST',
+        'HTTP_X_FORWARDED_PREFIX',
+    )
+
+    def __init__(self, app):
+        self.app = app
+
+    def __call__(self, environ, start_response):
+        if not _forwarded_headers_trusted(environ.get('REMOTE_ADDR', '')):
+            for header in self._FORWARDED_HEADERS:
+                environ.pop(header, None)
+        return self.app(environ, start_response)
+
 
 def ensure_owner_exists():
     """
@@ -121,8 +183,19 @@ def create_app(config_name=None):
     # Create Flask app instance
     app = Flask(__name__)
     
-    # Apply ProxyFix middleware for reverse proxy support
+    # Apply ProxyFix middleware for reverse proxy support, guarded so
+    # forwarded headers from untrusted (directly exposed) peers are
+    # dropped before ProxyFix can act on them (CFG-11).
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+    app.wsgi_app = _ForwardedHeaderGuard(app.wsgi_app)
+
+    @app.after_request
+    def _set_framing_protection(response):
+        # CFG-07a: never render framed by another origin. SAMEORIGIN
+        # keeps any same-origin framing working while blocking the
+        # cross-origin clickjacking case.
+        response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+        return response
     
     # Load configuration
     try:
