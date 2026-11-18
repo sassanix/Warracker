@@ -561,22 +561,44 @@ class PaperlessHandler:
         
         return debug_info
 
-    def document_exists(self, document_id: int) -> bool:
+    def document_existence(self, document_id: int) -> str:
         """
-        Check if a document exists in Paperless-ngx
-        
-        Args:
-            document_id: Paperless-ngx document ID
-            
-        Returns:
-            True if document exists, False otherwise
+        Whether a Paperless-ngx document still exists.
+
+        Returns 'exists' (HTTP 200), 'gone' (HTTP 404), or 'unknown'
+        (any other status or a transport error: Paperless may be down).
+        Callers that unlink references must only act on 'gone'; an
+        outage must never be read as a deletion (PPL-04).
         """
         try:
             response = self.get(f'/api/documents/{document_id}/', timeout=10)
-            return response.status_code == 200
+            if response.status_code == 200:
+                return 'exists'
+            if response.status_code == 404:
+                return 'gone'
+            logger.warning(
+                f"Paperless document existence check for {document_id} "
+                f"returned unexpected status {response.status_code}")
+            return 'unknown'
         except Exception as e:
-            logger.warning(f"Error checking document existence {document_id}: {e}")
-            return False
+            logger.warning(
+                f"Paperless document existence check for {document_id} "
+                f"failed: {e}")
+            return 'unknown'
+
+    def document_exists(self, document_id: int) -> bool:
+        """
+        Check if a document exists in Paperless-ngx
+
+        Args:
+            document_id: Paperless-ngx document ID
+
+        Returns:
+            True only when Paperless affirmatively reports the document.
+            Unknown (Paperless unreachable) reads as False here, so code
+            that unlinks references must use document_existence instead.
+        """
+        return self.document_existence(document_id) == 'exists'
 
     def find_document_by_title(self, title: str) -> Tuple[bool, Optional[int], str]:
         """

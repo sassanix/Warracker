@@ -658,6 +658,12 @@ def paperless_search():
             search_result['results'] = filtered
             search_result['count'] = len(filtered)
             search_result['next'] = None
+            # PPL-01: the upstream `all` array carries the IDs of every
+            # matching document instance-wide, and `previous` carries the
+            # internal Paperless URL. Neither may reach a non-admin user,
+            # even when their own filtered result set is empty.
+            search_result.pop('all', None)
+            search_result['previous'] = None
 
         return jsonify(search_result)
         
@@ -936,6 +942,7 @@ def cleanup_invalid_paperless_documents():
             'checked': 0,
             'invalid_found': 0,
             'cleaned_up': 0,
+            'skipped': 0,
             'errors': []
         }
         
@@ -981,7 +988,21 @@ def cleanup_invalid_paperless_documents():
                         cleanup_results['checked'] += 1
                         
                         try:
-                            if not paperless_handler.document_exists(doc_id):
+                            existence = paperless_handler.document_existence(doc_id)
+                            if existence == 'unknown':
+                                # Paperless is unreachable or answered
+                                # oddly: leave the reference in place and
+                                # report it, never unlink on an outage.
+                                cleanup_results['skipped'] += 1
+                                cleanup_results['errors'].append(
+                                    f"Could not check document {doc_id}: "
+                                    "Paperless-ngx is unreachable; "
+                                    "reference left in place.")
+                                logger.warning(
+                                    f"Cleanup skipped document {doc_id}: "
+                                    "Paperless-ngx unreachable, reference kept")
+                                continue
+                            if existence == 'gone':
                                 cleanup_results['invalid_found'] += 1
                                 logger.info(f"Found invalid Paperless document ID {doc_id} in warranty {warranty_id} ({product_name})")
                                 
@@ -1002,9 +1023,18 @@ def cleanup_invalid_paperless_documents():
             
             conn.commit()
         
+        message = (
+            f"Cleanup complete. Checked {cleanup_results['checked']} documents, "
+            f"found {cleanup_results['invalid_found']} invalid, "
+            f"cleaned up {cleanup_results['cleaned_up']}.")
+        if cleanup_results['skipped']:
+            message += (
+                f" {cleanup_results['skipped']} could not be checked because "
+                "Paperless-ngx was unreachable; those references were left "
+                "in place.")
         return jsonify({
             "success": True,
-            "message": f"Cleanup complete. Checked {cleanup_results['checked']} documents, found {cleanup_results['invalid_found']} invalid, cleaned up {cleanup_results['cleaned_up']}.",
+            "message": message,
             "details": cleanup_results
         }), 200
         
