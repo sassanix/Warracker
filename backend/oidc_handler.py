@@ -23,6 +23,21 @@ logger = logging.getLogger(__name__) # Or use current_app.logger inside routes
 
 oidc_bp = Blueprint('oidc', __name__) # url_prefix will be set when registering in app.py
 
+def _userinfo_subject_matches(id_token_claims, userinfo):
+    """True when the userinfo subject agrees with the ID token (AUTH-11).
+
+    The userinfo endpoint is a second source of claims, and the callback
+    falls back to it for email, names, and groups. If it names a
+    different subject than the ID token, its claims describe a different
+    user than the one who authenticated, so the login must be refused.
+    A missing userinfo subject is tolerated, for providers that omit
+    it, and the ID token claims stand on their own.
+    """
+    userinfo_subject = userinfo.get('sub')
+    if not userinfo_subject:
+        return True
+    return userinfo_subject == id_token_claims.get('sub')
+
 def _provider_supports_pkce(issuer_url):
     """True when the provider discovery document advertises PKCE S256.
 
@@ -198,6 +213,13 @@ def oidc_callback_route():
         logger.error("[OIDC_HANDLER] OIDC callback: 'sub' (subject) missing in token userinfo.")
         frontend_login_url = os.environ.get('FRONTEND_URL', 'http://localhost:8080').rstrip('/') + "/login.html"
         return redirect(f"{frontend_login_url}?oidc_error=subject_missing")
+
+    if not _userinfo_subject_matches(token_id_claims, userinfo):
+        logger.error("[OIDC_HANDLER] OIDC callback: userinfo subject does not match the ID token subject; refusing login.")
+        frontend_login_url = os.environ.get('FRONTEND_URL', 'http://localhost:8080').rstrip('/') + "/login.html"
+        return redirect(f"{frontend_login_url}?oidc_error=subject_mismatch")
+    if not userinfo.get('sub'):
+        logger.warning("[OIDC_HANDLER] OIDC callback: userinfo response carries no subject; continuing on the ID token claims.")
 
     email = token_id_claims.get('email') or userinfo.get('email')
 
