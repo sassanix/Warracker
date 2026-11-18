@@ -351,17 +351,23 @@ def transfer_ownership():
 def fix_owner_role():
     """Temporary endpoint to manually fix owner role - can be removed after fix"""
     try:
-        # Import ensure_owner_exists if available
+        # ensure_owner_exists lives in the package __init__, not in
+        # db_handler. Importing it from db_handler raised ImportError
+        # for every caller, and the fallback import then raised
+        # ModuleNotFoundError, so this endpoint 500d for every
+        # authorized caller (ADM-01). Imported here rather than at
+        # module level to avoid a circular import with the package
+        # __init__, which imports this blueprint.
         try:
-            from .db_handler import ensure_owner_exists
+            from . import ensure_owner_exists
         except ImportError:
-            from db_handler import ensure_owner_exists
-        
+            from backend import ensure_owner_exists
+
         ensure_owner_exists()
         return jsonify({'success': True, 'message': 'Owner role fix attempted. Check logs for results.'}), 200
     except Exception as e:
         logger.error(f"Error in fix_owner_role endpoint: {e}")
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500 
+        return jsonify({'success': False, 'message': 'Failed to fix the owner role. Check the server logs for details.'}), 500
 
 # ============================
 # Site Settings Routes
