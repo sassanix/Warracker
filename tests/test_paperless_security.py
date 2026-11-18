@@ -104,11 +104,14 @@ def test_attacker_create_warranty_link_blocked(client, scenario,
 
 
 def test_attacker_search_and_link_blocked(client, scenario):
+    # PPL-05: the block answers exactly as a missing document (404),
+    # so the status does not reveal that the title exists or is owned.
     r = client.post("/api/paperless-search-and-link", headers=scenario.b,
                     json={"warranty_id": scenario.wid_b,
                           "document_type": "other",
                           "search_title": "ADMIN-SECRET-INVOICE"})
-    assert r.status_code == 403
+    assert r.status_code == 404
+    assert r.get_json()["message"] == "Document not found"
 
 
 def test_attacker_update_warranty_link_blocked(client, scenario):

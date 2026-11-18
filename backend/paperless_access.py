@@ -61,6 +61,39 @@ def record_paperless_document_owner(cur, document_id, user_id):
     )
 
 
+def claim_upload_ownership(cur, document_id, user_id, upload_started_at):
+    """Record the uploader as owner, reclaiming mid-upload claims (PPL-03).
+
+    Ownership is recorded only after Paperless finishes processing an
+    upload, so a speculative link during the processing window could
+    claim the pending document id first, and ON CONFLICT DO NOTHING
+    then kept the speculator while the uploader's own link and download
+    were refused. A claim recorded after this upload started cannot
+    predate the document itself, so the uploader takes it over. Claims
+    predating the upload are left alone.
+    """
+    if document_id is None or user_id is None:
+        return
+    cur.execute(
+        """
+        INSERT INTO paperless_document_ownership (paperless_document_id, user_id)
+        VALUES (%s, %s)
+        ON CONFLICT (paperless_document_id) DO NOTHING
+        RETURNING paperless_document_id
+        """,
+        (document_id, user_id),
+    )
+    if cur.fetchone():
+        return
+    cur.execute(
+        """
+        UPDATE paperless_document_ownership SET user_id = %s
+        WHERE paperless_document_id = %s AND created_at >= %s
+        """,
+        (user_id, document_id, upload_started_at),
+    )
+
+
 def _referenced_by(cur, document_id, user_id, own):
     """True when a warranty or claim-document reference to the document
     exists for the given user (own=True) or for any other user (own=False)."""

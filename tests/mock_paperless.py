@@ -19,12 +19,15 @@ PNG_BYTES = base64.b64decode(
 
 DOCS = [
     {"id": 1, "title": "Invoice - Laptop 2026", "created": "2026-01-20T10:00:00Z",
-     "mime_type": "application/pdf", "archived_file_name": "invoice-laptop.pdf"},
+     "mime_type": "application/pdf", "archived_file_name": "invoice-laptop.pdf",
+     "tags": [1]},
     {"id": 2, "title": "Manual - Headphones", "created": "2026-06-05T10:00:00Z",
-     "mime_type": "application/pdf", "archived_file_name": "manual-headphones.pdf"},
+     "mime_type": "application/pdf", "archived_file_name": "manual-headphones.pdf",
+     "tags": [2]},
 ]
 TASKS = {}  # task_id -> doc_id
 NEXT_ID = [3]
+LAST_DOCUMENT_QUERIES = []  # parsed query dicts of /api/documents/ GETs
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -51,6 +54,7 @@ class Handler(BaseHTTPRequestHandler):
         path, qs = u.path, parse_qs(u.query)
 
         if path == "/api/documents/":
+            LAST_DOCUMENT_QUERIES.append(qs)
             docs = DOCS
             # checksum dedup lookup: mock docs have no checksums -> no match
             if "checksum__iexact" in qs:
@@ -95,9 +99,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._json([])
 
         if path == "/api/tags/":
-            return self._json({"count": 2, "next": None, "previous": None,
+            # Tag 3 is attached to no document: it must never reach a
+            # non-admin user (PPL-06).
+            return self._json({"count": 3, "next": None, "previous": None,
                                "results": [{"id": 1, "name": "invoice"},
-                                           {"id": 2, "name": "manual"}]})
+                                           {"id": 2, "name": "manual"},
+                                           {"id": 3, "name": "secret"}]})
 
         self._json({"detail": "not found"}, status=404)
 

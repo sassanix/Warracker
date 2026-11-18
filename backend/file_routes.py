@@ -1,5 +1,6 @@
 # backend/file_routes.py
 from flask import Blueprint, request, jsonify, current_app, send_from_directory, Response
+from datetime import datetime, UTC
 import os
 import mimetypes
 import logging
@@ -11,6 +12,7 @@ try:
     from .paperless_handler import get_paperless_handler, PaperlessHandler
     from .paperless_access import (
         check_paperless_document_access,
+        claim_upload_ownership,
         record_paperless_document_owner,
         user_can_link_paperless_document,
         visible_paperless_document_ids,
@@ -23,6 +25,7 @@ except ImportError:
     from paperless_handler import get_paperless_handler, PaperlessHandler
     from paperless_access import (
         check_paperless_document_access,
+        claim_upload_ownership,
         record_paperless_document_owner,
         user_can_link_paperless_document,
         visible_paperless_document_ids,
@@ -108,6 +111,19 @@ def _check_file_authorization(cur, db_search_path, user_id, is_admin):
 
     logger.warning(f"[FILE_AUTH] Unauthorized file access attempt: '{db_search_path}' by user {user_id}")
     return False
+
+
+def _paperless_next_path(next_url):
+    """Next-page path for paperless_handler.get, which takes a path.
+
+    Paperless returns absolute `next` URLs; convert them to path plus
+    query, and pass through relative values and None unchanged.
+    """
+    if next_url and next_url.startswith('http'):
+        from urllib.parse import urlparse
+        parts = urlparse(next_url)
+        return parts.path + (('?' + parts.query) if parts.query else '')
+    return next_url
 
 
 # ============================
@@ -425,7 +441,10 @@ def paperless_upload():
             logger.error(f"Error reading file content: {file_read_error}")
             return jsonify({"error": f"Error reading file: {str(file_read_error)}"}), 400
         
-        # Upload to Paperless-ngx
+        # Upload to Paperless-ngx. The start time bounds the PPL-03
+        # reclaim window: claims recorded after it cannot predate the
+        # document being uploaded.
+        upload_started_at = datetime.now(UTC)
         logger.info("Starting upload to Paperless-ngx")
         try:
             success, document_id, message = paperless_handler.upload_document(
@@ -449,7 +468,7 @@ def paperless_upload():
             try:
                 numeric_document_id = int(document_id)
                 with conn.cursor() as cur:
-                    record_paperless_document_owner(cur, numeric_document_id, request.user['id'])
+                    claim_upload_ownership(cur, numeric_document_id, request.user['id'], upload_started_at)
                 conn.commit()
             except (TypeError, ValueError):
                 logger.info(f"Upload returned non-document id {document_id!r}; ownership not recorded")
@@ -460,9 +479,20 @@ def paperless_upload():
             }), 200
         else:
             logger.warning(f"Upload failed: {message}")
+            # PPL-05: a duplicate upload returns the existing document's
+            # id, which must not be revealed when another user owns it.
+            # Reveal it only when the requester could link it anyway.
+            revealed_id = document_id
+            if document_id is not None:
+                with conn.cursor() as cur:
+                    if not user_can_link_paperless_document(
+                        cur, request.user['id'],
+                        request.user.get('is_admin', False), document_id
+                    ):
+                        revealed_id = None
             return jsonify({
                 "success": False,
-                "document_id": document_id,
+                "document_id": revealed_id,
                 "error": message
             }), 200
             
@@ -552,6 +582,13 @@ def paperless_search():
                 page = str((offset_int // limit_int) + 1)
         except (ValueError, ZeroDivisionError):
             page = '1'
+            limit = '25'
+
+        # PPL-07: never forward an unbounded page size to Paperless-ngx;
+        # page_size=100000 used to return every matching document at once.
+        try:
+            limit = str(max(1, min(int(limit), 100)))
+        except ValueError:
             limit = '25'
         
         # Build search URL using paperless handler's configuration
@@ -656,12 +693,29 @@ def paperless_tags():
                 response.raise_for_status()
                 page = response.json()
                 all_tags.extend(page.get('results', []))
-                url = page.get('next')
-                # paperless_handler.get takes a path; convert absolute next URLs
-                if url and url.startswith('http'):
-                    from urllib.parse import urlparse
-                    parts = urlparse(url)
-                    url = parts.path + (('?' + parts.query) if parts.query else '')
+                url = _paperless_next_path(page.get('next'))
+
+            # PPL-06: non-admin users only receive tags attached to
+            # documents they may see. Without this, any signed-in user
+            # learned every instance tag, including tags used only on
+            # other users' documents.
+            if not request.user.get('is_admin', False):
+                with conn.cursor() as cur:
+                    visible_ids = visible_paperless_document_ids(cur, request.user['id'], False)
+                if not visible_ids:
+                    all_tags = []
+                else:
+                    used_tag_ids = set()
+                    url = '/api/documents/?page_size=100'
+                    while url:
+                        response = paperless_handler.get(url, timeout=30)
+                        response.raise_for_status()
+                        page = response.json()
+                        for doc in page.get('results', []):
+                            if doc.get('id') in visible_ids:
+                                used_tag_ids.update(doc.get('tags') or [])
+                        url = _paperless_next_path(page.get('next'))
+                    all_tags = [t for t in all_tags if t.get('id') in used_tag_ids]
         except Exception as e:
             # See CFG-10 in paperless_search: exception text can carry
             # the internal Paperless host and path, so log it and reply
@@ -1021,7 +1075,9 @@ def paperless_search_and_link():
                     request.user["id"],
                     document_id,
                 )
-                return jsonify({"success": False, "message": "This document belongs to another user"}), 403
+                # PPL-05: answer exactly as for a missing document, so
+                # the status does not reveal that it exists or is owned.
+                return jsonify({"success": False, "message": "Document not found"}), 404
 
             logger.info(
                 "Updating warranty %s field %s with document ID %s for user %s",
