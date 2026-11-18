@@ -8,7 +8,49 @@ import json
 import csv
 import io
 from dateutil.relativedelta import relativedelta
-from dateutil.parser import parse as date_parse
+
+# CSV-04: explicit allow-list of unambiguous date formats. The CSV
+# importer and the claim endpoints used to accept anything dateutil
+# would parse, so "03/04/2024" silently became March 4 (month-first).
+# Only ISO dates and named-month dates are accepted; anything else is
+# rejected with a clear error naming the accepted formats.
+CSV_DATE_FORMATS = (
+    '%Y-%m-%d',   # 2024-03-15
+    '%d %b %Y',   # 15 Mar 2024
+    '%d %B %Y',   # 15 March 2024
+    '%b %d, %Y',  # Mar 15, 2024
+    '%B %d, %Y',  # March 15, 2024
+    '%d %b, %Y',  # 15 Mar, 2024
+    '%b %d %Y',   # Mar 15 2024
+)
+
+
+def parse_unambiguous_date(value):
+    """Parse a date from the explicit allow-list (CSV-04).
+
+    Accepts ISO YYYY-MM-DD and the named-month forms in
+    CSV_DATE_FORMATS. A date object or datetime passes through
+    unchanged (as a date). Anything else, including ambiguous numeric
+    dates such as 03/04/2024, raises ValueError with a message naming
+    the accepted formats.
+    """
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(
+            "Use YYYY-MM-DD or a named month, such as 15 Mar 2024 or "
+            "March 15, 2024.")
+    text = value.strip()
+    for fmt in CSV_DATE_FORMATS:
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    raise ValueError(
+        f"Date '{text}' is ambiguous or unsupported. Use YYYY-MM-DD or "
+        "a named month, such as 15 Mar 2024 or March 15, 2024.")
 import mimetypes
 from flask import Response
 import uuid
@@ -1630,10 +1672,9 @@ def import_warranties():
 
                     # --- Type/Format Validation --- 
                     try:
-                        purchase_date_dt = date_parse(purchase_date_str)
-                        purchase_date = purchase_date_dt.date()
-                    except ValueError:
-                        errors.append("Invalid PurchaseDate format.")
+                        purchase_date = parse_unambiguous_date(purchase_date_str)
+                    except ValueError as e:
+                        errors.append(f"Invalid PurchaseDate format. {e}")
                         purchase_date = None # Set to None to prevent further errors
 
                     is_lifetime = is_lifetime_str == 'true'
@@ -1682,11 +1723,11 @@ def import_warranties():
                             expiration_date_str
                         ):
                             try:
-                                expiration_date = date_parse(expiration_date_str).date()
+                                expiration_date = parse_unambiguous_date(expiration_date_str)
                                 if expiration_date < purchase_date:
                                     errors.append("ExpirationDate cannot be before PurchaseDate.")
-                            except ValueError:
-                                errors.append("Invalid ExpirationDate format. Use YYYY-MM-DD.")
+                            except ValueError as e:
+                                errors.append(f"Invalid ExpirationDate format. {e}")
                         # Existing duration calculation logic
                         elif (
                             warranty_duration_years > 0 or
@@ -2658,16 +2699,16 @@ def create_claim(warranty_id):
 
         # Parse dates
         try:
-            parsed_claim_date = date_parse(claim_date).date() if isinstance(claim_date, str) else claim_date
-        except (ValueError, TypeError):
-            return jsonify({'error': 'Invalid claim date format'}), 400
+            parsed_claim_date = parse_unambiguous_date(claim_date)
+        except (ValueError, TypeError) as e:
+            return jsonify({'error': f'Invalid claim date format. {e}'}), 400
 
         parsed_resolution_date = None
         if resolution_date:
             try:
-                parsed_resolution_date = date_parse(resolution_date).date() if isinstance(resolution_date, str) else resolution_date
-            except (ValueError, TypeError):
-                return jsonify({'error': 'Invalid resolution date format'}), 400
+                parsed_resolution_date = parse_unambiguous_date(resolution_date)
+            except (ValueError, TypeError) as e:
+                return jsonify({'error': f'Invalid resolution date format. {e}'}), 400
 
         # Validate status
         valid_statuses = ['Submitted', 'In Progress', 'Approved', 'Denied', 'Resolved', 'Cancelled']
@@ -2883,17 +2924,17 @@ def update_claim(warranty_id, claim_id):
         # Parse dates
         if claim_date:
             try:
-                parsed_claim_date = date_parse(claim_date).date() if isinstance(claim_date, str) else claim_date
-            except (ValueError, TypeError):
-                return jsonify({'error': 'Invalid claim date format'}), 400
+                parsed_claim_date = parse_unambiguous_date(claim_date)
+            except (ValueError, TypeError) as e:
+                return jsonify({'error': f'Invalid claim date format. {e}'}), 400
         else:
             parsed_claim_date = current_claim[0]
             
         if resolution_date:
             try:
-                parsed_resolution_date = date_parse(resolution_date).date() if isinstance(resolution_date, str) else resolution_date
-            except (ValueError, TypeError):
-                return jsonify({'error': 'Invalid resolution date format'}), 400
+                parsed_resolution_date = parse_unambiguous_date(resolution_date)
+            except (ValueError, TypeError) as e:
+                return jsonify({'error': f'Invalid resolution date format. {e}'}), 400
         else:
             parsed_resolution_date = current_claim[5]
         
