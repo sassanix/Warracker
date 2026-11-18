@@ -41,6 +41,8 @@ const editUserAdmin = document.getElementById('editUserAdmin');
 const firstNameInput = document.getElementById('firstName');
 const lastNameInput = document.getElementById('lastName');
 const emailInput = document.getElementById('email');
+const profilePasswordGroup = document.getElementById('profilePasswordGroup');
+const profileCurrentPasswordInput = document.getElementById('profileCurrentPassword');
 const currentPasswordInput = document.getElementById('currentPassword');
 const newPasswordInput = document.getElementById('newPassword');
 const confirmPasswordInput = document.getElementById('confirmPassword');
@@ -1251,6 +1253,20 @@ function setupEventListeners() {
     if (saveProfileBtn) {
         saveProfileBtn.addEventListener('click', saveProfile);
     }
+
+    // AUTH-09: reveal the current-password field as soon as the email
+    // differs from the signed-in address, so the requirement is visible
+    // before the user saves.
+    if (emailInput && profilePasswordGroup) {
+        emailInput.addEventListener('input', function() {
+            const currentUser = window.auth && window.auth.getCurrentUser
+                ? window.auth.getCurrentUser() : null;
+            const changed = currentUser && currentUser.email
+                && emailInput.value.trim().toLowerCase()
+                    !== currentUser.email.toLowerCase();
+            profilePasswordGroup.style.display = changed ? 'block' : 'none';
+        });
+    }
     
     // Save preferences button
     if (savePreferencesBtn) {
@@ -1615,6 +1631,22 @@ async function saveProfile() {
         return;
     }
 
+    // AUTH-09: changing the email address needs the current password,
+    // so a stolen session alone cannot convert the account.
+    const currentUser = window.auth.getCurrentUser();
+    const emailChanged = currentUser && currentUser.email
+        && newEmail.toLowerCase() !== currentUser.email.toLowerCase();
+    let currentPassword = '';
+    if (emailChanged) {
+        currentPassword = profileCurrentPasswordInput
+            ? profileCurrentPasswordInput.value : '';
+        if (!currentPassword) {
+            if (profilePasswordGroup) profilePasswordGroup.style.display = 'block';
+            showToast('Enter your current password to change your email address.', 'error');
+            return;
+        }
+    }
+
     showLoading();
     const userNameDisplay = document.getElementById('currentUserNameDisplay');
 
@@ -1628,7 +1660,8 @@ async function saveProfile() {
             body: JSON.stringify({
                 first_name: firstNameInput.value.trim(),
                 last_name: lastNameInput.value.trim(),
-                email: newEmail
+                email: newEmail,
+                current_password: currentPassword || undefined
             })
         });
 
@@ -1670,6 +1703,10 @@ async function saveProfile() {
             }
 
             showToast('Profile updated successfully', 'success');
+
+            // Clear the password field now that the change is saved.
+            if (profileCurrentPasswordInput) profileCurrentPasswordInput.value = '';
+            if (profilePasswordGroup) profilePasswordGroup.style.display = 'none';
         } else {
             const errorData = await response.json().catch(() => ({ message: 'Failed to parse error response' }));
             throw new Error(errorData.message || 'Failed to update profile');

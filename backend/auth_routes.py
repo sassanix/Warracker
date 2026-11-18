@@ -517,6 +517,8 @@ def update_profile():
         try:
             update_fields = ["first_name = %s", "last_name = %s"]
             update_params = [first_name, last_name]
+            email_changed = False
+            old_email = None
 
             # Handle email change
             if new_email:
@@ -525,14 +527,31 @@ def update_profile():
                     return jsonify({'message': 'Invalid email format!'}), 400
 
                 # Check if the new email is different from the current one
-                cursor.execute("SELECT email FROM users WHERE id = %s", (user_id,))
-                current_email_tuple = cursor.fetchone()
-                if not current_email_tuple:
+                cursor.execute(
+                    "SELECT email, password_hash, oidc_sub FROM users "
+                    "WHERE id = %s", (user_id,))
+                current_row = cursor.fetchone()
+                if not current_row:
                     conn.rollback()
                     return jsonify({'message': 'User not found while fetching current email.'}), 404
-                current_email = current_email_tuple[0]
+                current_email = current_row[0]
 
                 if new_email.lower() != current_email.lower():
+                    # AUTH-09: an email change is a credential change. It
+                    # needs the current password, so a stolen session
+                    # alone cannot convert the account and then take it
+                    # over with a reset to the new address. Accounts
+                    # without a local password (single sign-on) cannot
+                    # confirm one; their email is changed by an admin.
+                    if current_row[1] is None:
+                        conn.rollback()
+                        return jsonify({'message': 'Email changes for single sign-on accounts must be made by an administrator.'}), 403
+                    current_password = data.get('current_password', '')
+                    if not current_password or not bcrypt.check_password_hash(
+                            current_row[1], current_password):
+                        conn.rollback()
+                        return jsonify({'message': 'Incorrect current password!'}), 401
+
                     # Check if the new email is already in use by another user
                     cursor.execute("SELECT id FROM users WHERE LOWER(email) = LOWER(%s) AND id != %s", (new_email, user_id))
                     if cursor.fetchone():
@@ -540,6 +559,8 @@ def update_profile():
                         return jsonify({'message': 'This email address is already in use by another account.'}), 409
                     update_fields.append("email = %s")
                     update_params.append(new_email)
+                    email_changed = True
+                    old_email = current_email
 
             update_query_string = ", ".join(update_fields)
             final_query = f"""
@@ -557,6 +578,18 @@ def update_profile():
                 return jsonify({'message': 'User not found'}), 404
 
             conn.commit()
+
+            if email_changed and old_email:
+                # AUTH-09: tell the old address the account email
+                # changed, so a takeover via a stolen session is visible
+                # to the legitimate owner. Best effort; a mail failure
+                # must not fail the profile update itself.
+                try:
+                    send_email_change_notice(old_email, new_email)
+                except Exception as notice_err:
+                    current_app.logger.error(
+                        f"Failed to send email-change notice to "
+                        f"{old_email}: {notice_err}")
 
             user = {
                 'id': user_data[0],
@@ -928,6 +961,63 @@ def send_password_reset_email(recipient_email, reset_link):
     except Exception as e:
         current_app.logger.error(f"Error sending password reset email: {e}")
         return False
+
+
+def send_email_change_notice(old_email, new_email):
+    """Tell the previous address that the account email changed (AUTH-09).
+
+    Best effort: returns True on delivery, False otherwise, and never
+    raises. The profile update that calls it must not fail on mail.
+    """
+    try:
+        smtp_host = os.environ.get('SMTP_HOST', 'localhost')
+        smtp_port = int(os.environ.get('SMTP_PORT', 1025))
+        smtp_username = os.environ.get('SMTP_USERNAME')
+        smtp_password = os.environ.get('SMTP_PASSWORD')
+        if os.environ.get('SMTP_PASSWORD_FILE'):
+            smtp_password = open(os.environ.get('SMTP_PASSWORD_FILE'), 'r').read().strip()
+        smtp_use_tls = os.environ.get('SMTP_USE_TLS', 'true').lower() == 'true'
+        try:
+            from .utils import get_smtp_from_address
+        except ImportError:
+            from utils import get_smtp_from_address
+        sender_email = get_smtp_from_address()
+
+        html_content = f"""
+        <html>
+            <body>
+                <p>Hello,</p>
+                <p>The email address on your Warracker account was changed to {new_email}.</p>
+                <p>If you did not make this change, please contact your administrator right away: someone with access to your account may have changed it.</p>
+                <p>Thanks,<br>The Warracker Team</p>
+            </body>
+        </html>
+        """
+
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = "Email Changed - Warracker"
+        msg['From'] = sender_email
+        msg['To'] = old_email
+        msg.attach(MIMEText(html_content, 'html'))
+
+        server = None
+        if smtp_port == 465:
+            server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10)
+        else:
+            server = smtplib.SMTP(smtp_host, smtp_port, timeout=10)
+            if smtp_use_tls:
+                server.starttls()
+        if smtp_username and smtp_password:
+            server.login(smtp_username, smtp_password)
+        server.sendmail(sender_email, old_email, msg.as_string())
+        server.quit()
+        current_app.logger.info(
+            f"Email-change notice sent to {old_email}")
+        return True
+    except Exception as e:
+        current_app.logger.error(f"Error sending email-change notice: {e}")
+        return False
+
 
 @auth_bp.route('/preferences', methods=['GET'])
 @token_required

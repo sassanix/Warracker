@@ -183,6 +183,12 @@
                             <label for="email" data-i18n="settings.email">Email</label>
                             <input type="email" id="email" name="email" class="form-control">
                         </div>
+
+                        <div class="form-group" id="profilePasswordGroup" style="display: none;">
+                            <label for="profileCurrentPassword">Current Password</label>
+                            <input type="password" id="profileCurrentPassword" name="profileCurrentPassword" class="form-control" autocomplete="current-password">
+                            <p class="text-muted">Required to change your email address.</p>
+                        </div>
                         
                         <button type="button" id="saveProfileBtn" class="btn btn-primary" data-i18n="settings.save_profile">Save Changes</button>
                     </form>
