@@ -1,5 +1,6 @@
 # backend/auth_utils.py
 import jwt
+import uuid
 from datetime import datetime, UTC, timedelta
 from flask import current_app, request, jsonify
 from functools import wraps
@@ -13,19 +14,32 @@ except ImportError:
     import db_handler
 
 def generate_token(user_id):
-    """Generate a JWT token for the user"""
+    """Generate a JWT token for the user.
+
+    Returns (token, jti). The jti (AUTH-01) is a per-login session id:
+    callers store it as the user_sessions.session_token so a token can
+    be revoked by deleting its session row (logout, password change,
+    password reset). Tokens minted before this existed carry no jti and
+    are grandfathered by token_required until their 24h expiry.
+    """
+    jti = str(uuid.uuid4())
     payload = {
         'exp': datetime.now(UTC) + current_app.config['JWT_EXPIRATION_DELTA'],
         'iat': datetime.now(UTC),
-        'sub': str(user_id)
+        'sub': str(user_id),
+        'jti': jti,
     }
-    return jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
+    return jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256'), jti
 
 def decode_token(token):
     """Decode a JWT token and return the user_id"""
+    payload = decode_token_payload(token)
+    return payload['sub'] if payload else None
+
+def decode_token_payload(token):
+    """Decode a JWT token and return the full payload, or None."""
     try:
-        payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
-        return payload['sub']
+        return jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
     except jwt.ExpiredSignatureError:
         return None  # Token has expired
     except jwt.InvalidTokenError:
@@ -56,16 +70,25 @@ def token_required(f):
             return jsonify({'message': 'Authentication token is missing!'}), 401
         
         # Decode the token
-        user_id = decode_token(token)
+        payload = decode_token_payload(token)
+        user_id = payload['sub'] if payload else None
         if not user_id:
             current_app.logger.warning(f"Invalid token used for: {request.path}")
             return jsonify({'message': 'Invalid or expired token!'}), 401
-        
+
+        # AUTH-01: a token carrying a jti is bound to its session row.
+        # Logout, password change, and password reset delete session rows,
+        # so a revoked token fails here even though its signature and
+        # expiry are still valid. Tokens minted before jti existed carry
+        # no jti; they are grandfathered until their 24h expiry.
+        session_jti = payload.get('jti') if payload else None
+
         # Check if user exists.
         # Release the connection before calling the route. Holding it, with
         # its transaction open, for the whole request doubled the connections
         # each request needed and could exhaust the pool under load.
         conn = None
+        session_revoked = False
         try:
             conn = db_handler.get_db_connection()
             with conn.cursor() as cur:
@@ -81,6 +104,18 @@ def token_required(f):
                     cur.execute('SELECT id, username, email, is_admin FROM users WHERE id = %s AND is_active = TRUE', (user_id,))
                     user = cur.fetchone()
                     has_owner_column = False
+                if user and session_jti:
+                    # expires_at is stored timezone-naive in UTC; compare
+                    # against UTC explicitly so a non-UTC database
+                    # timezone cannot stretch a session.
+                    cur.execute(
+                        'SELECT 1 FROM user_sessions WHERE user_id = %s '
+                        'AND session_token = %s '
+                        'AND expires_at > (NOW() AT TIME ZONE \'UTC\')',
+                        (user[0], session_jti))
+                    if not cur.fetchone():
+                        session_revoked = True
+                        user = None
             conn.rollback()  # end the read-only transaction before releasing
         except HTTPException:
             # Let HTTP errors (e.g. 413 from oversized uploads) propagate to
@@ -94,6 +129,8 @@ def token_required(f):
                 db_handler.release_db_connection(conn)
 
         if not user:
+            if session_revoked:
+                return jsonify({'message': 'Session expired or revoked!'}), 401
             return jsonify({'message': 'User not found or inactive!'}), 401
 
         # Add user info to request context
@@ -102,6 +139,7 @@ def token_required(f):
             'username': user[1],
             'email': user[2],
             'is_admin': user[3],
+            'session_jti': session_jti,
         }
 
         if has_owner_column:

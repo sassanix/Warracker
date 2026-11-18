@@ -136,8 +136,9 @@ def register():
             if is_owner:
                 current_app.logger.info(f"✅ First user registered: {username} ({email}) - automatically set as admin and owner")
             
-            # Generate token
-            token = generate_token(user_id)
+            # Generate token (AUTH-01: the returned jti is stored as the
+            # session row so the token can be revoked by deleting it)
+            token, session_jti = generate_token(user_id)
             
             # Update last login
             cur.execute('UPDATE users SET last_login = %s WHERE id = %s', (datetime.now(UTC), user_id))
@@ -145,7 +146,7 @@ def register():
             # Store session info
             ip_address = request.remote_addr
             user_agent = request.headers.get('User-Agent', '')
-            session_token = str(uuid.uuid4())
+            session_token = session_jti
             expires_at = datetime.now(UTC) + current_app.config['JWT_EXPIRATION_DELTA']
             
             cur.execute(
@@ -209,8 +210,9 @@ def login():
             
             user_id = user[0]
             
-            # Generate token
-            token = generate_token(user_id)
+            # Generate token (AUTH-01: the returned jti is stored as the
+            # session row so the token can be revoked by deleting it)
+            token, session_jti = generate_token(user_id)
             
             # Update last login
             cur.execute('UPDATE users SET last_login = %s WHERE id = %s', (datetime.now(UTC), user_id))
@@ -218,7 +220,7 @@ def login():
             # Store session info
             ip_address = request.remote_addr
             user_agent = request.headers.get('User-Agent', '')
-            session_token = str(uuid.uuid4())
+            session_token = session_jti
             expires_at = datetime.now(UTC) + current_app.config['JWT_EXPIRATION_DELTA']
             
             cur.execute(
@@ -721,6 +723,10 @@ def reset_password():
             
             # Delete the used token
             cur.execute('DELETE FROM password_reset_tokens WHERE token = %s', (_hash_reset_token(token),))
+
+            # AUTH-01: a completed reset revokes every session for this
+            # user, so a token captured before the reset stops working.
+            cur.execute('DELETE FROM user_sessions WHERE user_id = %s', (user_id,))
             
             conn.commit()
             
@@ -777,6 +783,21 @@ def change_password():
             
             # Update the password in the database
             cur.execute('UPDATE users SET password_hash = %s WHERE id = %s', (new_password_hash, user_id))
+
+            # AUTH-01: revoke every other session for this user, so a
+            # token captured before the change stops working. The session
+            # making this request stays valid (a token minted before jti
+            # existed has no session_jti, so it is revoked too).
+            current_jti = request.user.get('session_jti')
+            if current_jti:
+                cur.execute(
+                    'DELETE FROM user_sessions WHERE user_id = %s '
+                    'AND session_token != %s',
+                    (user_id, current_jti))
+            else:
+                cur.execute(
+                    'DELETE FROM user_sessions WHERE user_id = %s',
+                    (user_id,))
             
             conn.commit()
             

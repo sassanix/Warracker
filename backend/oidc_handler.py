@@ -368,7 +368,9 @@ def oidc_callback_route():
                 )
 
             if user_id:
-                app_session_token = generate_token(user_id) # Generate app-specific JWT
+                # Generate app-specific JWT (AUTH-01: the returned jti is
+                # stored as the session row so the token can be revoked)
+                app_session_token, session_jti = generate_token(user_id)
 
                 # Update last login timestamp
                 cur.execute('UPDATE users SET last_login = %s WHERE id = %s', (datetime.now(UTC), user_id))
@@ -376,8 +378,7 @@ def oidc_callback_route():
                 # Log OIDC session in user_sessions table
                 ip_address = request.remote_addr
                 user_agent = request.headers.get('User-Agent', '')
-                # Use a different UUID for session_token in DB if needed, or re-use app_session_token if appropriate for your session model
-                db_session_token = str(uuid.uuid4())
+                db_session_token = session_jti
                 expires_at = datetime.now(UTC) + current_app.config['JWT_EXPIRATION_DELTA']
 
                 cur.execute(
