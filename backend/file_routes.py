@@ -589,11 +589,16 @@ def paperless_search():
             response = paperless_handler.get(search_url, params=params, timeout=30)
             response.raise_for_status()
         except Exception as e:
-            # Provide user-friendly error on auth failures
-            return jsonify({
-                'success': False,
-                'message': f'Paperless-ngx search failed: {str(e)}'
-            }), 400
+            # Log the full error server-side, but never send exception
+            # text to the client: a connection error carries the internal
+            # Paperless host, port, API path, and query shape (CFG-10).
+            logger.error(f"Paperless-ngx search failed: {e}")
+            status = getattr(getattr(e, 'response', None), 'status_code', None)
+            if status in (401, 403):
+                message = 'Paperless-ngx search failed: Paperless-ngx rejected the credentials.'
+            else:
+                message = 'Paperless-ngx search failed. Check that Paperless-ngx is reachable.'
+            return jsonify({'success': False, 'message': message}), 400
         search_result = response.json()
 
         logger.info(f"Paperless search returned {len(search_result.get('results', []))} documents")
@@ -613,7 +618,7 @@ def paperless_search():
         
     except Exception as e:
         logger.error(f"Error searching Paperless documents: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': 'An error occurred while searching Paperless documents.'}), 500
     finally:
         if conn:
             release_db_connection(conn)
@@ -650,16 +655,25 @@ def paperless_tags():
                     parts = urlparse(url)
                     url = parts.path + (('?' + parts.query) if parts.query else '')
         except Exception as e:
-            return jsonify({'success': False, 'message': f'Paperless-ngx tags failed: {str(e)}'}), 400
+            # See CFG-10 in paperless_search: exception text can carry
+            # the internal Paperless host and path, so log it and reply
+            # with a generic message.
+            logger.error(f"Paperless-ngx tags failed: {e}")
+            status = getattr(getattr(e, 'response', None), 'status_code', None)
+            if status in (401, 403):
+                message = 'Paperless-ngx tags failed: Paperless-ngx rejected the credentials.'
+            else:
+                message = 'Paperless-ngx tags failed. Check that Paperless-ngx is reachable.'
+            return jsonify({'success': False, 'message': message}), 400
         tags_result = {'results': all_tags, 'count': len(all_tags)}
 
         logger.info(f"Paperless tags returned {len(all_tags)} tags")
 
         return jsonify(tags_result)
-        
+
     except Exception as e:
         logger.error(f"Error fetching Paperless tags: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': 'An error occurred while fetching Paperless tags.'}), 500
     finally:
         if conn:
             release_db_connection(conn)

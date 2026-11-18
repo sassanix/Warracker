@@ -282,7 +282,7 @@ def get_statistics():
     
     except Exception as e:
         logger.error(f"Error getting warranty statistics: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to load statistics."}), 500
     
     finally:
         if conn:
@@ -527,7 +527,7 @@ def get_global_statistics():
     
     except Exception as e:
         logger.error(f"Error getting global warranty statistics: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to load statistics."}), 500
     
     finally:
         if conn:

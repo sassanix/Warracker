@@ -526,7 +526,7 @@ def add_warranty():
                 except Exception as e:
                     logger.error(f"Error saving invoice {filename} to {invoice_path}: {e}")
                     # Optionally, decide if you want to return an error here or continue
-                    return jsonify({"error": f"Failed to save invoice: {str(e)}"}), 500
+                    return jsonify({"error": "Failed to save invoice."}), 500
         elif paperless_invoice_id:
             logger.info(f"Invoice stored in Paperless-ngx with ID: {paperless_invoice_id}")
         
@@ -547,7 +547,7 @@ def add_warranty():
                     logger.info(f"Successfully saved manual: {db_manual_path}")
                 except Exception as e:
                     logger.error(f"Error saving manual {filename} to {manual_path}: {e}")
-                    return jsonify({"error": f"Failed to save manual: {str(e)}"}), 500
+                    return jsonify({"error": "Failed to save manual."}), 500
         elif paperless_manual_id:
             logger.info(f"Manual stored in Paperless-ngx with ID: {paperless_manual_id}")
         
@@ -568,7 +568,7 @@ def add_warranty():
                     logger.info(f"Successfully saved other_document: {db_other_document_path}")
                 except Exception as e:
                     logger.error(f"Error saving other_document {filename} to {other_document_path_on_disk}: {e}")
-                    return jsonify({"error": f"Failed to save other_document: {str(e)}"}), 500
+                    return jsonify({"error": "Failed to save other_document."}), 500
         elif paperless_other_id:
             logger.info(f"Other document stored in Paperless-ngx with ID: {paperless_other_id}")
 
@@ -590,7 +590,7 @@ def add_warranty():
                     logger.info(f"Successfully saved product_photo: {db_product_photo_path}")
                 except Exception as e:
                     logger.error(f"Error saving product_photo {filename} to {product_photo_path_on_disk}: {e}")
-                    return jsonify({"error": f"Failed to save product_photo: {str(e)}"}), 500
+                    return jsonify({"error": "Failed to save product_photo."}), 500
         elif paperless_photo_id:
             logger.info(f"Product photo stored in Paperless-ngx with ID: {paperless_photo_id}")
 
@@ -612,7 +612,7 @@ def add_warranty():
                 logger.info(f"Successfully saved product_photo from URL: {db_product_photo_path}")
             except Exception as e:
                 logger.error(f"Error saving product_photo from URL {filename}: {e}")
-                return jsonify({"error": f"Failed to save product_photo: {str(e)}"}), 500
+                return jsonify({"error": "Failed to save product_photo."}), 500
 
 
 
