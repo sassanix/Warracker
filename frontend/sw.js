@@ -11,11 +11,9 @@ const urlsToCache = [
   './reset-password.html',
   './reset-password-request.html',
   './auth-redirect.html',
-  './debug-export.html',
 
   // Stylesheets (versioned)
   './style.css?v=20250119004',
-  './styles.css?v=20250119001',
   './settings-styles.css?v=20250119001',
   './header-fix.css?v=20250119001',
   './mobile-header.css?v=20250119002',
@@ -57,7 +55,15 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('Opened cache');
-        return cache.addAll(urlsToCache);
+        // Cache each URL on its own: cache.addAll is atomic, so one
+        // missing file used to roll back the whole batch and leave
+        // offline caching silently empty (MISC-01). A file that fails
+        // to cache now logs a warning instead of voiding the rest.
+        return Promise.all(urlsToCache.map(url =>
+          cache.add(url).catch(error => {
+            console.warn('Service worker: failed to precache ' + url, error);
+          })
+        ));
       })
   );
   // Activate the new service worker immediately after installation
