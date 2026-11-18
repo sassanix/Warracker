@@ -36,6 +36,22 @@
   - _Files: `frontend/js/components/tagManager.js`, `frontend/script.js`, `frontend/settings-new.js`, `tests/test_xss_regressions.py`_
 - **Security hardening, Apprise audit trail:** Apprise test notifications and custom notifications now write an entry to the admin audit log, including whether per-request URLs were used and whether the send succeeded. The entries record only the URL schemes and the count, never hosts, paths, credentials, or notification content, since Apprise URLs embed secrets.
   - _Files: `backend/admin_routes.py`, `tests/test_apprise_audit.py`_
+- **Security hardening, cross-origin requests:** the API no longer reflects any Origin with credentials support when Flask is exposed directly. Cross-origin API calls with a Bearer token keep working exactly as before, but no credentials are honored cross-origin unless the operator names the allowed origins in the new `CORS_ALLOWED_ORIGINS` setting (a comma separated list). The shipped setup serves the frontend from the same origin, so existing installs need no change.
+  - _Files: `backend/extensions.py`, `tests/test_cors.py`_
+- **Security hardening, response headers:** every response now carries a Content-Security-Policy and a Referrer-Policy, from Flask for API responses and direct serving, and from nginx for the pages it serves. The policy keeps the app's own third-party calls working (the Buy Me a Coffee button, the version checker's GitHub fetch, and the Unsplash page background) while blocking plugins, foreign framing, and off-origin form submissions, and the referrer policy sends the full URL only to the same origin.
+  - _Files: `backend/__init__.py`, `nginx.conf`, `tests/test_security_headers.py`_
+- **Deployment config cleanups:** the root Compose file no longer mounts a `backend/init.sql` file that does not exist (it was deleted long ago while the mount remained), and the shipped nginx configuration now suppresses the version number in error pages and the Server header.
+  - _Files: `docker-compose.yml`, `nginx.conf`_
+- **Security hardening, notification emails:** the HTML part of expiration emails now escapes the recipient's first name and the product names, so markup typed into a name or product renders as text in the mailbox instead of live HTML. The plain text part is unchanged.
+  - _Files: `backend/notifications.py`, `tests/test_email_escaping.py`_
+- **Owner-role repair endpoint fixed:** the admin endpoint for manually fixing the owner role returned a 500 error for every caller, because it imported its helper from the wrong module, and the error body disclosed the internal error text. It now imports the helper from where it lives and answers successfully, and failures return a generic message with the detail kept in the server log.
+  - _Files: `backend/admin_routes.py`, `tests/test_admin_fix_owner.py`_
+- **Security hardening, settings and audit trail:** the settings endpoint now accepts only the known setting keys, so unknown keys in a request are ignored and named in the response instead of persisting silently. Audit entries for settings changes now mask the Apprise URLs value, which embeds credentials in the URL itself and previously landed in cleartext in the audit log; entries written before this upgrade still hold the old values. Ownership transfers now write an audit entry naming both accounts, where previously the change left no trace.
+  - _Files: `backend/admin_routes.py`, `tests/test_settings_allowlist_audit.py`_
+- **Security hardening, wizard summary:** the Add Warranty summary step now builds its serial number list as text instead of markup, so a serial number typed with HTML in it renders as text instead of executing when the summary step opens.
+  - _Files: `frontend/js/components/formTabs.js`, `frontend/js/components/addWarrantyForm.js`, `tests/test_xss_regressions.py`_
+- **Offline caching fixed on plain static hosting:** the service worker precached two files that do not exist, and because the install cached everything atomically, one missing file rolled back the whole batch and left offline caching silently empty. The dead entries are gone, and the install now caches each file on its own, logging a warning for any file that fails instead of voiding the rest.
+  - _Files: `frontend/sw.js`, `tests/test_service_worker.py`_
 
 ## 1.0.6 - 2026-11-10
 
