@@ -41,6 +41,74 @@ logger = logging.getLogger(__name__)
 
 warranties_bp = Blueprint('warranties_bp', __name__)
 
+# Columns that can reference a locally stored file, for the FILE-06
+# shared-path check. Every stored value is a relative 'uploads/<name>'
+# path. Table and column names come only from this constant, never
+# from input, so interpolating them into the check queries is safe.
+_FILE_REFERENCE_COLUMNS = (
+    ('warranties', 'invoice_path'),
+    ('warranties', 'manual_path'),
+    ('warranties', 'other_document_path'),
+    ('warranties', 'product_photo_path'),
+    ('claim_documents', 'file_path'),
+)
+
+
+def _stored_file_disk_path(stored_path):
+    """Disk location of a DB-stored file path, or None if it is not a
+    local relative path. FILE-05: derived from the configured
+    UPLOAD_FOLDER, never the hard-coded /data prefix the delete sites
+    used to join, so non-default deployments actually delete bytes."""
+    if not stored_path or os.path.isabs(stored_path):
+        return None
+    name = stored_path[8:] if stored_path.startswith('uploads/') else stored_path
+    if not name or '..' in name.split('/'):
+        return None
+    return os.path.join(current_app.config['UPLOAD_FOLDER'], name)
+
+
+def _delete_stored_file(cur, stored_path, exclude=None):
+    """Remove a stored file's bytes unless another row still needs them.
+
+    FILE-06: two rows can share one stored path (legacy or restored
+    data), and deleting the bytes for one orphaned the other. `exclude`
+    names the single (table, column, row id) being cleared, which does
+    not count as a live reference; when the owning row was already
+    deleted, pass no exclusion and the check runs against what remains.
+    Best effort, matching the existing delete behavior: a failed
+    reference check keeps the file, and removal failures are logged,
+    never raised.
+    """
+    disk_path = _stored_file_disk_path(stored_path)
+    if disk_path is None:
+        logger.warning(f"Not deleting unresolvable stored file path: {stored_path!r}")
+        return
+    try:
+        for table, column in _FILE_REFERENCE_COLUMNS:
+            if exclude and (table, column) == (exclude[0], exclude[1]):
+                cur.execute(
+                    f"SELECT 1 FROM {table} WHERE {column} = %s AND id != %s LIMIT 1",
+                    (stored_path, exclude[2]),
+                )
+            else:
+                cur.execute(
+                    f"SELECT 1 FROM {table} WHERE {column} = %s LIMIT 1",
+                    (stored_path,),
+                )
+            if cur.fetchone():
+                logger.info(f"Keeping shared stored file: {stored_path} (still referenced)")
+                return
+    except Exception as e:
+        logger.error(f"Reference check failed for stored file {stored_path}: {e}")
+        return
+    try:
+        if os.path.exists(disk_path):
+            os.remove(disk_path)
+            logger.info(f"Deleted stored file: {disk_path}")
+    except OSError as e:
+        logger.error(f"Error deleting stored file {disk_path}: {e}")
+
+
 def unique_upload_filename(original_name, infix=""):
     """Build a collision-proof stored filename.
 
@@ -830,33 +898,23 @@ def delete_warranty(warranty_id):
             
             # Delete the invoice file if it exists
             if invoice_path:
-                full_path = os.path.join('/data', invoice_path)
-                if os.path.exists(full_path):
-                    os.remove(full_path)
+                _delete_stored_file(cur, invoice_path)
             
             # Delete the manual file if it exists
             if manual_path:
-                full_path = os.path.join('/data', manual_path)
-                if os.path.exists(full_path):
-                    os.remove(full_path)
+                _delete_stored_file(cur, manual_path)
             
             # Delete the other_document file if it exists
             if other_document_path:
-                full_path = os.path.join('/data', other_document_path)
-                if os.path.exists(full_path):
-                    os.remove(full_path)
+                _delete_stored_file(cur, other_document_path)
             
             # Delete the product photo file if it exists
             if product_photo_path:
-                full_path = os.path.join('/data', product_photo_path)
-                if os.path.exists(full_path):
-                    os.remove(full_path)
+                _delete_stored_file(cur, product_photo_path)
 
             # Delete claim document files (rows already cascaded)
             for claim_doc_path in claim_document_paths:
-                full_path = os.path.join('/data', claim_doc_path)
-                if os.path.exists(full_path):
-                    os.remove(full_path)
+                _delete_stored_file(cur, claim_doc_path)
 
             return jsonify({"message": "Warranty deleted successfully"}), 200
             
@@ -1066,13 +1124,7 @@ def update_warranty(warranty_id):
                     cur.execute('SELECT invoice_path FROM warranties WHERE id = %s', (warranty_id,))
                     old_invoice_path = cur.fetchone()[0]
                     if old_invoice_path:
-                        full_path = os.path.join('/data', old_invoice_path)
-                        if os.path.exists(full_path):
-                            try:
-                                os.remove(full_path)
-                                logger.info(f"Deleted old invoice: {full_path}")
-                            except Exception as e:
-                                logger.error(f"Error deleting old invoice: {e}")
+                        _delete_stored_file(cur, old_invoice_path, exclude=('warranties', 'invoice_path', warranty_id))
                     filename = unique_upload_filename(invoice.filename)
                     invoice_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                     logger.info(f"Attempting to save updated invoice to: {invoice_path}")
@@ -1089,25 +1141,13 @@ def update_warranty(warranty_id):
                 cur.execute('SELECT invoice_path FROM warranties WHERE id = %s', (warranty_id,))
                 old_invoice_path = cur.fetchone()[0]
                 if old_invoice_path:
-                    full_path = os.path.join('/data', old_invoice_path)
-                    if os.path.exists(full_path):
-                        try:
-                            os.remove(full_path)
-                            logger.info(f"Deleted old local invoice (moving to Paperless): {full_path}")
-                        except Exception as e:
-                            logger.error(f"Error deleting old local invoice: {e}")
+                    _delete_stored_file(cur, old_invoice_path, exclude=('warranties', 'invoice_path', warranty_id))
                 db_invoice_path = None  # Clear local path
             elif request.form.get('delete_invoice', 'false').lower() == 'true':
                 cur.execute('SELECT invoice_path FROM warranties WHERE id = %s', (warranty_id,))
                 old_invoice_path = cur.fetchone()[0]
                 if old_invoice_path:
-                    full_path = os.path.join('/data', old_invoice_path)
-                    if os.path.exists(full_path):
-                        try:
-                            os.remove(full_path)
-                            logger.info(f"Deleted invoice (delete request): {full_path}")
-                        except Exception as e:
-                            logger.error(f"Error deleting invoice (delete request): {e}")
+                    _delete_stored_file(cur, old_invoice_path, exclude=('warranties', 'invoice_path', warranty_id))
                 db_invoice_path = None  # Set to None to clear in DB
             
             # File handling for manual
@@ -1120,13 +1160,7 @@ def update_warranty(warranty_id):
                     cur.execute('SELECT manual_path FROM warranties WHERE id = %s', (warranty_id,))
                     old_manual_path = cur.fetchone()[0]
                     if old_manual_path:
-                        full_path = os.path.join('/data', old_manual_path)
-                        if os.path.exists(full_path):
-                            try:
-                                os.remove(full_path)
-                                logger.info(f"Deleted old manual: {full_path}")
-                            except Exception as e:
-                                logger.error(f"Error deleting old manual: {e}")
+                        _delete_stored_file(cur, old_manual_path, exclude=('warranties', 'manual_path', warranty_id))
                     filename = unique_upload_filename(manual.filename, "manual_")
                     manual_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                     logger.info(f"Attempting to save updated manual to: {manual_path}")
@@ -1143,25 +1177,13 @@ def update_warranty(warranty_id):
                 cur.execute('SELECT manual_path FROM warranties WHERE id = %s', (warranty_id,))
                 old_manual_path = cur.fetchone()[0]
                 if old_manual_path:
-                    full_path = os.path.join('/data', old_manual_path)
-                    if os.path.exists(full_path):
-                        try:
-                            os.remove(full_path)
-                            logger.info(f"Deleted old local manual (moving to Paperless): {full_path}")
-                        except Exception as e:
-                            logger.error(f"Error deleting old local manual: {e}")
+                    _delete_stored_file(cur, old_manual_path, exclude=('warranties', 'manual_path', warranty_id))
                 db_manual_path = None  # Clear local path
             elif request.form.get('delete_manual', 'false').lower() == 'true':
                 cur.execute('SELECT manual_path FROM warranties WHERE id = %s', (warranty_id,))
                 old_manual_path = cur.fetchone()[0]
                 if old_manual_path:
-                    full_path = os.path.join('/data', old_manual_path)
-                    if os.path.exists(full_path):
-                        try:
-                            os.remove(full_path)
-                            logger.info(f"Deleted manual (delete request): {full_path}")
-                        except Exception as e:
-                            logger.error(f"Error deleting manual (delete request): {e}")
+                    _delete_stored_file(cur, old_manual_path, exclude=('warranties', 'manual_path', warranty_id))
                 db_manual_path = None  # Set to None to clear in DB
             
             # File handling for other document
@@ -1174,13 +1196,7 @@ def update_warranty(warranty_id):
                     cur.execute('SELECT other_document_path FROM warranties WHERE id = %s', (warranty_id,))
                     old_other_document_path = cur.fetchone()[0]
                     if old_other_document_path:
-                        full_path = os.path.join('/data', old_other_document_path)
-                        if os.path.exists(full_path):
-                            try:
-                                os.remove(full_path)
-                                logger.info(f"Deleted old other_document: {full_path}")
-                            except Exception as e:
-                                logger.error(f"Error deleting old other_document: {e}")
+                        _delete_stored_file(cur, old_other_document_path, exclude=('warranties', 'other_document_path', warranty_id))
                     filename = unique_upload_filename(other_document.filename, "other_")
                     other_document_path_on_disk = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                     logger.info(f"Attempting to save updated other_document to: {other_document_path_on_disk}")
@@ -1197,25 +1213,13 @@ def update_warranty(warranty_id):
                 cur.execute('SELECT other_document_path FROM warranties WHERE id = %s', (warranty_id,))
                 old_other_document_path = cur.fetchone()[0]
                 if old_other_document_path:
-                    full_path = os.path.join('/data', old_other_document_path)
-                    if os.path.exists(full_path):
-                        try:
-                            os.remove(full_path)
-                            logger.info(f"Deleted old local other_document (moving to Paperless): {full_path}")
-                        except Exception as e:
-                            logger.error(f"Error deleting old local other_document: {e}")
+                    _delete_stored_file(cur, old_other_document_path, exclude=('warranties', 'other_document_path', warranty_id))
                 db_other_document_path = None  # Clear local path
             elif request.form.get('delete_other_document', 'false').lower() == 'true':
                 cur.execute('SELECT other_document_path FROM warranties WHERE id = %s', (warranty_id,))
                 old_other_document_path = cur.fetchone()[0]
                 if old_other_document_path:
-                    full_path = os.path.join('/data', old_other_document_path)
-                    if os.path.exists(full_path):
-                        try:
-                            os.remove(full_path)
-                            logger.info(f"Deleted other_document (delete request): {full_path}")
-                        except Exception as e:
-                            logger.error(f"Error deleting other_document (delete request): {e}")
+                    _delete_stored_file(cur, old_other_document_path, exclude=('warranties', 'other_document_path', warranty_id))
                 db_other_document_path = None # Set to None to clear in DB
 
             # Handle product photo file upload (only if not stored in Paperless-ngx)
@@ -1231,13 +1235,7 @@ def update_warranty(warranty_id):
                     cur.execute('SELECT product_photo_path FROM warranties WHERE id = %s', (warranty_id,))
                     old_product_photo_path = cur.fetchone()[0]
                     if old_product_photo_path:
-                        full_path = os.path.join('/data', old_product_photo_path)
-                        if os.path.exists(full_path):
-                            try:
-                                os.remove(full_path)
-                                logger.info(f"Deleted old product_photo: {full_path}")
-                            except Exception as e:
-                                logger.error(f"Error deleting old product_photo: {e}")
+                        _delete_stored_file(cur, old_product_photo_path, exclude=('warranties', 'product_photo_path', warranty_id))
                     
                     filename = unique_upload_filename(product_photo.filename, "photo_")
                     product_photo_path_on_disk = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
@@ -1255,25 +1253,13 @@ def update_warranty(warranty_id):
                 cur.execute('SELECT product_photo_path FROM warranties WHERE id = %s', (warranty_id,))
                 old_product_photo_path = cur.fetchone()[0]
                 if old_product_photo_path:
-                    full_path = os.path.join('/data', old_product_photo_path)
-                    if os.path.exists(full_path):
-                        try:
-                            os.remove(full_path)
-                            logger.info(f"Deleted old local product_photo (moving to Paperless): {full_path}")
-                        except Exception as e:
-                            logger.error(f"Error deleting old local product_photo: {e}")
+                    _delete_stored_file(cur, old_product_photo_path, exclude=('warranties', 'product_photo_path', warranty_id))
                 db_product_photo_path = None  # Clear local path
             elif request.form.get('delete_product_photo', 'false').lower() == 'true':
                 cur.execute('SELECT product_photo_path FROM warranties WHERE id = %s', (warranty_id,))
                 old_product_photo_path = cur.fetchone()[0]
                 if old_product_photo_path:
-                    full_path = os.path.join('/data', old_product_photo_path)
-                    if os.path.exists(full_path):
-                        try:
-                            os.remove(full_path)
-                            logger.info(f"Deleted product_photo (delete request): {full_path}")
-                        except Exception as e:
-                            logger.error(f"Error deleting product_photo (delete request): {e}")
+                    _delete_stored_file(cur, old_product_photo_path, exclude=('warranties', 'product_photo_path', warranty_id))
                 db_product_photo_path = None  # Set to None to clear in DB
 
             # Product photo by URL (#207): replace the photo with a downloaded
@@ -1288,13 +1274,7 @@ def update_warranty(warranty_id):
                 cur.execute('SELECT product_photo_path FROM warranties WHERE id = %s', (warranty_id,))
                 old_product_photo_path = cur.fetchone()[0]
                 if old_product_photo_path:
-                    full_path = os.path.join('/data', old_product_photo_path)
-                    if os.path.exists(full_path):
-                        try:
-                            os.remove(full_path)
-                            logger.info(f"Deleted old product_photo: {full_path}")
-                        except Exception as e:
-                            logger.error(f"Error deleting old product_photo: {e}")
+                    _delete_stored_file(cur, old_product_photo_path, exclude=('warranties', 'product_photo_path', warranty_id))
                 filename = unique_upload_filename(f"downloaded{photo_ext}", "photo_")
                 product_photo_path_on_disk = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                 try:
@@ -2903,7 +2883,7 @@ def delete_claim(warranty_id, claim_id):
         conn.commit()
 
         for doc_file in document_files:
-            _remove_claim_document_file(doc_file)
+            _delete_stored_file(cur, doc_file)
         
         logger.info(f"Deleted claim {claim_id} for warranty {warranty_id} by user {user_id}")
         return jsonify({'message': 'Claim deleted successfully'}), 200
@@ -2948,18 +2928,6 @@ def _verify_claim_ownership(cur, warranty_id, claim_id, user_id):
         WHERE w.id = %s AND c.id = %s AND w.user_id = %s
     """, (warranty_id, claim_id, user_id))
     return cur.fetchone() is not None
-
-
-def _remove_claim_document_file(file_path):
-    """Best-effort removal of a locally stored claim document file."""
-    if not file_path:
-        return
-    try:
-        full_path = os.path.join(current_app.config['UPLOAD_FOLDER'], os.path.basename(file_path))
-        if os.path.exists(full_path):
-            os.remove(full_path)
-    except OSError as e:
-        logger.warning(f"Could not remove claim document file {file_path}: {e}")
 
 
 @warranties_bp.route('/warranties/<int:warranty_id>/claims/<int:claim_id>/documents', methods=['POST'])
@@ -3126,7 +3094,7 @@ def delete_claim_document(warranty_id, claim_id, document_id):
                     (document_id, claim_id))
         conn.commit()
 
-        _remove_claim_document_file(file_path)
+        _delete_stored_file(cur, file_path)
 
         logger.info(f"Deleted document {document_id} from claim {claim_id} by user {user_id}")
         return jsonify({'message': 'Document deleted successfully'}), 200
