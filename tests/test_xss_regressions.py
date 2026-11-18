@@ -32,6 +32,10 @@ raw interpolation back, the suite fails before the payload does.
   owner's browser. The test-connection and test-upload renders carry
   the same server-controlled strings. All of them must go through the
   file's escapeHtmlSafe helper.
+- XSS-09: the add-warranty wizard's summary step interpolated the
+  user's own unsaved serial numbers raw into innerHTML, so a typed
+  payload executed when the summary rendered. The list must be built
+  with DOM APIs and textContent.
 """
 import os
 
@@ -126,4 +130,20 @@ def test_xss08_paperless_test_renders_escaped():
     assert "${result.file_info.filename}" not in upload
     assert "${escapeHtmlSafe(result.message)}" in upload
     assert "${escapeHtmlSafe(result.error)}" in upload
+
+
+def test_xss09_wizard_summary_serials_built_as_dom_nodes():
+    src = _read("frontend/js/components/formTabs.js")
+    assert "<li>${sn}</li>" not in src
+    assert "serialNumbers.map(sn =>" not in src
+    assert "document.createElement('ul')" in src
+    assert "document.createElement('li')" in src
+    assert "item.textContent = sn" in src
+    # The live summary render is addWarrantyForm.js's updateSummary,
+    # which carried the same raw interpolation; both copies are pinned.
+    live = _read("frontend/js/components/addWarrantyForm.js")
+    assert "<li>${sn}</li>" not in live
+    assert "serialValues.map((sn) =>" not in live
+    assert "document.createElement('ul')" in live
+    assert "item.textContent = sn" in live
 

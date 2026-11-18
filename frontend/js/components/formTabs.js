@@ -254,9 +254,18 @@ function updateSummary() {
     const serialNumbersContainer = document.getElementById('summary-serial-numbers');
     if (serialNumbersContainer) {
         if (serialNumbers.length > 0) {
-            serialNumbersContainer.innerHTML = '<ul>' + 
-                serialNumbers.map(sn => `<li>${sn}</li>`).join('') + 
-                '</ul>';
+            // Build the list with DOM APIs, not innerHTML: serial
+            // numbers are the user's own unsaved input, and reflecting
+            // them as markup executed typed payloads when the summary
+            // step rendered (XSS-09). textContent keeps them inert.
+            serialNumbersContainer.innerHTML = '';
+            const list = document.createElement('ul');
+            serialNumbers.forEach(sn => {
+                const item = document.createElement('li');
+                item.textContent = sn;
+                list.appendChild(item);
+            });
+            serialNumbersContainer.appendChild(list);
         } else {
             serialNumbersContainer.textContent = 'None';
         }

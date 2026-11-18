@@ -391,7 +391,18 @@ export function updateSummary() {
 		.filter(Boolean);
 	if (state.summary.serialNumbers) {
 		if (serialValues.length) {
-			state.summary.serialNumbers.innerHTML = `<ul>${serialValues.map((sn) => `<li>${sn}</li>`).join('')}</ul>`;
+			// Build the list with DOM APIs, not innerHTML: serial
+			// numbers are the user's own unsaved input, and reflecting
+			// them as markup executed typed payloads when the summary
+			// rendered (XSS-09). textContent keeps them inert.
+			state.summary.serialNumbers.innerHTML = '';
+			const list = document.createElement('ul');
+			serialValues.forEach((sn) => {
+				const item = document.createElement('li');
+				item.textContent = sn;
+				list.appendChild(item);
+			});
+			state.summary.serialNumbers.appendChild(list);
 		} else {
 			state.summary.serialNumbers.textContent = (window.i18next && window.i18next.t('warranties.none') || 'None');
 		}
