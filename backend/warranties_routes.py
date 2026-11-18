@@ -657,15 +657,17 @@ def add_warranty():
             # Insert tags if provided
             if tag_ids:
                 for tag_id in tag_ids:
-                    # Verify tag exists
-                    cur.execute('SELECT id FROM tags WHERE id = %s', (tag_id,))
+                    # Verify tag exists and belongs to this user (FILE-03):
+                    # linking another user's tag by ID disclosed its name
+                    # and color. The tag picker only ever shows own tags.
+                    cur.execute('SELECT id FROM tags WHERE id = %s AND user_id = %s', (tag_id, user_id))
                     if cur.fetchone():
                         cur.execute('''
                             INSERT INTO warranty_tags (warranty_id, tag_id)
                             VALUES (%s, %s)
                         ''', (warranty_id, tag_id))
                     else:
-                        logger.warning(f"Skipping non-existent tag ID: {tag_id}")
+                        logger.warning(f"Skipping non-existent or foreign tag ID: {tag_id}")
             
             conn.commit()
             
@@ -1402,15 +1404,15 @@ def update_warranty(warranty_id):
                 
                 # Add new tags
                 for tag_id in tag_ids:
-                    # Verify tag exists
-                    cur.execute('SELECT id FROM tags WHERE id = %s', (tag_id,))
+                    # Verify tag exists and belongs to this user (FILE-03).
+                    cur.execute('SELECT id FROM tags WHERE id = %s AND user_id = %s', (tag_id, user_id))
                     if cur.fetchone():
                         cur.execute('''
                             INSERT INTO warranty_tags (warranty_id, tag_id)
                             VALUES (%s, %s)
                         ''', (warranty_id, tag_id))
                     else:
-                        logger.warning(f"Skipping non-existent tag ID: {tag_id}")
+                        logger.warning(f"Skipping non-existent or foreign tag ID: {tag_id}")
 
             # Claim ownership of any Paperless documents linked above
             for _pid in (paperless_invoice_id, paperless_manual_id,
