@@ -1576,12 +1576,30 @@ def import_warranties():
         conn.autocommit = False # Start transaction
 
         with conn.cursor() as cur:
+            # CSV-03: next suffix to try per (base name, purchase date).
+            # The duplicate search used to restart at (1) for every row,
+            # so a same-name import re-checked every earlier suffix for
+            # each row: O(n^2) database checks. Resuming where the last
+            # row left off makes it O(n); the loop still verifies each
+            # candidate against the database, so the renaming result is
+            # unchanged.
+            next_suffix = {}
+
             for row in csv_reader:
                 row_number += 1 # Increment for each data row (header is row 1)
                 errors = []
                 processed_row = {}
 
                 try:
+                    # CSV-01: one savepoint per row. A database error in
+                    # a row (for example an over-long serial aborting the
+                    # transaction) used to poison the whole import: the
+                    # commit at the end rolled everything back while the
+                    # API still reported the rows imported before the
+                    # failure. Rolling back to the savepoint confines the
+                    # failure to its row, so success_count is accurate.
+                    cur.execute('SAVEPOINT csv_row')
+
                     # --- Data Extraction and Basic Validation ---
                     product_name = (row.get('ProductName') or '').strip()
                     purchase_date_str = (row.get('PurchaseDate') or '').strip()
@@ -1757,12 +1775,15 @@ def import_warranties():
 
                         if is_name_taken(product_name):
                             base_name = product_name
-                            suffix_index = 1
+                            suffix_index = next_suffix.get(
+                                (base_name, purchase_date), 1)
                             while True:
                                 candidate_name = f"{base_name} ({suffix_index})"
                                 if not is_name_taken(candidate_name):
                                     logger.info(f"[Import] Duplicate detected for row {row_number}. Renaming '{base_name}' to '{candidate_name}' for purchase date {purchase_date}.")
                                     product_name = candidate_name
+                                    next_suffix[(base_name, purchase_date)] = (
+                                        suffix_index + 1)
                                     break
                                 suffix_index += 1
                     
@@ -1874,11 +1895,18 @@ def import_warranties():
                     used_name_date_pairs.add((product_name, purchase_date))
 
                     imported_count += 1
+                    cur.execute('RELEASE SAVEPOINT csv_row')
 
                 except Exception as e:
                     logger.error(f"Error processing CSV row {row_number}: {e}")
                     failed_rows.append({"row": row_number, "errors": [f"Internal processing error: {str(e)}"]})
-                    # Don't rollback yet, just record failure
+                    # Roll the failed row back to its savepoint so the
+                    # transaction stays usable for the remaining rows.
+                    try:
+                        cur.execute('ROLLBACK TO SAVEPOINT csv_row')
+                        cur.execute('RELEASE SAVEPOINT csv_row')
+                    except Exception as savepoint_err:
+                        logger.error(f"Error rolling back CSV row {row_number} to savepoint: {savepoint_err}")
 
             # --- Transaction Commit/Rollback --- 
             if imported_count > 0 and failed_rows:
