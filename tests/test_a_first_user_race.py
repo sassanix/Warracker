@@ -16,6 +16,7 @@ creates, leaving the table empty for the tests that follow. If the
 table is not empty (someone runs this file after other tests), it
 skips.
 """
+import os
 import threading
 import uuid
 from pathlib import Path
@@ -24,12 +25,16 @@ import psycopg2
 import pytest
 
 from backend.auth_utils import FIRST_USER_LOCK_KEY, acquire_first_user_lock
+from conftest import _connect
 
 
 def test_first_user_lock_blocks_concurrent_acquire(db_connection):
     """The advisory lock serializes: a second transaction cannot take
     it while the first holds it, and can once the first commits."""
-    conn_b = psycopg2.connect(db_connection.dsn)
+    # Build the second connection from the environment like the
+    # fixture does: db_connection.dsn carries no password, which works
+    # on the trust-auth local socket but fails password auth in CI.
+    conn_b = _connect(os.environ["DB_NAME"])
     try:
         with db_connection.cursor() as cur_a:
             acquire_first_user_lock(cur_a)

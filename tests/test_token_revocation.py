@@ -6,6 +6,7 @@ password change, and password reset all delete session rows, so a
 captured token stops working after each. Tokens minted before jti
 existed carry no jti and are grandfathered until their 24h expiry.
 """
+import os
 import uuid
 from datetime import datetime, timedelta, UTC
 
@@ -13,7 +14,11 @@ import jwt
 
 from backend.auth_routes import _hash_reset_token
 
-SECRET_KEY = "warracker-test-secret-key-0123456789"
+# The app signs with the SECRET_KEY from the environment (conftest sets
+# the local default; CI sets its own), so forged tokens must use the
+# same value or signature verification fails before the jti logic runs.
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY", "warracker-test-secret-key-0123456789")
 
 
 def _user_id_from_token(token):
