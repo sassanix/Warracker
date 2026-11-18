@@ -17,11 +17,17 @@ try:
     from . import db_handler, notifications
     from .auth_utils import generate_token, token_required, is_valid_email, is_valid_password, is_password_too_long
     from .localization import SUPPORTED_LANGUAGES
+    from .rate_limit import (
+        login_limited, record_login_failure, clear_login_failures,
+        reset_request_limited, record_reset_request)
 except ImportError:
     # Fallback for development environment
     import db_handler, notifications
     from auth_utils import generate_token, token_required, is_valid_email, is_valid_password, is_password_too_long
     from localization import SUPPORTED_LANGUAGES
+    from rate_limit import (
+        login_limited, record_login_failure, clear_login_failures,
+        reset_request_limited, record_reset_request)
 
 # Import bcrypt from extensions since it's initialized with the app
 try:
@@ -215,6 +221,11 @@ def login():
         if is_password_too_long(password):
             return jsonify({'message': 'Password must not exceed 72 characters!'}), 400
 
+        # AUTH-05: refuse a locked-out (IP, username) pair before the
+        # password check, so brute force cannot keep burning bcrypt.
+        if login_limited(request.remote_addr, username):
+            return jsonify({'message': 'Too many failed login attempts. Try again later!'}), 429
+
         conn = db_handler.get_db_connection()
         with conn.cursor() as cur:
             # AUTH-12: OIDC-only mode forbids local sign-in outright. The
@@ -232,10 +243,14 @@ def login():
             # would short-circuit it and restore the timing split.
             password_ok = bcrypt.check_password_hash(password_hash, password)
             if not user or not password_ok:
+                record_login_failure(request.remote_addr, username)
                 return jsonify({'message': 'Invalid username or password!'}), 401
             
             if not user[4]:  # is_active
                 return jsonify({'message': 'Account is inactive!'}), 401
+
+            # A successful login clears the pair's failure count.
+            clear_login_failures(request.remote_addr, username)
             
             user_id = user[0]
             
@@ -418,7 +433,16 @@ def request_password_reset():
             # not reveal whether the address is registered or SSO-managed.
             if user[1] is not None and _oidc_only_mode_enabled(cur):
                 return jsonify({'message': 'If your email is registered, you will receive a password reset link.'}), 200
-            
+
+            # AUTH-05: cap reset requests per address. A limited request
+            # gets the same generic 200 as an unknown address, and no
+            # token is minted and no mail is sent, so the endpoint
+            # cannot be used as an unauthenticated mail relay.
+            if reset_request_limited(email):
+                current_app.logger.warning(
+                    f"Password reset requests rate-limited for {email}.")
+                return jsonify({'message': 'If your email is registered, you will receive a password reset link.'}), 200
+
             # Generate reset token. Only its hash is stored (AUTH-08), so
             # the database value alone can never complete a reset; the
             # emailed link carries the raw token. Tokens live one hour.
@@ -435,6 +459,7 @@ def request_password_reset():
             )
             
             conn.commit()
+            record_reset_request(email)
 
             # Get email base URL from settings with correct precedence
             # Priority: Environment Variable > Database Setting > Hardcoded Default
