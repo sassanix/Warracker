@@ -181,23 +181,36 @@ def get_db_connection():
         if connection_pool is None or pool_pid != current_pid: # If still invalid after attempt
             logger.critical("[DB_HANDLER] CRITICAL: Database pool initialization failed for current process.")
             raise Exception("Database connection pool is not initialized and could not be re-initialized.")
-    # Use the pool and its semaphore as a pair, even if the globals change
-    # before the connection is released.
-    the_pool, slots = connection_pool, _pool_slots
-    if not slots.acquire(timeout=DB_POOL_WAIT_SECONDS):
-        logger.error(f"[DB_HANDLER] Error getting connection from pool: connection pool exhausted (waited {DB_POOL_WAIT_SECONDS}s)")
-        raise pool.PoolError("connection pool exhausted")
-    try:
-        conn = the_pool.getconn()
-        if conn.closed:  # closed by the server since it was last used: replace it
-            the_pool.putconn(conn, close=True)
+    # If getconn fails (e.g. the database restarted and a new connection can't
+    # be opened yet), release the slot and try once more. A closed pool is
+    # replaced before the retry.
+    for attempt in (1, 2):
+        # Use the pool and its semaphore as a pair, even if the globals change
+        # before the connection is released.
+        the_pool, slots = connection_pool, _pool_slots
+        if not slots.acquire(timeout=DB_POOL_WAIT_SECONDS):
+            logger.error(f"[DB_HANDLER] Error getting connection from pool: connection pool exhausted (waited {DB_POOL_WAIT_SECONDS}s)")
+            raise pool.PoolError("connection pool exhausted")
+        try:
             conn = the_pool.getconn()
-    except Exception as e:
-        slots.release()
-        logger.error(f"[DB_HANDLER] Error getting connection from pool: {e}")
-        raise
-    _checked_out[id(conn)] = (the_pool, slots)
-    return conn
+            if conn.closed:  # closed by the server since it was last used: replace it
+                the_pool.putconn(conn, close=True)
+                conn = the_pool.getconn()
+        except Exception as e:
+            slots.release()
+            if attempt == 2:
+                logger.error(f"[DB_HANDLER] Error getting connection from pool: {e}")
+                raise
+            logger.warning(f"[DB_HANDLER] Error getting connection from pool: {e}. Retrying once.")
+            if the_pool.closed:
+                with _init_lock:
+                    if connection_pool is the_pool:
+                        logger.warning("[DB_HANDLER] Connection pool is closed. Reinitializing...")
+                        connection_pool = None
+                        init_db_pool()
+            continue
+        _checked_out[id(conn)] = (the_pool, slots)
+        return conn
 
 def release_db_connection(conn):
     if conn is None:
