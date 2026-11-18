@@ -3,6 +3,7 @@ from datetime import datetime, date
 import os
 import re
 import logging
+import urllib.parse
 
 # Use try-except pattern for imports to handle both Docker and development environments
 try:
@@ -638,26 +639,52 @@ def get_scheduler_status():
 # Apprise Admin Routes
 # ============================
 
+def _apprise_destination_summary(urls):
+    """Summarize per-request Apprise destinations for the audit log.
+
+    Apprise URLs embed credentials in the authority and path (bot
+    tokens, webhook ids, passwords), so only the URL schemes and the
+    count are recorded, never hosts, paths, queries, or the
+    notification content itself.
+    """
+    if not urls:
+        return 'configured URLs'
+    if isinstance(urls, str):
+        urls = [urls]
+    schemes = []
+    for url in urls:
+        try:
+            schemes.append(urllib.parse.urlparse(str(url)).scheme or '?')
+        except Exception:
+            schemes.append('?')
+    noun = 'URL' if len(schemes) == 1 else 'URLs'
+    return f"{len(schemes)} per-request {noun} (schemes: {', '.join(schemes)})"
+
+
 @admin_bp.route('/apprise/test', methods=['POST'])
 @admin_required
 def test_apprise_notification():
     """Send a test Apprise notification"""
     if not APPRISE_AVAILABLE or apprise_handler is None:
         return jsonify({'success': False, 'message': 'Apprise notifications are not available'}), 503
-    
+
     try:
         data = request.get_json()
         test_url = data.get('test_url') if data else None
-        
+
         success = apprise_handler.send_test_notification(test_url)
-        
+        create_audit_log('APPRISE_TEST', target_type='Apprise', target_id='test-notification',
+                         details=f"Test notification via {_apprise_destination_summary(test_url)}: {'sent' if success else 'failed'}")
+
         if success:
             return jsonify({'success': True, 'message': 'Test notification sent successfully'}), 200
         else:
             return jsonify({'success': False, 'message': 'Failed to send test notification'}), 400
-            
+
     except Exception as e:
         logger.error(f"Error sending test Apprise notification: {e}")
+        create_audit_log('APPRISE_TEST', target_type='Apprise', target_id='test-notification',
+                         details='Test notification attempt errored')
         return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
 
 @admin_bp.route('/apprise/validate-url', methods=['POST'])
@@ -808,16 +835,20 @@ def send_custom_apprise_notification():
         
         if not title or not message:
             return jsonify({'success': False, 'message': 'Title and message are required'}), 400
-        
+
         success = apprise_handler.send_custom_notification(title, message, urls)
-        
+        create_audit_log('APPRISE_SEND_CUSTOM', target_type='Apprise', target_id='custom-notification',
+                         details=f"Custom notification via {_apprise_destination_summary(urls)}: {'sent' if success else 'failed'}")
+
         if success:
             return jsonify({'success': True, 'message': 'Custom notification sent successfully'}), 200
         else:
             return jsonify({'success': False, 'message': 'Failed to send custom notification'}), 400
-            
+
     except Exception as e:
         logger.error(f"Error sending custom Apprise notification: {e}")
+        create_audit_log('APPRISE_SEND_CUSTOM', target_type='Apprise', target_id='custom-notification',
+                         details='Custom notification attempt errored')
         return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
 
 @admin_bp.route('/apprise/status', methods=['GET'])
