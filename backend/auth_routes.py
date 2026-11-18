@@ -6,6 +6,7 @@ import uuid
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import hashlib
 import os
 import pytz
 import psycopg2
@@ -30,6 +31,23 @@ except ImportError:
     from extensions import bcrypt
 
 auth_bp = Blueprint('auth_bp', __name__)
+
+# AUTH-06: a valid bcrypt hash of a random value nobody knows, checked
+# when the login name matches no account or the account has no local
+# password hash (OIDC-only). Running the check unconditionally keeps
+# login timing from revealing whether an account exists, and a NULL
+# hash returns the same 401 as a wrong password instead of a 500.
+_DUMMY_PASSWORD_HASH = '$2b$12$LItrc0bk3Uh0XRSXHNV2aO43hjnIhIrWoz9LLb2k514.lybEznWj6'
+
+
+def _hash_reset_token(token):
+    """One-way hash of a password reset token for storage (AUTH-08).
+
+    Only the hash is stored, so the database value alone can never
+    complete a reset. The emailed link still carries the raw token.
+    """
+    return hashlib.sha256(token.encode('utf-8')).hexdigest()
+
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
@@ -179,7 +197,11 @@ def login():
             cur.execute('SELECT id, username, email, password_hash, is_active, is_admin FROM users WHERE username = %s OR email = %s', (username, username))
             user = cur.fetchone()
             
-            if not user or not bcrypt.check_password_hash(user[3], password):
+            password_hash = user[3] if user and user[3] else _DUMMY_PASSWORD_HASH
+            # Run the check unconditionally: branching on `user` first
+            # would short-circuit it and restore the timing split.
+            password_ok = bcrypt.check_password_hash(password_hash, password)
+            if not user or not password_ok:
                 return jsonify({'message': 'Invalid username or password!'}), 401
             
             if not user[4]:  # is_active
@@ -359,17 +381,19 @@ def request_password_reset():
             
             user_id = user[0]
             
-            # Generate reset token
+            # Generate reset token. Only its hash is stored (AUTH-08), so
+            # the database value alone can never complete a reset; the
+            # emailed link carries the raw token. Tokens live one hour.
             reset_token = str(uuid.uuid4())
-            expires_at = datetime.now(UTC) + timedelta(hours=24)
-            
+            expires_at = datetime.now(UTC) + timedelta(hours=1)
+
             # Delete any existing tokens for this user
             cur.execute('DELETE FROM password_reset_tokens WHERE user_id = %s', (user_id,))
-            
-            # Insert new token
+
+            # Insert new token (hash only)
             cur.execute(
                 'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (%s, %s, %s)',
-                (user_id, reset_token, expires_at)
+                (user_id, _hash_reset_token(reset_token), expires_at)
             )
             
             conn.commit()
@@ -670,8 +694,8 @@ def reset_password():
 
         conn = db_handler.get_db_connection()
         with conn.cursor() as cur:
-            # Check if token exists and is valid
-            cur.execute('SELECT user_id, expires_at FROM password_reset_tokens WHERE token = %s', (token,))
+            # Check if token exists and is valid (stored as a hash, AUTH-08)
+            cur.execute('SELECT user_id, expires_at FROM password_reset_tokens WHERE token = %s', (_hash_reset_token(token),))
             token_info = cur.fetchone()
             
             if not token_info:
@@ -696,7 +720,7 @@ def reset_password():
             cur.execute('UPDATE users SET password_hash = %s WHERE id = %s', (password_hash, user_id))
             
             # Delete the used token
-            cur.execute('DELETE FROM password_reset_tokens WHERE token = %s', (token,))
+            cur.execute('DELETE FROM password_reset_tokens WHERE token = %s', (_hash_reset_token(token),))
             
             conn.commit()
             
@@ -800,7 +824,7 @@ def send_password_reset_email(recipient_email, reset_link):
                 <p>Please click the link below to reset your password:</p>
                 <p><a href="{reset_link}">Reset Password</a></p>
                 <p>If you did not request this password reset, please ignore this email.</p>
-                <p>This link will expire in 24 hours.</p>
+                <p>This link will expire in 1 hour.</p>
                 <p>Thanks,<br>The {app_name} Team</p>
             </body>
         </html>
