@@ -56,7 +56,6 @@ services:
     image: "postgres:15-alpine"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
       - POSTGRES_DB=warranty_test
       - POSTGRES_USER=warranty_user
