@@ -1481,6 +1481,11 @@ def request_email_change():
         cur.execute("UPDATE users SET email = %s WHERE id = %s", (new_email, current_user_id))
         conn.commit()
 
+        # AUTH-09: tell the old address, best effort, like the profile
+        # flow. The helper never raises, so a mail failure cannot fail
+        # the change.
+        send_email_change_notice(current_email, new_email)
+
         return jsonify({'message': 'Email address updated successfully.'}), 200
 
     except Exception as e:
