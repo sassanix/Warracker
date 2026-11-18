@@ -1,5 +1,6 @@
 # backend/extensions.py
 import logging
+import os
 from authlib.integrations.flask_client import OAuth
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
@@ -13,6 +14,29 @@ bcrypt = Bcrypt()
 babel = None  # Will be initialized in initialize_extensions
 db_pool = None  # Database connection pool
 
+def cors_settings():
+    """CORS origins and credential support (AUTH-14).
+
+    The shipped topology serves the frontend from the same origin as
+    the API, so no cross-origin credentialed access is ever needed by
+    the app itself: API authentication is a Bearer token sent in the
+    Authorization header, and the Flask session cookie is only used by
+    the top-level OIDC redirect flow. Reflecting any Origin with
+    credentials support is a latent trap if cookie authentication is
+    ever added, so credentials are only enabled for origins the
+    operator names explicitly in CORS_ALLOWED_ORIGINS (a comma
+    separated list, for example
+    https://warracker.example.com,https://app.example.com). With the
+    variable unset, any origin may still call the API with a Bearer
+    token, but no credentials are honored cross-origin.
+    """
+    raw = os.environ.get('CORS_ALLOWED_ORIGINS', '')
+    origins = [origin.strip() for origin in raw.split(',') if origin.strip()]
+    if origins:
+        return origins, True
+    return '*', False
+
+
 def initialize_extensions(app):
     """Initialize all extensions with the Flask app object."""
     global babel, db_pool
@@ -23,8 +47,17 @@ def initialize_extensions(app):
     oauth.init_app(app)
     logger.info("OAuth initialized")
     
-    # Initialize CORS with credentials support
-    cors.init_app(app, supports_credentials=True)
+    # Initialize CORS. Credentials are only honored for origins the
+    # operator names in CORS_ALLOWED_ORIGINS; see cors_settings. The
+    # default branch sends a literal wildcard origin and no
+    # credentials header instead of echoing the request Origin.
+    origins, supports_credentials = cors_settings()
+    cors.init_app(
+        app,
+        origins=origins,
+        supports_credentials=supports_credentials,
+        send_wildcard=(origins == '*'),
+    )
     logger.info("CORS initialized")
     
     # Initialize Bcrypt
