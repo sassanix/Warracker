@@ -52,6 +52,7 @@ def test_csp_allows_the_about_page_widget_and_version_check():
     assert "https://cdnjs.buymeacoffee.com" in _CONTENT_SECURITY_POLICY
     assert "https://*.buymeacoffee.com" in _CONTENT_SECURITY_POLICY
     assert "https://api.github.com" in _CONTENT_SECURITY_POLICY
+    assert "https://images.unsplash.com" in _CONTENT_SECURITY_POLICY
 
 
 def test_csp_blocks_plugins_and_foreign_framing():

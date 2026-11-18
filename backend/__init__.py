@@ -175,15 +175,16 @@ def ensure_owner_exists():
 # styles throughout, so script-src and style-src keep 'unsafe-inline';
 # the policy still pins the fetchable origins, blocks plugins and
 # foreign framing, and keeps form submissions and base URIs
-# same-origin. The two third-party allowances are load-bearing: the
-# About page loads the Buy Me a Coffee button script, which fetches
-# its font and images from the buymeacoffee and Google Fonts hosts,
-# and version-checker.js fetches the latest release from api.github.com.
+# same-origin. The third-party allowances are load-bearing: the About
+# page loads the Buy Me a Coffee button script, which fetches its
+# font and images from the buymeacoffee and Google Fonts hosts,
+# version-checker.js fetches the latest release from api.github.com,
+# and style.css uses an Unsplash photo as a page background.
 _CONTENT_SECURITY_POLICY = (
     "default-src 'self'; "
     "script-src 'self' 'unsafe-inline' https://cdnjs.buymeacoffee.com; "
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-    "img-src 'self' data: blob: https://*.buymeacoffee.com; "
+    "img-src 'self' data: blob: https://*.buymeacoffee.com https://images.unsplash.com; "
     "font-src 'self' data: https://fonts.gstatic.com; "
     "connect-src 'self' https://api.github.com; "
     "frame-src 'self' https://*.buymeacoffee.com; "
