@@ -106,3 +106,20 @@ def test_email_change_notice_sender_returns_false_without_smtp(app):
     with app.app_context():
         assert send_email_change_notice(
             "old@test.local", "new@test.local") is False
+
+
+def test_change_email_route_notifies_old_address(
+        client, user_factory, monkeypatch):
+    """The separate /change-email route already required the password;
+    it now notifies the old address too, like the profile flow."""
+    calls = []
+    monkeypatch.setattr(
+        "backend.auth_routes.send_email_change_notice",
+        lambda old, new: calls.append((old, new)) or True)
+    user = user_factory()
+    new_email = f"moved2-{user['username']}@test.local"
+    r = client.post("/api/auth/change-email", headers=user["headers"],
+                    json={"new_email": new_email,
+                          "password": "TestPass123!"})
+    assert r.status_code == 200, r.get_data(as_text=True)
+    assert calls == [(f"{user['username']}@test.local", new_email)]
