@@ -793,6 +793,21 @@
             return;
         }
 
+        // CSV-02: neutralize formula injection. A value whose first
+        // non-space character is =, +, -, @, tab, or carriage return
+        // would be evaluated as a formula by spreadsheet apps on
+        // import. Prefixing a tab keeps the value inert, and the
+        // importer strips field values, so a re-imported export
+        // round-trips to the stored value.
+        const neutralizeCsvFormula = (value) => {
+            const text = String(value);
+            const first = text.trimStart()[0];
+            if (first === '=' || first === '+' || first === '-' || first === '@'
+                || first === '\t' || first === '\r') {
+                return '\t' + text;
+            }
+            return text;
+        };
         const headers = [
             'ProductName',
             'PurchaseDate',
@@ -812,7 +827,7 @@
             'ModelNumber',
             'WarrantyType',
         ];
-        const escapeField = (field) => `"${String(field).replace(/"/g, '""')}"`;
+        const escapeField = (field) => `"${neutralizeCsvFormula(String(field)).replace(/"/g, '""')}"`;
         let csv = headers.join(',') + '\n';
         displayWarranties.forEach((warranty) => {
             // JSON-encoded so values containing commas round-trip intact

@@ -4,6 +4,21 @@ import { loadWarranties, applyFilters } from '../controllers/warrantyListControl
 import { loadTags } from './tagManager.js';
 import { formatDateYYYYMMDD } from '../lib/dates.js';
 
+// CSV-02: neutralize formula injection. A value whose first non-space
+// character is =, +, -, @, tab, or carriage return would be evaluated
+// as a formula by spreadsheet apps on import. Prefixing a tab keeps
+// the value inert, and the importer strips field values, so a
+// re-imported export round-trips to the stored value.
+export function neutralizeCsvFormula(value) {
+  const text = String(value);
+  const first = text.trimStart()[0];
+  if (first === '=' || first === '+' || first === '-' || first === '@'
+      || first === '\t' || first === '\r') {
+    return '\t' + text;
+  }
+  return text;
+}
+
 export async function exportWarranties() {
   const warranties = getWarranties();
   if (!warranties.length) {
@@ -90,7 +105,7 @@ export async function exportWarranties() {
       warranty.model_number || '',
       warranty.warranty_type || '',
     ];
-    csv += `${row.map((field) => `"${String(field).replace(/"/g, '""')}"`).join(',')}\n`;
+    csv += `${row.map((field) => `"${neutralizeCsvFormula(String(field)).replace(/"/g, '""')}"`).join(',')}\n`;
   });
 
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
