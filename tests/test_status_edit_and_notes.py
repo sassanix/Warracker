@@ -66,3 +66,33 @@ def test_warranty_list_stops_after_logout_before_second_fetch():
     archived_fetch = controller.index("listWarranties({ scope, archived: true })")
     between = controller[first_fetch:archived_fetch]
     assert "if (!authService.isAuthenticated())" in between
+
+
+def test_notes_modal_renders_team_entry_thread():
+    """Team note entries (next release): the notes modal must carry the
+    thread container and add box, fetch entries when it opens, and
+    render each entry's author and time with textContent, never
+    interpolated into HTML."""
+    notes = (REPO / "frontend" / "js" / "components" / "notes.js").read_text()
+    assert 'id="notesThread"' in notes
+    assert 'id="notesAddTextarea"' in notes
+    assert 'id="addNoteEntryBtn"' in notes
+    assert "fetch(`/api/warranties/${state.warrantyId}/notes`" in notes
+    assert "new Date(entry.created_at).toLocaleString()" in notes
+    assert "meta.textContent = entry.username + ' - ' + when" in notes
+    assert "text.textContent = entry.text" in notes
+    assert "refs.editBtn.disabled = !canEdit" in notes
+    # The live modal markup is the legacy one script.js injects at load
+    # time; the module reuses it when it exists. It must carry the same
+    # thread and add-box elements, or the modal opens without them.
+    legacy = (REPO / "frontend" / "script.js").read_text()
+    assert 'id="notesThread"' in legacy
+    assert 'id="notesAddTextarea"' in legacy
+    assert 'id="addNoteEntryBtn"' in legacy
+
+
+def test_note_entry_endpoints_exist():
+    routes = (REPO / "backend" / "warranties_routes.py").read_text()
+    assert "'/warranties/<int:warranty_id>/notes', methods=['GET']" in routes
+    assert "'/warranties/<int:warranty_id>/notes', methods=['POST']" in routes
+    assert "'/warranties/<int:warranty_id>/notes/<int:entry_id>', methods=['DELETE']" in routes

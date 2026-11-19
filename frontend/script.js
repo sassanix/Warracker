@@ -6316,6 +6316,11 @@ if (!document.getElementById('notesModal')) {
             <div class="modal-body">
                 <div id="notesModalContent" style="white-space: pre-line;"></div>
                 <textarea id="notesModalTextarea" style="display:none;width:100%;min-height:100px;"></textarea>
+                <div id="notesThread" style="margin-top: 12px;"></div>
+                <div id="notesAddBox" style="margin-top: 12px;">
+                    <textarea id="notesAddTextarea" placeholder="Add a note for the team..." style="width:100%;min-height:60px;"></textarea>
+                    <button class="btn btn-primary" id="addNoteEntryBtn" style="margin-top: 6px;">Add Note</button>
+                </div>
             </div>
             <div class="modal-footer" id="notesModalFooter">
                 <button class="btn btn-secondary" id="editNotesBtn">Edit Notes</button>

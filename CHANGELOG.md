@@ -8,6 +8,8 @@
   - _Files: `Dockerfile`_
 - **CI workflow pinning and Renovate action update (#279, #282):** pinned `actions/checkout`, `actions/setup-python`, the CI `postgres:15` service image, and Python version in the test and Docker workflows by commit SHA/digest for supply-chain safety, and updated `renovatebot/github-action` from v46.3.10 to v46.3.14.
   - _Files: `.github/workflows/tests.yml`, `.github/workflows/docker-build.yml`, `.github/workflows/renovate.yml`_
+- **Team notes on warranties:** anyone who can view a warranty can now add a note to it, and each entry shows the username of the person who added it and the time it was added. Entries live in a new table, so the warranty's own notes field is untouched and stays editable only by the owner or an admin. An entry can be deleted by its author, the warranty owner, or an admin. With global view off, or restricted to admins, non-owners can neither view nor add entries.
+  - _Files: `backend/migrations/056_create_warranty_note_entries.sql`, `backend/warranties_routes.py`, `frontend/js/components/notes.js`, `frontend/script.js`, `tests/test_warranty_note_entries.py`, `tests/test_status_edit_and_notes.py`_
 
 ## 1.0.7 - 2026-11-23
 

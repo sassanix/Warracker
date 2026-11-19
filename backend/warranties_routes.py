@@ -2876,6 +2876,167 @@ def get_claims(warranty_id):
         if conn:
             release_db_connection(conn)
 
+
+def _warranty_viewable_by(cur, warranty_id, user_id, is_admin):
+    """Return the warranty's (id, user_id) row if the caller may view it.
+
+    Admins and owners always may. Other users may only when global view
+    is enabled and not restricted to admins, matching get_warranty_debug
+    and get_claims. Returns None both when the warranty does not exist
+    and when the caller may not view it, so callers answer 404 in either
+    case without revealing which one it is.
+    """
+    cur.execute("SELECT id, user_id FROM warranties WHERE id = %s", (warranty_id,))
+    row = cur.fetchone()
+    if not row:
+        return None
+    if is_admin or row[1] == user_id:
+        return row
+    cur.execute("SELECT key, value FROM site_settings WHERE key IN ('global_view_enabled', 'global_view_admin_only')")
+    settings = {r[0]: r[1] for r in cur.fetchall()}
+    global_view_enabled = settings.get('global_view_enabled', 'true').lower() == 'true'
+    admin_only = settings.get('global_view_admin_only', 'false').lower() == 'true'
+    if global_view_enabled and not admin_only:
+        return row
+    return None
+
+
+def _note_entry_dict(row):
+    return {
+        'id': row[0],
+        'warranty_id': row[1],
+        'user_id': row[2],
+        'username': row[3],
+        'text': row[4],
+        'created_at': row[5].isoformat() if row[5] else None,
+    }
+
+
+@warranties_bp.route('/warranties/<int:warranty_id>/notes', methods=['GET'])
+@token_required
+def get_warranty_note_entries(warranty_id):
+    """List the team note entries on a warranty, oldest first.
+
+    Viewable by anyone who may view the warranty: the owner, an admin,
+    or any authenticated user when global view allows it.
+    """
+    conn = None
+    cur = None
+    try:
+        user_id = request.user['id']
+        is_admin = request.user.get('is_admin', False)
+        conn = get_db_connection()
+        cur = conn.cursor()
+        if not _warranty_viewable_by(cur, warranty_id, user_id, is_admin):
+            return jsonify({'error': 'Warranty not found'}), 404
+        cur.execute("""
+            SELECT e.id, e.warranty_id, e.user_id, u.username, e.note_text, e.created_at
+            FROM warranty_note_entries e
+            JOIN users u ON e.user_id = u.id
+            WHERE e.warranty_id = %s
+            ORDER BY e.created_at ASC, e.id ASC
+        """, (warranty_id,))
+        return jsonify([_note_entry_dict(row) for row in cur.fetchall()]), 200
+    except Exception as e:
+        logger.error(f"Error getting note entries: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            release_db_connection(conn)
+
+
+@warranties_bp.route('/warranties/<int:warranty_id>/notes', methods=['POST'])
+@token_required
+def create_warranty_note_entry(warranty_id):
+    """Add a team note entry to a warranty.
+
+    Allowed for anyone who may view the warranty. The entry is attributed
+    to the caller with the current time; the warranty's own notes field
+    is untouched.
+    """
+    conn = None
+    cur = None
+    try:
+        user_id = request.user['id']
+        is_admin = request.user.get('is_admin', False)
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        text = data.get('text')
+        if not isinstance(text, str) or not text.strip():
+            return jsonify({'error': 'Note text is required'}), 400
+        text = text.strip()
+        if len(text) > 5000:
+            return jsonify({'error': 'Note text must be 5000 characters or fewer'}), 400
+        conn = get_db_connection()
+        cur = conn.cursor()
+        if not _warranty_viewable_by(cur, warranty_id, user_id, is_admin):
+            return jsonify({'error': 'Warranty not found'}), 404
+        cur.execute("""
+            INSERT INTO warranty_note_entries (warranty_id, user_id, note_text)
+            VALUES (%s, %s, %s)
+            RETURNING id, created_at
+        """, (warranty_id, user_id, text))
+        entry_id, created_at = cur.fetchone()
+        conn.commit()
+        return jsonify({
+            'id': entry_id,
+            'warranty_id': warranty_id,
+            'user_id': user_id,
+            'username': request.user.get('username'),
+            'text': text,
+            'created_at': created_at.isoformat() if created_at else None,
+        }), 201
+    except Exception as e:
+        logger.error(f"Error creating note entry: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            release_db_connection(conn)
+
+
+@warranties_bp.route('/warranties/<int:warranty_id>/notes/<int:entry_id>', methods=['DELETE'])
+@token_required
+def delete_warranty_note_entry(warranty_id, entry_id):
+    """Delete a team note entry.
+
+    Allowed for the entry's author, the warranty owner, or an admin.
+    """
+    conn = None
+    cur = None
+    try:
+        user_id = request.user['id']
+        is_admin = request.user.get('is_admin', False)
+        conn = get_db_connection()
+        cur = conn.cursor()
+        warranty = _warranty_viewable_by(cur, warranty_id, user_id, is_admin)
+        if not warranty:
+            return jsonify({'error': 'Warranty not found'}), 404
+        cur.execute("""
+            SELECT id, user_id FROM warranty_note_entries
+            WHERE id = %s AND warranty_id = %s
+        """, (entry_id, warranty_id))
+        entry = cur.fetchone()
+        if not entry:
+            return jsonify({'error': 'Note entry not found'}), 404
+        if not (is_admin or entry[1] == user_id or warranty[1] == user_id):
+            return jsonify({'error': 'Only the entry author, the warranty owner, or an admin may delete this note'}), 403
+        cur.execute("DELETE FROM warranty_note_entries WHERE id = %s", (entry_id,))
+        conn.commit()
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        logger.error(f"Error deleting note entry: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            release_db_connection(conn)
+
 @warranties_bp.route('/warranties/<int:warranty_id>/claims/<int:claim_id>', methods=['PUT'])
 @token_required
 def update_claim(warranty_id, claim_id):

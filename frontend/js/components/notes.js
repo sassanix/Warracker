@@ -10,6 +10,11 @@ const DEFAULT_MODAL_HTML = `
 		<div class="modal-body">
 			<div id="notesModalContent" style="white-space: pre-line;"></div>
 			<textarea id="notesModalTextarea" style="display:none;width:100%;min-height:100px;"></textarea>
+			<div id="notesThread" style="margin-top: 12px;"></div>
+			<div id="notesAddBox" style="margin-top: 12px;">
+				<textarea id="notesAddTextarea" placeholder="Add a note for the team..." style="width:100%;min-height:60px;"></textarea>
+				<button class="btn btn-primary" id="addNoteEntryBtn" style="margin-top: 6px;">Add Note</button>
+			</div>
 		</div>
 		<div class="modal-footer" id="notesModalFooter">
 			<button class="btn btn-secondary" id="editNotesBtn">${(window.i18next && window.i18next.t('actions.edit_notes') || 'Edit Notes')}</button>
@@ -68,6 +73,9 @@ function refreshDomRefs() {
 		modal: document.getElementById('notesModal'),
 		content: document.getElementById('notesModalContent'),
 		textarea: document.getElementById('notesModalTextarea'),
+		thread: document.getElementById('notesThread'),
+		addTextarea: document.getElementById('notesAddTextarea'),
+		addBtn: document.getElementById('addNoteEntryBtn'),
 		editBtn: document.getElementById('editNotesBtn'),
 		saveBtn: document.getElementById('saveNotesBtn'),
 		cancelBtn: document.getElementById('cancelEditNotesBtn'),
@@ -83,6 +91,7 @@ function bindEvents() {
 	dom.saveBtn?.addEventListener('click', saveNotes);
 	dom.cancelBtn?.addEventListener('click', exitEditMode);
 	dom.editWarrantyBtn?.addEventListener('click', handleEditWarranty);
+	dom.addBtn?.addEventListener('click', addNoteEntry);
 	dom.modal._notesBound = true;
 }
 
@@ -272,6 +281,112 @@ async function saveNotes() {
 	}
 }
 
+// Team note entries: anyone who can view the warranty may add one,
+// and each entry shows its author and time. Deleting is for the entry
+// author, the warranty owner, or an admin. Entry text and usernames
+// are set with textContent, never interpolated into HTML.
+function canDeleteNoteEntry(entry) {
+	const currentUser = callIfExists(window.auth?.getCurrentUser) || null;
+	if (!currentUser) return false;
+	if (Boolean(currentUser.is_admin)) return true;
+	if (Number(entry.user_id) === Number(currentUser.id)) return true;
+	if (state.warranty && Number(state.warranty.user_id) === Number(currentUser.id)) return true;
+	return false;
+}
+
+function renderNoteEntries(entries) {
+	if (!dom || !dom.thread) return;
+	dom.thread.innerHTML = '';
+	if (!entries || entries.length === 0) return;
+	for (const entry of entries) {
+		const row = document.createElement('div');
+		row.className = 'note-entry';
+		row.style.cssText = 'border-top: 1px solid var(--border-color, #ddd); padding: 8px 0;';
+		const meta = document.createElement('div');
+		meta.className = 'note-entry-meta';
+		meta.style.cssText = 'font-size: 0.85em; color: var(--text-muted, #666);';
+		const when = entry.created_at ? new Date(entry.created_at).toLocaleString() : '';
+		meta.textContent = entry.username + ' - ' + when;
+		const text = document.createElement('div');
+		text.className = 'note-entry-text';
+		text.style.whiteSpace = 'pre-line';
+		text.textContent = entry.text;
+		row.appendChild(meta);
+		row.appendChild(text);
+		if (canDeleteNoteEntry(entry)) {
+			const del = document.createElement('button');
+			del.type = 'button';
+			del.className = 'btn btn-sm btn-danger note-entry-delete';
+			del.textContent = 'Delete';
+			del.addEventListener('click', () => deleteNoteEntry(entry.id));
+			row.appendChild(del);
+		}
+		dom.thread.appendChild(row);
+	}
+}
+
+async function loadNoteEntries() {
+	if (!dom || !state.warrantyId) return;
+	const token = getToken();
+	if (!token) return;
+	try {
+		const response = await fetch(`/api/warranties/${state.warrantyId}/notes`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		if (!response.ok) return;
+		renderNoteEntries(await response.json());
+	} catch (error) {
+		console.error('[notes] Failed to load note entries', error);
+	}
+}
+
+async function addNoteEntry() {
+	if (!dom || !state.warrantyId) return;
+	const text = dom.addTextarea.value.trim();
+	if (!text) return;
+	const token = getToken();
+	if (!token) {
+		showToast((window.i18next && window.i18next.t('messages.authentication_required') || 'Authentication required'), 'error');
+		return;
+	}
+	try {
+		const response = await fetch(`/api/warranties/${state.warrantyId}/notes`, {
+			method: 'POST',
+			headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+			body: JSON.stringify({ text }),
+		});
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}));
+			throw new Error(errorData.error || `Failed to add note (Status: ${response.status})`);
+		}
+		dom.addTextarea.value = '';
+		await loadNoteEntries();
+	} catch (error) {
+		console.error('[notes] Failed to add note entry', error);
+		showToast(error.message || 'Failed to add note', 'error');
+	}
+}
+
+async function deleteNoteEntry(entryId) {
+	if (!dom || !state.warrantyId) return;
+	const token = getToken();
+	if (!token) return;
+	try {
+		const response = await fetch(`/api/warranties/${state.warrantyId}/notes/${entryId}`, {
+			method: 'DELETE',
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}));
+			throw new Error(errorData.error || `Failed to delete note (Status: ${response.status})`);
+		}
+		await loadNoteEntries();
+	} catch (error) {
+		console.error('[notes] Failed to delete note entry', error);
+		showToast(error.message || 'Failed to delete note', 'error');
+	}
+}
+
 export function showNotesModal(notes, warrantyOrId = null) {
 	const refs = ensureModal();
 	// If warrantyOrId is already a warranty object, use it directly
@@ -308,7 +423,9 @@ export function showNotesModal(notes, warrantyOrId = null) {
 			refs.editBtn.title = 'View only - not your warranty';
 		}
 	}
+	if (refs.addTextarea) refs.addTextarea.value = '';
 	exitEditMode();
+	loadNoteEntries();
 	refs.modal.classList.add('active');
 }
 
