@@ -74,6 +74,8 @@
   - _Files: `frontend/js/components/importExport.js`, `frontend/status.js`, `tests/test_csv_formula_neutralization.py`_
 - **Security hardening, CSV and claim dates:** the importer and the claim endpoints accepted anything the date parser would read, so "03/04/2024" silently became March 4 (month-first). Only ISO YYYY-MM-DD and named-month dates are accepted now (15 Mar 2024, 15 March 2024, Mar 15, 2024, March 15, 2024, and the comma-less variants). Anything else, including ambiguous numeric dates, is rejected with an error naming the accepted formats. Imports that relied on flexible numeric dates need their dates rewritten.
   - _Files: `backend/warranties_routes.py`, `tests/test_csv_date_formats.py`_
+- **SSO login fixed:** the single-use code exchange added for OIDC sign-in used `await` inside a plain (non-async) page-load callback, so the whole login redirect script failed to parse and sign-in through an identity provider stalled at "Authenticating, please wait..." with no error shown. The callback is now async, so the code exchange runs, the token and user info are stored, and sign-in completes. The no-params fallback redirect to the login page works again too.
+  - _Files: `frontend/auth-redirect.html`, `tests/test_auth_redirect_script.py`_
 
 ## 1.0.6 - 2026-11-10
 
