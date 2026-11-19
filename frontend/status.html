@@ -39,6 +39,14 @@
     <!-- Load fix for auth buttons -->
     <script src="fix-auth-buttons-loader.js?v=20250119001"></script>
     <script src="script.js?v=20261101003" defer></script> <!-- Added script.js -->
+    <!-- Serial-number inputs for the edit modal: script.js calls the
+         bare window.addSerialNumberInput, which only exists on pages
+         that load the js/index.js module tree. The status page does
+         not load that tree (it would bootstrap the dashboard), so
+         load just this import-free module; it exposes the function
+         on window itself. Without it the Edit button throws
+         ReferenceError and the modal never opens. -->
+    <script type="module" src="js/components/serialNumbers.js?v=20261119001"></script>
     <style>
         .user-menu {
             position: relative;

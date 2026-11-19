@@ -2895,7 +2895,20 @@ async function openEditModal(warranty) {
         
         // Use the original input method if available, otherwise fall back to previous logic
         if (!warranty.is_lifetime) {
-            if (warranty.original_input_method === 'exact_date') {
+            // The status page passes raw API objects that never went
+            // through the list processing that computes
+            // original_input_method, so infer the exact-date method
+            // from zero duration plus an expiration date, mirroring
+            // the module edit modal. Without this, an exact-date
+            // warranty opens with the duration method selected and
+            // all-zero duration, and the legacy save validation
+            // refuses it.
+            const useExactDate = warranty.original_input_method === 'exact_date' ||
+                ((warranty.warranty_duration_years || 0) === 0 &&
+                 (warranty.warranty_duration_months || 0) === 0 &&
+                 (warranty.warranty_duration_days || 0) === 0 &&
+                 !!warranty.expiration_date);
+            if (useExactDate) {
                 // Use exact date method
                 editExactDateMethodRadio.checked = true;
                 editDurationMethodRadio.checked = false;

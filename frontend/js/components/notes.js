@@ -296,6 +296,18 @@ export function showNotesModal(notes, warrantyOrId = null) {
 			refs.editWarrantyBtn.title = 'View only - not your warranty';
 		}
 	}
+	if (refs.editBtn) {
+		// Notes save through the same ownership-gated PUT, so the
+		// Edit Notes button gets the same treatment: disabled for
+		// viewers who are neither the owner nor an admin.
+		const canEdit = canEditWarranty(warranty);
+		refs.editBtn.disabled = !canEdit;
+		if (canEdit) {
+			refs.editBtn.removeAttribute('title');
+		} else {
+			refs.editBtn.title = 'View only - not your warranty';
+		}
+	}
 	exitEditMode();
 	refs.modal.classList.add('active');
 }
