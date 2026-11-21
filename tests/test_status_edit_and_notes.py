@@ -38,3 +38,31 @@ def test_notes_modal_disables_edit_notes_for_non_owners():
     notes = (REPO / "frontend" / "js" / "components" / "notes.js").read_text()
     assert "refs.editBtn.disabled = !canEdit" in notes
     assert "refs.editBtn.title = 'View only - not your warranty'" in notes
+    assert "refs.editWarrantyBtn.disabled = !canEdit" in notes
+    assert "refs.editWarrantyBtn.title = 'View only - not your warranty'" in notes
+
+
+def test_status_page_disables_edit_button_for_non_owners():
+    status_js = (REPO / "frontend" / "status.js").read_text()
+    assert "function canEditWarranty(warrantyUserId)" in status_js
+    assert "user_id: warranty.user_id" in status_js
+    assert 'disabled title="View only - not your warranty"' in status_js
+
+
+def test_total_value_card_has_z_index_above_charts():
+    css = (REPO / "frontend" / "style.css").read_text()
+    selector = '.status-card[data-status="total_value"] {'
+    assert selector in css
+    idx = css.index(selector)
+    block = css[idx:css.index("}", idx) + 1]
+    assert "z-index:" in block
+
+
+def test_warranty_list_stops_after_logout_before_second_fetch():
+    controller = (
+        REPO / "frontend" / "js" / "controllers" / "warrantyListController.js"
+    ).read_text()
+    first_fetch = controller.index("const primary = await listWarranties(")
+    archived_fetch = controller.index("listWarranties({ scope, archived: true })")
+    between = controller[first_fetch:archived_fetch]
+    assert "if (!authService.isAuthenticated())" in between

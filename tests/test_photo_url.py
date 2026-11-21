@@ -263,3 +263,29 @@ def test_photo_fetch_timeout_env_var(monkeypatch):
     probe_app.config["TESTING"] = True
     Config.init_app(probe_app)
     assert probe_app.config["PHOTO_FETCH_TIMEOUT_SECONDS"] == 12.0
+
+
+def test_photo_fetch_timeout_env_var_enforced_end_to_end(monkeypatch):
+    import time
+    from flask import Flask
+    from backend.config import Config
+    from backend.warranties_routes import download_product_photo
+
+    monkeypatch.setenv("PHOTO_FETCH_TIMEOUT_SECONDS", "1")
+    probe_app = Flask(__name__)
+    probe_app.config["TESTING"] = True
+    Config.init_app(probe_app)
+    probe_app.config["ALLOW_PRIVATE_PHOTO_URLS"] = True
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _DripHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        url = f"http://127.0.0.1:{server.server_address[1]}/drip.png"
+        start = time.monotonic()
+        with probe_app.app_context():
+            with pytest.raises(ValueError, match="Timed out"):
+                download_product_photo(url)
+        assert time.monotonic() - start < 10
+    finally:
+        server.shutdown()

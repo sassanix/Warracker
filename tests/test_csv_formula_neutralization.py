@@ -89,3 +89,30 @@ def test_neutralize_csv_formula_behavior_in_both_exporters():
             capture_output=True, text=True,
         )
         assert r.returncode == 0, f"{name}: {r.stderr}"
+
+
+def test_csv_import_strips_tab_neutralization_prefix_on_round_trip(
+        client, user_factory, db_connection):
+    import io
+    user = user_factory()
+    csv_body = (
+        "ProductName,PurchaseDate,IsLifetime,WarrantyDurationYears,"
+        "WarrantyDurationMonths,WarrantyDurationDays,ExpirationDate,"
+        "Status,PurchasePrice,SerialNumber,ProductURL,Tags,Vendor\n"
+        '"\t=SUM(1,2)",2025-01-15,FALSE,1,0,0,,"",,,,,"\t+Acme"\n'
+    )
+    r = client.post(
+        "/api/warranties/import",
+        headers=user["headers"],
+        data={"csv_file": (io.BytesIO(csv_body.encode("utf-8")), "export.csv")},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 200, r.get_data(as_text=True)
+    assert r.get_json()["success_count"] == 1
+    with db_connection.cursor() as cur:
+        cur.execute(
+            "SELECT product_name, vendor FROM warranties WHERE product_name = %s",
+            ("=SUM(1,2)",),
+        )
+        row = cur.fetchone()
+        assert row == ("=SUM(1,2)", "+Acme")

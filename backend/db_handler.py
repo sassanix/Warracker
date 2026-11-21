@@ -230,6 +230,12 @@ def release_db_connection(conn):
             except Exception as e:
                 logger.warning(f"[DB_HANDLER] Rollback on release failed, discarding connection: {e}")
                 broken = True
+        if not broken and conn.autocommit:
+            try:
+                conn.autocommit = False
+            except Exception as e:
+                logger.warning(f"[DB_HANDLER] Resetting autocommit on release failed, discarding connection: {e}")
+                broken = True
         the_pool.putconn(conn, close=broken)
     except Exception as e:
         logger.error(f"[DB_HANDLER] Error releasing connection to pool: {e}. Discarding it.")

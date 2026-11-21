@@ -29,3 +29,17 @@ def test_docker_compose_env_indentation_and_secret_var():
     src = "\n".join(lines)
     assert "SECRET_KEY=${SECRET_KEY:-}" in src
     assert "APP_SECRET_KEY" not in src
+
+
+def test_root_compose_does_not_mount_missing_init_sql():
+    with open(os.path.join(REPO_ROOT, "docker-compose.yml"),
+              encoding="utf-8") as fh:
+        src = fh.read()
+    assert "init.sql" not in src
+
+
+def test_nginx_suppresses_version_banner():
+    with open(os.path.join(REPO_ROOT, "nginx.conf"),
+              encoding="utf-8") as fh:
+        src = fh.read()
+    assert "server_tokens off;" in src

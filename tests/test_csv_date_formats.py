@@ -132,3 +132,27 @@ def test_claim_dates_use_the_same_allow_list(
     r = client.put(f"/api/warranties/{wid}/claims/{cid}", headers=h,
                    json={"claim_date": "15 March 2024"})
     assert r.status_code == 200, r.get_data(as_text=True)
+
+    r = client.put(f"/api/warranties/{wid}/claims/{cid}", headers=h,
+                   json={"claim_date": "March 15 2024",
+                         "resolution_date": "15 March, 2024"})
+    assert r.status_code == 200, r.get_data(as_text=True)
+
+
+def test_csv_import_accepts_full_month_commaless_and_day_comma_dates(
+        client, user_factory, db_connection):
+    user = user_factory()
+    body = (
+        HEADER
+        + _row("CommalessFullMonth", "March 15 2024", '"15 March, 2026"',
+               duration_years=0)
+    )
+    r = _import(client, user["headers"], body)
+    assert r.status_code == 200, r.get_data(as_text=True)
+    assert r.get_json()["success_count"] == 1, r.get_json()
+    with db_connection.cursor() as cur:
+        cur.execute(
+            "SELECT purchase_date, expiration_date FROM warranties "
+            "WHERE product_name = %s",
+            ("CommalessFullMonth",))
+        assert cur.fetchone() == (date(2024, 3, 15), date(2026, 3, 15))

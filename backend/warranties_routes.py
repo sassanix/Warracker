@@ -2000,8 +2000,7 @@ def import_warranties():
         return jsonify({"error": f"Failed to import CSV: {str(e)}"}), 500
     finally:
         if conn:
-            conn.autocommit = True # Reset autocommit
-            release_db_connection(conn) 
+            release_db_connection(conn)
 
 @warranties_bp.route('/admin/warranties', methods=['GET'])
 @admin_required

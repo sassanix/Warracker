@@ -62,3 +62,27 @@ def test_total_value_currency_rules(client, user_factory, warranty_factory,
 
     st = _stats(client, h)
     assert st["total_value"] == 250  # 100 (no currency) + 150 (NULL), not 500
+
+
+def test_statistics_payloads_include_owner_user_id(
+        client, user_factory, warranty_factory):
+    alice = user_factory()
+    bob = user_factory()
+
+    w_alice = warranty_factory(alice["headers"], product_name="Alice Item").get_json()["id"]
+    w_bob = warranty_factory(bob["headers"], product_name="Bob Item").get_json()["id"]
+
+    me_alice = client.get("/api/auth/user", headers=alice["headers"]).get_json()
+    me_bob = client.get("/api/auth/user", headers=bob["headers"]).get_json()
+    alice_id = me_alice["user"]["id"] if "user" in me_alice else me_alice["id"]
+    bob_id = me_bob["user"]["id"] if "user" in me_bob else me_bob["id"]
+
+    personal = _stats(client, alice["headers"])
+    by_id = {w["id"]: w for w in personal["all_warranties"]}
+    assert by_id[w_alice]["user_id"] == alice_id
+
+    r_global = client.get("/api/statistics/global", headers=bob["headers"])
+    assert r_global.status_code == 200, r_global.get_data(as_text=True)
+    global_by_id = {w["id"]: w for w in r_global.get_json()["all_warranties"]}
+    assert global_by_id[w_alice]["user_id"] == alice_id
+    assert global_by_id[w_bob]["user_id"] == bob_id
