@@ -11,9 +11,11 @@ import { formatDateYYYYMMDD } from '../lib/dates.js';
 // re-imported export round-trips to the stored value.
 export function neutralizeCsvFormula(value) {
   const text = String(value);
-  const first = text.trimStart()[0];
-  if (first === '=' || first === '+' || first === '-' || first === '@'
-      || first === '\t' || first === '\r') {
+  const firstNonSpace = text.replace(/^ +/, '')[0];
+  const firstNonWhitespace = text.trimStart()[0];
+  if (firstNonSpace === '\t' || firstNonSpace === '\r'
+      || firstNonWhitespace === '=' || firstNonWhitespace === '+'
+      || firstNonWhitespace === '-' || firstNonWhitespace === '@') {
     return '\t' + text;
   }
   return text;

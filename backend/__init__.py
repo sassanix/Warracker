@@ -180,6 +180,10 @@ def ensure_owner_exists():
 # font and images from the buymeacoffee and Google Fonts hosts,
 # version-checker.js fetches the latest release from api.github.com,
 # and style.css uses an Unsplash photo as a page background.
+# upgrade-insecure-requests is intentionally omitted: self-hosted
+# installs on plain HTTP (LAN IP, localhost, Unraid, Proxmox, TrueNAS)
+# would otherwise have browsers rewrite same-origin subresources to
+# https:// and fail to load.
 _CONTENT_SECURITY_POLICY = (
     "default-src 'self'; "
     "script-src 'self' 'unsafe-inline' https://cdnjs.buymeacoffee.com; "
@@ -191,8 +195,7 @@ _CONTENT_SECURITY_POLICY = (
     "object-src 'none'; "
     "base-uri 'self'; "
     "form-action 'self'; "
-    "frame-ancestors 'self'; "
-    "upgrade-insecure-requests"
+    "frame-ancestors 'self'"
 )
 
 

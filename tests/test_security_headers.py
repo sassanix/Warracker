@@ -60,3 +60,9 @@ def test_csp_blocks_plugins_and_foreign_framing():
     assert "frame-ancestors 'self'" in _CONTENT_SECURITY_POLICY
     assert "base-uri 'self'" in _CONTENT_SECURITY_POLICY
     assert "form-action 'self'" in _CONTENT_SECURITY_POLICY
+
+
+def test_csp_does_not_force_https_for_plain_http_installs():
+    # Plain-HTTP self-hosted installs (LAN IPs, localhost, Unraid,
+    # Proxmox, TrueNAS) break if browsers rewrite subresources to https.
+    assert "upgrade-insecure-requests" not in _CONTENT_SECURITY_POLICY

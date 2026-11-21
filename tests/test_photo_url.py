@@ -222,6 +222,7 @@ def test_slow_drip_fetch_times_out(app):
     server = ThreadingHTTPServer(("127.0.0.1", 0), _DripHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
+    previous_timeout = app.config.get("PHOTO_FETCH_TIMEOUT_SECONDS")
     try:
         url = f"http://127.0.0.1:{server.server_address[1]}/drip.png"
         app.config["ALLOW_PRIVATE_PHOTO_URLS"] = True
@@ -232,6 +233,33 @@ def test_slow_drip_fetch_times_out(app):
                 download_product_photo(url)
         assert time.monotonic() - start < 10
     finally:
-        app.config.pop("PHOTO_FETCH_TIMEOUT_SECONDS", None)
+        if previous_timeout is None:
+            app.config.pop("PHOTO_FETCH_TIMEOUT_SECONDS", None)
+        else:
+            app.config["PHOTO_FETCH_TIMEOUT_SECONDS"] = previous_timeout
         app.config["ALLOW_PRIVATE_PHOTO_URLS"] = False
         server.shutdown()
+
+
+def test_photo_fetch_timeout_env_var(monkeypatch):
+    from flask import Flask
+    from backend.config import Config
+
+    monkeypatch.delenv("PHOTO_FETCH_TIMEOUT_SECONDS", raising=False)
+    assert Config._get_photo_fetch_timeout_seconds() == 60
+
+    monkeypatch.setenv("PHOTO_FETCH_TIMEOUT_SECONDS", "15")
+    assert Config._get_photo_fetch_timeout_seconds() == 15.0
+
+    monkeypatch.setenv("PHOTO_FETCH_TIMEOUT_SECONDS", "2.5")
+    assert Config._get_photo_fetch_timeout_seconds() == 2.5
+
+    for invalid in ("", "   ", "0", "-5", "abc", "nan", "inf", "-inf"):
+        monkeypatch.setenv("PHOTO_FETCH_TIMEOUT_SECONDS", invalid)
+        assert Config._get_photo_fetch_timeout_seconds() == 60, invalid
+
+    monkeypatch.setenv("PHOTO_FETCH_TIMEOUT_SECONDS", "12")
+    probe_app = Flask(__name__)
+    probe_app.config["TESTING"] = True
+    Config.init_app(probe_app)
+    assert probe_app.config["PHOTO_FETCH_TIMEOUT_SECONDS"] == 12.0

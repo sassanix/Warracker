@@ -127,6 +127,29 @@ class Config:
         
         logger.info(f"Max upload file size set to: {max_upload_mb}MB")
         return max_upload_mb
+
+    DEFAULT_PHOTO_FETCH_TIMEOUT_SECONDS = 60
+
+    @staticmethod
+    def _get_photo_fetch_timeout_seconds():
+        raw = os.environ.get('PHOTO_FETCH_TIMEOUT_SECONDS', '').strip()
+        if not raw:
+            return Config.DEFAULT_PHOTO_FETCH_TIMEOUT_SECONDS
+        try:
+            timeout = float(raw)
+        except ValueError:
+            logger.warning(
+                f"PHOTO_FETCH_TIMEOUT_SECONDS={raw!r} was not a valid number, "
+                f"defaulting to {Config.DEFAULT_PHOTO_FETCH_TIMEOUT_SECONDS}s."
+            )
+            return Config.DEFAULT_PHOTO_FETCH_TIMEOUT_SECONDS
+        if timeout != timeout or timeout in (float('inf'), float('-inf')) or timeout <= 0:
+            logger.warning(
+                f"PHOTO_FETCH_TIMEOUT_SECONDS={raw!r} must be positive and finite, "
+                f"defaulting to {Config.DEFAULT_PHOTO_FETCH_TIMEOUT_SECONDS}s."
+            )
+            return Config.DEFAULT_PHOTO_FETCH_TIMEOUT_SECONDS
+        return timeout
     
     # Email Configuration
     EMAIL_CHANGE_TOKEN_EXPIRATION_HOURS = 24
@@ -220,6 +243,7 @@ class Config:
         # Set upload configuration
         max_upload_mb = Config._get_max_upload_mb()
         app.config['MAX_CONTENT_LENGTH'] = max_upload_mb * 1024 * 1024
+        app.config['PHOTO_FETCH_TIMEOUT_SECONDS'] = Config._get_photo_fetch_timeout_seconds()
         
         # Log configuration status
         logger.info("Application configuration initialized successfully")

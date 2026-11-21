@@ -21,7 +21,9 @@ CSV_DATE_FORMATS = (
     '%b %d, %Y',  # Mar 15, 2024
     '%B %d, %Y',  # March 15, 2024
     '%d %b, %Y',  # 15 Mar, 2024
+    '%d %B, %Y',  # 15 March, 2024
     '%b %d %Y',   # Mar 15 2024
+    '%B %d %Y',   # March 15 2024
 )
 
 
