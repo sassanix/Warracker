@@ -171,16 +171,19 @@ class Config:
     MAX_COOKIE_SIZE = 4093  # Slightly under 4KB limit
     USE_X_SENDFILE = False  # Serve files directly via Flask; nginx is not configured to handle X-Sendfile
     
-    DB_VARS = ('DB_USER', 'DB_PASSWORD', 'DB_ADMIN_USER', 'DB_ADMIN_PASSWORD')
+    REQUIRED_DB_VARS = ('DB_USER', 'DB_PASSWORD')
+    OPTIONAL_DB_ADMIN_VARS = ('DB_ADMIN_USER', 'DB_ADMIN_PASSWORD')
+    DB_VARS = REQUIRED_DB_VARS + OPTIONAL_DB_ADMIN_VARS
 
     @staticmethod
     def _missing_db_vars(app):
         """Return required database credential variables with no value.
 
-        DATABASE_URL can supply the application user and password, as it
-        already takes precedence in the database handlers. The separate
-        admin credentials remain required because migrations use them to
-        manage the application role.
+        DB_USER and DB_PASSWORD are required, though DATABASE_URL can
+        supply them because it takes precedence in the database handlers.
+        DB_ADMIN_USER and DB_ADMIN_PASSWORD are optional (only used by
+        the optional 010_configure_admin_roles.sql migration) and have no
+        built-in defaults; if one is set, the other must also be set.
         """
         if app.config.get('TESTING'):
             return []
@@ -194,7 +197,15 @@ class Config:
             if parsed.password and not values['DB_PASSWORD']:
                 values['DB_PASSWORD'] = unquote(parsed.password)
 
-        return [var for var, value in values.items() if not value]
+        missing = [var for var in Config.REQUIRED_DB_VARS if not values[var]]
+        admin_user_set = bool(values['DB_ADMIN_USER'])
+        admin_password_set = bool(values['DB_ADMIN_PASSWORD'])
+        if admin_user_set != admin_password_set:
+            if not admin_user_set:
+                missing.append('DB_ADMIN_USER')
+            if not admin_password_set:
+                missing.append('DB_ADMIN_PASSWORD')
+        return missing
 
     @staticmethod
     def _validate_db_vars(app):
@@ -203,8 +214,10 @@ class Config:
             raise RuntimeError(
                 "Missing required database environment variables: "
                 + ', '.join(missing_vars)
-                + ". Set DB_USER, DB_PASSWORD, DB_ADMIN_USER, and "
-                "DB_ADMIN_PASSWORD in your environment or .env file."
+                + ". Set DB_USER and DB_PASSWORD (or DATABASE_URL with "
+                "credentials) in your environment or .env file. "
+                "DB_ADMIN_USER and DB_ADMIN_PASSWORD are optional, but "
+                "must be set together if used."
             )
 
     @staticmethod

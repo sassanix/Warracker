@@ -50,13 +50,13 @@
     Description="PostgreSQL password." Type="Variable"
     Display="always" Required="true" Mask="true"></Config>
 
-  <Config Name="DB_ADMIN_USER" Target="DB_ADMIN_USER" Default="warracker_admin" Mode=""
-    Description="PostgreSQL admin username, used for database migrations. Required: Warracker has no built-in default. Pre-filled with the example value; change it if your PostgreSQL admin user differs." Type="Variable"
-    Display="always" Required="true" Mask="false">warracker_admin</Config>
+  <Config Name="DB_ADMIN_USER" Target="DB_ADMIN_USER" Default="" Mode=""
+    Description="Optional PostgreSQL admin username created by initial migrations. Leave both DB_ADMIN_USER and DB_ADMIN_PASSWORD blank unless you want Warracker to create a separate PostgreSQL admin role (no built-in default)." Type="Variable"
+    Display="advanced" Required="false" Mask="false"></Config>
 
   <Config Name="DB_ADMIN_PASSWORD" Target="DB_ADMIN_PASSWORD" Default="" Mode=""
-    Description="PostgreSQL admin password, used for database migrations. Required: Warracker has no built-in default. Set it to your PostgreSQL admin password." Type="Variable"
-    Display="always" Required="true" Mask="true"></Config>
+    Description="Optional PostgreSQL admin password paired with DB_ADMIN_USER. Leave blank if DB_ADMIN_USER is blank; required if DB_ADMIN_USER is set (no built-in default)." Type="Variable"
+    Display="advanced" Required="false" Mask="true"></Config>
 
   <Config Name="SECRET_KEY" Target="SECRET_KEY" Default="" Mode=""
     Description="Secret key for Flask sessions and JWT. Generate a random string (e.g. openssl rand -hex 32)." Type="Variable"

@@ -70,17 +70,19 @@ def _validate_db_credentials():
         missing.append('DB_USER')
     if not DB_PASSWORD:
         missing.append('DB_PASSWORD')
-    if not DB_ADMIN_USER:
-        missing.append('DB_ADMIN_USER')
-    if not DB_ADMIN_PASSWORD:
-        missing.append('DB_ADMIN_PASSWORD')
+    if bool(DB_ADMIN_USER) != bool(DB_ADMIN_PASSWORD):
+        if not DB_ADMIN_USER:
+            missing.append('DB_ADMIN_USER')
+        if not DB_ADMIN_PASSWORD:
+            missing.append('DB_ADMIN_PASSWORD')
     if missing:
         raise RuntimeError(
             "Missing required database environment variables: "
             + ', '.join(missing)
-            + ". Set all four variables in your environment or .env file; "
-            "DATABASE_URL must include a username and password when it is "
-            "used instead of DB_USER and DB_PASSWORD."
+            + ". Set DB_USER and DB_PASSWORD in your environment or .env file "
+            "(DATABASE_URL must include a username and password when used "
+            "instead). DB_ADMIN_USER and DB_ADMIN_PASSWORD are optional, "
+            "but must be set together if used."
         )
 
 def get_db_connection(max_attempts=5, attempt_delay=5):
@@ -175,23 +177,32 @@ def apply_migrations():
                         sql = f.read()
                     
                     # Check if the SQL has placeholders before passing parameters
-                    if any(placeholder in sql for placeholder in ['%(db_name)s', '%(db_user)s', '%(db_admin_user)s', '%(db_admin_password)s']):
-                        cur.execute(
-                            sql,
-                            {
-                                # Identifiers are double-quoted so PostgreSQL
-                                # preserves their case (issue #187)
-                                "db_name": AsIs(_quote_ident(DB_NAME)),
-                                "db_user": AsIs(_quote_ident(DB_USER)),
-                                "db_admin_user": AsIs(_quote_ident(DB_ADMIN_USER)),
-                                # Raw names for string-literal contexts
-                                # (e.g. rolname comparisons)
-                                "db_user_name": DB_USER,
-                                "db_admin_user_name": DB_ADMIN_USER,
-                                # Password is a value: let psycopg2 escape it
-                                "db_admin_password": DB_ADMIN_PASSWORD,
-                            }
-                        )
+                    placeholders = (
+                        '%(db_name)s',
+                        '%(db_name_literal)s',
+                        '%(db_user)s',
+                        '%(db_user_name)s',
+                        '%(db_admin_user)s',
+                        '%(db_admin_user_name)s',
+                        '%(db_admin_password)s',
+                    )
+                    if any(placeholder in sql for placeholder in placeholders):
+                        params = {
+                            # Identifiers are double-quoted so PostgreSQL
+                            # preserves their case (issue #187)
+                            "db_name": AsIs(_quote_ident(DB_NAME)),
+                            "db_user": AsIs(_quote_ident(DB_USER)),
+                            # Raw names for string-literal contexts
+                            # (e.g. rolname comparisons and format('%I', ...))
+                            "db_name_literal": DB_NAME,
+                            "db_user_name": DB_USER,
+                            "db_admin_user_name": DB_ADMIN_USER,
+                            # Password is a value: let psycopg2 escape it
+                            "db_admin_password": DB_ADMIN_PASSWORD,
+                        }
+                        if DB_ADMIN_USER:
+                            params["db_admin_user"] = AsIs(_quote_ident(DB_ADMIN_USER))
+                        cur.execute(sql, params)
                     else:
                         # No placeholders, execute directly
                         cur.execute(sql)
