@@ -318,6 +318,79 @@ def test_apply_migrations_fresh_db_with_explicit_admin_credentials():
             conn.close()
 
 
+def test_migrations_and_fix_permissions_work_with_database_url_only(tmp_path):
+    """DATABASE_URL alone (without DB_HOST/PORT/NAME/USER/PASSWORD/DB_ADMIN_*) works end to end."""
+    from urllib.parse import quote
+
+    dbname = _create_scratch_db()
+    try:
+        user = quote(os.environ["DB_USER"], safe="")
+        pw = quote(os.environ["DB_PASSWORD"], safe="")
+        host = os.environ["DB_HOST"]
+        port = os.environ["DB_PORT"]
+        database_url = f"postgresql://{user}:{pw}@{host}:{port}/{dbname}"
+
+        stripped = {
+            "DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD",
+            "DB_ADMIN_USER", "DB_ADMIN_PASSWORD", "DATABASE_URL",
+        }
+        env = {k: v for k, v in os.environ.items() if k not in stripped}
+        env["DATABASE_URL"] = database_url
+        env["UPLOAD_FOLDER"] = str(tmp_path / "uploads")
+
+        migrations_script = os.path.join(
+            REPO_ROOT, "backend", "migrations", "apply_migrations.py"
+        )
+        r_mig = subprocess.run(
+            [sys.executable, migrations_script],
+            env=env, capture_output=True, text=True, timeout=600,
+        )
+        assert r_mig.returncode == 0, r_mig.stdout[-3000:] + r_mig.stderr[-3000:]
+
+        fix_script = os.path.join(REPO_ROOT, "backend", "fix_permissions.py")
+        r_fix = subprocess.run(
+            [sys.executable, fix_script],
+            env=env, capture_output=True, text=True, timeout=120,
+        )
+        assert r_fix.returncode == 0, r_fix.stdout[-3000:] + r_fix.stderr[-3000:]
+    finally:
+        _drop_scratch_db(dbname)
+
+
+def test_entrypoint_honors_database_url_without_printing_password():
+    entrypoint = os.path.join(REPO_ROOT, "Docker", "entrypoint.sh")
+    syntax = subprocess.run(
+        ["bash", "-n", entrypoint], capture_output=True, text=True,
+    )
+    assert syntax.returncode == 0, syntax.stderr
+
+    src = open(entrypoint, encoding="utf-8").read()
+    assert 'if [ -n "${DATABASE_URL:-}" ]; then' in src
+    assert 'DB_WAIT_HOST="${DB_DISPLAY_HOST}" DB_WAIT_PORT="${DB_DISPLAY_PORT}"' in src
+
+    # Extract and execute only the DATABASE_URL parsing block with python3/python.
+    start = src.index('if [ -n "${DATABASE_URL:-}" ]; then')
+    end = src.index('log "Database:', start)
+    snippet = src[start:end].replace("python -c", f"{sys.executable} -c")
+    probe = (
+        snippet
+        + '\nprintf "%s|%s|%s|%s\\n" '
+        '"$DB_DISPLAY_HOST" "$DB_DISPLAY_PORT" "$DB_DISPLAY_NAME" "$DB_DISPLAY_USER"\n'
+    )
+    env = dict(os.environ)
+    env["DATABASE_URL"] = (
+        "postgresql://dbuser:SuperSecretPass%21@pg.internal:5433/warracker_prod?sslmode=require"
+    )
+    r = subprocess.run(
+        ["bash", "-euo", "pipefail", "-c", probe],
+        env=env, capture_output=True, text=True, timeout=30,
+    )
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.strip() == "pg.internal|5433|warracker_prod|dbuser"
+    assert "SuperSecretPass" not in r.stdout
+    assert "SuperSecretPass" not in r.stderr
+
+
 def test_no_credential_fallbacks_remain_in_runtime_sources():
     runtime_files = [
         "backend/config.py",

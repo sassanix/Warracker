@@ -20,10 +20,27 @@ echo "=== Warracker ${APP_VERSION} ==="
 
 # Configuration summary: the values support questions ask for first
 # when a user pastes their startup log. Passwords are never printed.
-DB_DISPLAY_HOST="${DB_HOST:-localhost}"
-DB_DISPLAY_PORT="${DB_PORT:-5432}"
-DB_DISPLAY_NAME="${DB_NAME:-warranty_db}"
-DB_DISPLAY_USER="${DB_USER:-not set}"
+# When DATABASE_URL is set, derive host/port/name/user from it so both
+# the summary and the TCP readiness probe match the backend.
+if [ -n "${DATABASE_URL:-}" ]; then
+    IFS=$'\t' read -r DB_DISPLAY_HOST DB_DISPLAY_PORT DB_DISPLAY_NAME DB_DISPLAY_USER < <(
+        python -c "
+import os
+from urllib.parse import urlparse, unquote
+p = urlparse(os.environ['DATABASE_URL'])
+host = p.hostname or 'localhost'
+port = str(p.port) if p.port else '5432'
+name = (p.path or '').lstrip('/') or 'warranty_db'
+user = unquote(p.username) if p.username else 'not set'
+print(f'{host}\t{port}\t{name}\t{user}')
+"
+    )
+else
+    DB_DISPLAY_HOST="${DB_HOST:-localhost}"
+    DB_DISPLAY_PORT="${DB_PORT:-5432}"
+    DB_DISPLAY_NAME="${DB_NAME:-warranty_db}"
+    DB_DISPLAY_USER="${DB_USER:-not set}"
+fi
 log "Database: ${DB_DISPLAY_HOST}:${DB_DISPLAY_PORT}, database ${DB_DISPLAY_NAME}, user ${DB_DISPLAY_USER}"
 if [ "${DISABLE_NGINX:-false}" = "true" ]; then
     log "Web: nginx disabled, gunicorn serves directly on port 5000"
@@ -43,10 +60,10 @@ fi
 # replaces pg_isready, so the image no longer needs postgresql-client.
 log "Waiting for database connection to ${DB_DISPLAY_HOST}:${DB_DISPLAY_PORT}..."
 for i in {1..30}; do
-    if python -c "
+    if DB_WAIT_HOST="${DB_DISPLAY_HOST}" DB_WAIT_PORT="${DB_DISPLAY_PORT}" python -c "
 import os, socket, sys
 try:
-    with socket.create_connection((os.environ.get('DB_HOST', 'localhost'), int(os.environ.get('DB_PORT', '5432'))), timeout=2):
+    with socket.create_connection((os.environ['DB_WAIT_HOST'], int(os.environ['DB_WAIT_PORT'])), timeout=2):
         sys.exit(0)
 except OSError:
     sys.exit(1)

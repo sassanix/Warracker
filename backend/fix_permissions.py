@@ -8,25 +8,59 @@ import stat
 import pwd
 import grp
 
+from urllib.parse import parse_qsl, unquote, urlparse
+
 from psycopg2.extensions import AsIs
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+def _quote_ident(name):
+    """Quote a PostgreSQL identifier, preserving case (issue #187)."""
+    return '"' + str(name).replace('"', '""') + '"'
+
+
+def _db_parts():
+    url = os.environ.get('DATABASE_URL')
+    if url:
+        p = urlparse(url)
+        parts = {
+            'host': p.hostname or 'localhost',
+            'port': str(p.port) if p.port else '5432',
+            'name': (p.path or '').lstrip('/') or 'warranty_db',
+            'user': unquote(p.username) if p.username else None,
+            'password': unquote(p.password) if p.password else None,
+        }
+        options = dict(parse_qsl(p.query, keep_blank_values=True))
+        if options:
+            parts['options'] = options
+        return parts
+    return {
+        'host': os.environ.get('DB_HOST', 'warrackerdb'),
+        'port': os.environ.get('DB_PORT', '5432'),
+        'name': os.environ.get('DB_NAME', 'warranty_db'),
+        'user': os.environ.get('DB_USER'),
+        'password': os.environ.get('DB_PASSWORD'),
+    }
+
+
 # PostgreSQL connection details
-DB_HOST = os.environ.get('DB_HOST', 'warrackerdb')
-DB_PORT = os.environ.get('DB_PORT', '5432')
-DB_NAME = os.environ.get('DB_NAME', 'warranty_db')
-DB_USER = os.environ.get('DB_USER')
-DB_PASSWORD = os.environ.get('DB_PASSWORD')
+_DB = _db_parts()
+DB_HOST = _DB['host']
+DB_PORT = _DB['port']
+DB_NAME = _DB['name']
+DB_USER = _DB['user']
+DB_PASSWORD = _DB['password']
 
 def create_db_connection(max_retries=5, retry_delay=5):
     """Create a database connection with retry logic"""
     if not DB_USER or not DB_PASSWORD:
         raise RuntimeError(
             "Missing required database environment variables: "
-            "DB_USER and DB_PASSWORD must be set."
+            "DB_USER and DB_PASSWORD must be set (or DATABASE_URL must "
+            "include a username and password)."
         )
     attempt = 0
     last_exception = None
@@ -39,7 +73,8 @@ def create_db_connection(max_retries=5, retry_delay=5):
                 port=DB_PORT,
                 database=DB_NAME,
                 user=DB_USER,
-                password=DB_PASSWORD
+                password=DB_PASSWORD,
+                **_DB.get('options', {}),
             )
             logger.info("Database connection successful")
             return conn
@@ -126,8 +161,8 @@ def fix_database_permissions():
         cursor.execute(
             sql_script,
             {
-                "db_name": AsIs(DB_NAME),
-                "db_user": AsIs(DB_USER),
+                "db_name": AsIs(_quote_ident(DB_NAME)),
+                "db_user": AsIs(_quote_ident(DB_USER)),
             }
         )
 

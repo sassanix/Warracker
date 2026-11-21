@@ -43,3 +43,18 @@ def test_nginx_suppresses_version_banner():
               encoding="utf-8") as fh:
         src = fh.read()
     assert "server_tokens off;" in src
+
+
+def test_compose_files_do_not_default_db_admin_password():
+    for rel_path in ("docker-compose.yml", "Docker/docker-compose.yml"):
+        with open(os.path.join(REPO_ROOT, rel_path),
+                  encoding="utf-8") as fh:
+            src = fh.read()
+        assert "change_this_password_in_production" not in src, rel_path
+        active_lines = [
+            line for line in src.splitlines()
+            if not line.lstrip().startswith("#")
+        ]
+        active_src = "\n".join(active_lines)
+        assert "DB_ADMIN_USER=" not in active_src, rel_path
+        assert "DB_ADMIN_PASSWORD=" not in active_src, rel_path
