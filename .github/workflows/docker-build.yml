@@ -32,3 +32,6 @@ jobs:
 
       - name: Report image size
         run: docker images warracker:ci --format '{{.Repository}}:{{.Tag}} {{.Size}}'
+
+      - name: Run Docker smoke tests
+        run: bash tests/docker_smoke_test.sh warracker:ci

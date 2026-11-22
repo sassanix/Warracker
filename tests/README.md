@@ -65,6 +65,12 @@ CI runs the same suite on every pull request
   all frontend JS files and inline HTML scripts, pure JS date/currency
   helper tests, locale JSON completeness vs `SUPPORTED_LANGUAGES`, and
   frontend version-string lockstep.
+- `docker_smoke_test.sh` — end-to-end container smoke tests run in
+  `.github/workflows/docker-build.yml`: Compose config validation,
+  default 4-var stack boot with gevent workers, nginx security headers
+  and `Server` banner check, API CRUD + persisted `SECRET_KEY` across
+  container recreation, `DATABASE_URL`-only boot, `DISABLE_NGINX=true`
+  mode, and fail-closed missing/partial DB credential checks.
 - `test_notifications.py` — notification selection: the expiring-soon
   query includes in-window warranties and excludes expired, lifetime,
   archived and voided ones, and honors each user's own
