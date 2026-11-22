@@ -221,7 +221,8 @@ docker run -d --name "${APP_CTR}" --network "${NET}" \
     "${IMAGE}" >/dev/null
 
 wait_for_health "${APP_CTR}" "http://127.0.0.1:18006/api/health"
-if docker logs "${APP_CTR}" 2>&1 | grep -q "${DB_PASS}"; then
+dburl_logs="$(docker logs "${APP_CTR}" 2>&1 || true)"
+if grep -q "${DB_PASS}" <<< "${dburl_logs}"; then
     fail "DATABASE_URL password leaked into container logs"
 fi
 stop_app
