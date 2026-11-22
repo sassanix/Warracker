@@ -44,10 +44,27 @@ CI runs the same suite on every pull request
   other users get the global-view-shared types (photo, invoice,
   manual) but never "other documents" or claim documents; missing
   files return a JSON 404.
-- `test_config_deprecation.py` — the softened #221 behavior: the
-  built-in DB credential defaults still work in 1.0.5, production
-  init does not refuse to start, and the startup deprecation warning
-  names exactly the unset variables (all four gone in 1.0.6).
+- `test_db_credentials_required.py` — required `DB_USER`/`DB_PASSWORD`
+  (or `DATABASE_URL` with credentials) with zero built-in defaults (#221),
+  optional paired `DB_ADMIN_USER`/`DB_ADMIN_PASSWORD`, and end-to-end
+  `apply_migrations.py`, `fix_permissions.py`, and `Docker/entrypoint.sh`
+  checks.
+- `test_warranty_lifecycle_and_global_view.py` — archive/unarchive,
+  void/unvoid, cross-user ownership boundaries (stranger vs admin),
+  global view visibility modes (`global`, `global/archived`,
+  `global-view-status`), `admin/warranties`, `timezones`, and `locales`.
+- `test_claims_crud_and_access.py` — full claim CRUD lifecycle,
+  `claim_status_summary` transitions, claim document upload/delete disk
+  cleanup, and cross-user claim/document privacy under global view.
+- `test_tags_crud.py` — tag create/update/delete validation, per-user
+  uniqueness, non-owner 403 enforcement, and warranty-tag routes.
+- `test_user_account_and_preferences.py` — user preferences validation
+  and persistence, language preference, registration gate, self account
+  deletion, admin user deletion protections, and audit trail.
+- `test_frontend_and_locales.py` — `node --check` syntax checks across
+  all frontend JS files and inline HTML scripts, pure JS date/currency
+  helper tests, locale JSON completeness vs `SUPPORTED_LANGUAGES`, and
+  frontend version-string lockstep.
 - `test_notifications.py` — notification selection: the expiring-soon
   query includes in-window warranties and excludes expired, lifetime,
   archived and voided ones, and honors each user's own

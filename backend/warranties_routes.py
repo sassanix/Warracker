@@ -2617,7 +2617,8 @@ def get_locales():
             'pt': 'Português',
             'ko': '한국어',
             'tr': 'Türkçe',
-            'pl': 'Polski'
+            'pl': 'Polski',
+            'he': 'עברית'
         }
         
         locales = []
