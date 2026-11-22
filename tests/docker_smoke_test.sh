@@ -53,6 +53,7 @@ wait_for_health() {
     local ctr="$1"
     local url="$2"
     local max_attempts="${3:-45}"
+    local last_out=""
 
     for i in $(seq 1 "${max_attempts}"); do
         local running
@@ -60,12 +61,18 @@ wait_for_health() {
         if [ "${running}" != "true" ]; then
             fail "Container ${ctr} exited before becoming healthy"
         fi
-        if curl -fsS "${url}" 2>/dev/null | grep -q '"status":"ok"'; then
-            return 0
+        local body=""
+        if body="$(curl -fsS --max-time 5 "${url}" 2>&1)"; then
+            if grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' <<< "${body}"; then
+                return 0
+            fi
+            last_out="HTTP 200 unexpected body: ${body}"
+        else
+            last_out="${body}"
         fi
         sleep 1
     done
-    fail "Timed out waiting for ${url} on container ${ctr}"
+    fail "Timed out waiting for ${url} on container ${ctr} (last response: ${last_out})"
 }
 
 stop_app() {
@@ -124,16 +131,21 @@ wait_for_health "${APP_CTR}" "http://127.0.0.1:18005/api/health"
 
 # Confirm banner & version header appear in container logs (allow banner loop to flush).
 banner_ok=false
+app_logs=""
 for i in $(seq 1 10); do
-    if docker logs "${APP_CTR}" 2>&1 | grep -q "Warracker is up and healthy."; then
+    app_logs="$(docker logs "${APP_CTR}" 2>&1 || true)"
+    if grep -q "Warracker is up and healthy." <<< "${app_logs}"; then
         banner_ok=true
         break
     fi
     sleep 1
 done
 [ "${banner_ok}" = "true" ] || fail "Startup health banner not found in logs"
-docker logs "${APP_CTR}" 2>&1 | grep -q "=== Warracker ${EXPECTED_VERSION} ===" \
+grep -q "=== Warracker ${EXPECTED_VERSION} ===" <<< "${app_logs}" \
     || fail "Startup log missing expected version header === Warracker ${EXPECTED_VERSION} ==="
+if grep -q "Control server error" <<< "${app_logs}"; then
+    fail "Gunicorn logged a control server permission error"
+fi
 
 # Persisted generated SECRET_KEY must live in /data/uploads/.secret_key with 0600 & 999:999.
 key_meta="$(docker exec "${APP_CTR}" stat -c '%u:%g:%a:%s' /data/uploads/.secret_key)"
