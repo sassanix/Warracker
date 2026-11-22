@@ -78,6 +78,8 @@
   - _Files: `frontend/auth-redirect.html`, `tests/test_auth_redirect_script.py`_
 - **Status page Edit button now opens the edit modal:** on the status page the Edit button threw a ReferenceError and the modal never opened, for owners and admins alike, because the edit form calls a serial-number helper that only exists on pages loading the main app module tree. The status page now loads just that helper module, so the modal opens. Opening it also exposed a second failure in the same flow: a warranty with an exact expiration date and no duration opened with the duration method selected and all-zero duration, which the save validation refuses, so the method detection now infers the exact-date method from zero duration plus an expiration date, matching the main page edit modal. An edit started from the status page saves through the existing endpoint and refreshes the status table afterwards. The notes modal Edit Notes button is now disabled for viewers who are neither the owner nor an admin, matching the Edit Warranty button there, because notes save through the same ownership-gated endpoint and previously failed on save.
   - _Files: `frontend/status.html`, `frontend/script.js`, `frontend/js/components/notes.js`, `tests/test_status_edit_and_notes.py`_
+- **Hebrew display name added to the language list:** the language list endpoint returned a display name for every supported language except Hebrew, so Hebrew showed up without a name in language pickers. It now returns 'עברית', matching the other 19 languages.
+  - _Files: `backend/warranties_routes.py`, `tests/test_frontend_and_locales.py`_
 
 ## 1.0.6 - 2026-11-10
 
