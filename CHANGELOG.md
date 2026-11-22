@@ -80,6 +80,8 @@
   - _Files: `frontend/status.html`, `frontend/script.js`, `frontend/js/components/notes.js`, `tests/test_status_edit_and_notes.py`_
 - **Hebrew display name added to the language list:** the language list endpoint returned a display name for every supported language except Hebrew, so Hebrew showed up without a name in language pickers. It now returns 'עברית', matching the other 19 languages.
   - _Files: `backend/warranties_routes.py`, `tests/test_frontend_and_locales.py`_
+- **Docker image no longer logs a startup permission error:** Gunicorn 26 tried to write to the home directory on startup, but the container process had no home set, so every start logged a Permission denied error for /root/.gunicorn. The app still started and worked, the error was only log noise. The gunicorn process now runs with HOME set to /home/warracker, so the error is gone.
+  - _Files: `Docker/supervisord.conf`, `tests/docker_smoke_test.sh`_
 
 ## 1.0.6 - 2026-11-10
 
