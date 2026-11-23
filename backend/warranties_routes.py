@@ -197,26 +197,87 @@ def _ip_address_is_public(addr):
     return addr.is_global
 
 
-def _photo_url_host_is_public(hostname):
-    """SSRF guard for photo-by-URL: every address the host resolves to must
-    be a public (global) IP. Skipped only when the deployment explicitly sets
-    ALLOW_PRIVATE_PHOTO_URLS (used by the test suite with a local server)."""
-    if current_app.config.get('ALLOW_PRIVATE_PHOTO_URLS'):
-        return True
-    try:
-        infos = socket.getaddrinfo(hostname, None)
-    except Exception:
-        return False
-    if not infos:
-        return False
-    for info in infos:
+class _PhotoHostRejectedError(Exception):
+    """A photo URL host failed SSRF validation inside the transport
+    adapter. Deliberately not a ValueError: requests converts a
+    ValueError raised while building pool keys into InvalidURL,
+    which would change the user-facing error message, so the fetch
+    loop catches this type and raises the usual ValueError itself."""
+
+
+class _PinnedPhotoAdapter(requests.adapters.HTTPAdapter):
+    """Transport adapter for the product-photo fetch (SSRF-01).
+
+    The old guard resolved the hostname, checked the addresses, and
+    then let requests resolve the hostname again at connect time, so
+    a DNS answer that changed between the two lookups could steer
+    the connection to an address the guard never saw. This adapter
+    resolves each hop hostname exactly once with socket.getaddrinfo,
+    requires every returned address to be public (unless the
+    deployment sets ALLOW_PRIVATE_PHOTO_URLS), and connects to the
+    first public address. The validated address is the connected
+    address. There is no failover: a failed connect is a fetch
+    failure, never a fresh lookup.
+    """
+
+    def __init__(self, allow_private=False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._allow_private = allow_private
+
+    def _resolve_and_pin(self, hostname):
+        """One resolve-validate-pin cycle for a hop hostname.
+        Returns the IP string to connect to."""
         try:
-            addr = ipaddress.ip_address(info[4][0])
-        except ValueError:
-            return False
-        if not _ip_address_is_public(addr):
-            return False
-    return True
+            infos = socket.getaddrinfo(hostname, None)
+        except Exception:
+            raise _PhotoHostRejectedError(hostname)
+        if not infos:
+            raise _PhotoHostRejectedError(hostname)
+        pinned = None
+        for info in infos:
+            try:
+                addr = ipaddress.ip_address(info[4][0])
+            except ValueError:
+                raise _PhotoHostRejectedError(hostname)
+            if not self._allow_private and not _ip_address_is_public(addr):
+                raise _PhotoHostRejectedError(hostname)
+            if pinned is None:
+                pinned = info[4][0]
+        return pinned
+
+    def build_connection_pool_key_attributes(self, request, verify,
+                                             cert=None):
+        parsed = urllib.parse.urlparse(request.url)
+        hostname = parsed.hostname
+        if not hostname:
+            raise _PhotoHostRejectedError(hostname)
+        pinned = self._resolve_and_pin(hostname)
+        host_params, pool_kwargs = super().build_connection_pool_key_attributes(
+            request, verify, cert)
+        host_params["host"] = pinned
+        if parsed.scheme == "https":
+            # The pool is keyed by the pinned IP, so without these the
+            # connection would present the IP as SNI and verify the
+            # certificate against it. The pool key also carries both
+            # values, so two hostnames pinned to one IP never share a
+            # pool.
+            pool_kwargs["server_hostname"] = hostname
+            pool_kwargs["assert_hostname"] = hostname
+        return host_params, pool_kwargs
+
+    def add_headers(self, request, **kwargs):
+        parsed = urllib.parse.urlparse(request.url)
+        hostname = parsed.hostname
+        if hostname:
+            host = hostname
+            if ":" in host and not host.startswith("["):
+                host = f"[{host}]"
+            port = parsed.port
+            default = {"http": 80, "https": 443}.get(parsed.scheme)
+            if port is not None and port != default:
+                host = f"{host}:{port}"
+            request.headers["Host"] = host
+
 
 def _detect_image_extension(data):
     """Magic-byte image sniffing (the upload path checks extensions only;
@@ -264,66 +325,81 @@ def download_product_photo(url):
     # one chunk every few seconds hold a fetch open indefinitely.
     total_timeout = current_app.config.get('PHOTO_FETCH_TIMEOUT_SECONDS') or 60
     deadline = time.monotonic() + total_timeout
-    for _ in range(4):
-        parsed = urllib.parse.urlparse(current)
-        if parsed.scheme not in ('http', 'https') or not parsed.hostname:
-            raise ValueError("Photo URL must be a valid http(s) URL.")
-        if not _photo_url_host_is_public(parsed.hostname):
-            raise ValueError("Photo URL must point to a public address.")
-        if time.monotonic() >= deadline:
-            raise ValueError("Timed out fetching the photo URL.")
-        try:
-            resp = requests.get(current, timeout=min(10, deadline - time.monotonic()),
-                                stream=True, allow_redirects=False,
-                                headers={'User-Agent': 'Warracker photo fetch'})
-        except requests.RequestException:
-            raise ValueError("Could not fetch the photo URL.")
-        if resp.status_code in (301, 302, 303, 307, 308):
-            location = resp.headers.get('Location')
-            resp.close()
-            if not location:
-                raise ValueError("Could not fetch the photo URL.")
-            current = urllib.parse.urljoin(current, location)
-            continue
-        if resp.status_code != 200:
-            resp.close()
-            raise ValueError("Could not fetch the photo URL.")
-        chunks, total = [], 0
-        # A per-chunk deadline check alone does not bound a slow drip:
-        # a read for a full chunk blocks until the chunk fills or the
-        # connection closes, so the check may never run. A timer shuts
-        # the socket down at the deadline, which unblocks the read;
-        # the post-loop check then turns a shutdown-caused end of
-        # stream into the timeout error instead of accepting bytes
-        # that arrived after the deadline.
-        timer = threading.Timer(
-            max(0.0, deadline - time.monotonic()),
-            _interrupt_photo_fetch, args=(resp,))
-        timer.daemon = True
-        timer.start()
-        try:
-            for chunk in resp.iter_content(chunk_size=65536):
-                if time.monotonic() >= deadline:
-                    raise ValueError("Timed out fetching the photo URL.")
-                total += len(chunk)
-                if total > max_bytes:
-                    raise ValueError("Photo URL file is too large.")
-                chunks.append(chunk)
-        except requests.RequestException:
+    # One session for the whole fetch (redirect hops included), with the
+    # pinning adapter mounted. The session is fresh per fetch, so no
+    # pool is ever shared with another fetch or hostname.
+    session = requests.Session()
+    # Never route the fetch through an environment proxy: a proxy
+    # would resolve the hostname itself, which is a second DNS lookup
+    # the pinning exists to prevent.
+    session.trust_env = False
+    adapter = _PinnedPhotoAdapter(
+        allow_private=bool(current_app.config.get('ALLOW_PRIVATE_PHOTO_URLS')))
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    try:
+        for _ in range(4):
+            parsed = urllib.parse.urlparse(current)
+            if parsed.scheme not in ('http', 'https') or not parsed.hostname:
+                raise ValueError("Photo URL must be a valid http(s) URL.")
             if time.monotonic() >= deadline:
                 raise ValueError("Timed out fetching the photo URL.")
-            raise ValueError("Could not fetch the photo URL.")
-        finally:
-            timer.cancel()
-            resp.close()
-        if time.monotonic() >= deadline:
-            raise ValueError("Timed out fetching the photo URL.")
-        data = b''.join(chunks)
-        ext = _detect_image_extension(data)
-        if not ext:
-            raise ValueError("Product photo must be an image file (PNG, JPG, JPEG, WEBP, GIF)")
-        return data, ext
-    raise ValueError("Too many redirects fetching the photo URL.")
+            try:
+                resp = session.get(current, timeout=min(10, deadline - time.monotonic()),
+                                   stream=True, allow_redirects=False,
+                                   headers={'User-Agent': 'Warracker photo fetch'})
+            except _PhotoHostRejectedError:
+                raise ValueError("Photo URL must point to a public address.")
+            except requests.RequestException:
+                raise ValueError("Could not fetch the photo URL.")
+            if resp.status_code in (301, 302, 303, 307, 308):
+                location = resp.headers.get('Location')
+                resp.close()
+                if not location:
+                    raise ValueError("Could not fetch the photo URL.")
+                current = urllib.parse.urljoin(current, location)
+                continue
+            if resp.status_code != 200:
+                resp.close()
+                raise ValueError("Could not fetch the photo URL.")
+            chunks, total = [], 0
+            # A per-chunk deadline check alone does not bound a slow drip:
+            # a read for a full chunk blocks until the chunk fills or the
+            # connection closes, so the check may never run. A timer shuts
+            # the socket down at the deadline, which unblocks the read;
+            # the post-loop check then turns a shutdown-caused end of
+            # stream into the timeout error instead of accepting bytes
+            # that arrived after the deadline.
+            timer = threading.Timer(
+                max(0.0, deadline - time.monotonic()),
+                _interrupt_photo_fetch, args=(resp,))
+            timer.daemon = True
+            timer.start()
+            try:
+                for chunk in resp.iter_content(chunk_size=65536):
+                    if time.monotonic() >= deadline:
+                        raise ValueError("Timed out fetching the photo URL.")
+                    total += len(chunk)
+                    if total > max_bytes:
+                        raise ValueError("Photo URL file is too large.")
+                    chunks.append(chunk)
+            except requests.RequestException:
+                if time.monotonic() >= deadline:
+                    raise ValueError("Timed out fetching the photo URL.")
+                raise ValueError("Could not fetch the photo URL.")
+            finally:
+                timer.cancel()
+                resp.close()
+            if time.monotonic() >= deadline:
+                raise ValueError("Timed out fetching the photo URL.")
+            data = b''.join(chunks)
+            ext = _detect_image_extension(data)
+            if not ext:
+                raise ValueError("Product photo must be an image file (PNG, JPG, JPEG, WEBP, GIF)")
+            return data, ext
+        raise ValueError("Too many redirects fetching the photo URL.")
+    finally:
+        session.close()
 
 # Map of currency symbols to ISO codes (mirrors frontend js/lib/currency.js).
 # Used to resolve a user's preferred currency symbol to a code for new warranties.

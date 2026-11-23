@@ -2,6 +2,9 @@
 
 ## 1.0.8 - Unreleased
 
+- **Product photo fetch pins the connection to the validated address (GHSA-7rwc-pg49-r48w):** the photo-by-URL fetch used to validate a hostname and then let the HTTP client resolve it again at connect time, so a DNS answer that changed between the two lookups could steer the connection to a private address the guard never saw. The fetch now resolves each hop hostname exactly once, validates every returned address, and connects to the first public one, with no second lookup and no failover. For https the connection still presents the original hostname as SNI and verifies the certificate against it, and the Host header still carries the original hostname. The fetch also no longer follows environment proxy settings, since a proxy would resolve the hostname itself.
+  - _Files: `backend/warranties_routes.py`, `tests/test_photo_url.py`_
+
 - **Security and Python dependency updates (#295):** Apprise moves from 2.2.0 to 2.3.0, carrying upstream security fix GHSA-rmjg-h4cf-m74j along with OAuth token redaction in debug logs, slow-attachment timeout protection, and new notification services. Authlib moves from 1.9.5 to 1.9.10 (five patch releases for the OIDC client stack), and `email-validator` moves from 2.3.0 to 2.4.0 (enforcing IDNA Bidi rules, rejecting overlong IDN domains before encoding, and fixing quoted local-part normalization).
   - _Files: `backend/requirements.txt`_
 - **Docker base image and BuildKit syntax refreshed (#290, #296):** the pinned `python:3.15-slim-trixie` base image digest was refreshed in both Dockerfile stages to pick up upstream Python and Debian Trixie security updates, and the BuildKit Dockerfile syntax moves from 1.28.0 to 1.29.0.

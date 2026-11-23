@@ -7,6 +7,7 @@ one test turns the guard back on to prove it bites.
 """
 import base64
 import os
+import socket
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -263,6 +264,265 @@ def test_photo_fetch_timeout_env_var(monkeypatch):
     probe_app.config["TESTING"] = True
     Config.init_app(probe_app)
     assert probe_app.config["PHOTO_FETCH_TIMEOUT_SECONDS"] == 12.0
+
+
+# --- SSRF-01: DNS rebinding (GHSA-7rwc-pg49-r48w) ---
+
+class _RebindingHandler(BaseHTTPRequestHandler):
+    """Canary server. Records every hit and the Host headers it saw,
+    serves the photo, and redirects /redir at an absolute hop2 URL."""
+    hits = []
+    hosts_seen = []
+    hop2_url = None
+
+    def do_GET(self):
+        type(self).hits.append(self.path)
+        type(self).hosts_seen.append(self.headers.get_all("Host"))
+        if self.path == "/photo.png":
+            body = PNG_BYTES
+            self.send_response(200)
+            self.send_header("Content-Type", "image/png")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        elif self.path == "/redir":
+            self.send_response(302)
+            self.send_header("Location", type(self).hop2_url)
+            self.end_headers()
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def log_message(self, *args):
+        pass
+
+
+def _start_canary():
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _RebindingHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    return server
+
+
+def _scripted_resolver(real_getaddrinfo, script):
+    """getaddrinfo fake for the rebinding tests.
+
+    script maps a hostname to (validation_ip, connect_ip). The adapter
+    resolves with port=None, like the old guard did; the connector
+    resolves with the URL port. A rebinding answer gives the public
+    address to the validation call and the canary to the connect call,
+    which is exactly the advisory scenario.
+    """
+    calls = []
+
+    def fake(host, port, *args, **kwargs):
+        calls.append((host, port))
+        if host in script:
+            first_ip, later_ip = script[host]
+            ip = first_ip if port is None else later_ip
+            return [(socket.AF_INET, socket.SOCK_STREAM, 0, "",
+                     (ip, port or 80))]
+        return real_getaddrinfo(host, port, *args, **kwargs)
+
+    fake.calls = calls
+    return fake
+
+
+def test_rebinding_flip_is_rejected(monkeypatch, app):
+    """The advisory scenario: the guard sees a public address, the
+    connect would see the canary. The fetch must fail and the canary
+    must receive nothing, with exactly one resolution for the host."""
+    import socket
+    from backend.warranties_routes import download_product_photo
+    server = _start_canary()
+    port = server.server_address[1]
+    _RebindingHandler.hits = []
+    _RebindingHandler.hosts_seen = []
+    real_getaddrinfo = socket.getaddrinfo
+    fake = _scripted_resolver(real_getaddrinfo, {
+        "rebind.example.invalid": ("8.8.8.8", "127.0.0.1"),
+    })
+    monkeypatch.setattr(socket, "getaddrinfo", fake)
+    # Keep the fetch off any environment proxy so the test exercises
+    # the direct connect path in every environment, including this
+    # one, where a proxy would otherwise answer for the fake host.
+    monkeypatch.setenv(
+        "no_proxy",
+        os.environ.get("no_proxy", "") + ",rebind.example.invalid")
+    previous_timeout = app.config.get("PHOTO_FETCH_TIMEOUT_SECONDS")
+    try:
+        app.config["ALLOW_PRIVATE_PHOTO_URLS"] = False
+        app.config["PHOTO_FETCH_TIMEOUT_SECONDS"] = 5
+        with app.app_context():
+            with pytest.raises(ValueError, match="Could not fetch"):
+                download_product_photo(
+                    f"http://rebind.example.invalid:{port}/photo.png")
+    finally:
+        if previous_timeout is None:
+            app.config.pop("PHOTO_FETCH_TIMEOUT_SECONDS", None)
+        else:
+            app.config["PHOTO_FETCH_TIMEOUT_SECONDS"] = previous_timeout
+        app.config["ALLOW_PRIVATE_PHOTO_URLS"] = False
+        server.shutdown()
+    assert _RebindingHandler.hits == []
+    host_calls = [c for c in fake.calls
+                  if c[0] == "rebind.example.invalid"]
+    assert len(host_calls) == 1 and host_calls[0][1] is None
+
+
+def test_redirect_hop_rebinding_is_rejected(monkeypatch, app):
+    """Same flip on the second hop: hop1 reaches the canary and
+    redirects, hop2 must fail closed without the canary serving the
+    photo. ALLOW_PRIVATE is on so hop1 can legitimately point at the
+    canary; the adapter still pins hop2 to its one resolved address."""
+    import socket
+    from backend.warranties_routes import download_product_photo
+    server = _start_canary()
+    port = server.server_address[1]
+    _RebindingHandler.hits = []
+    _RebindingHandler.hosts_seen = []
+    _RebindingHandler.hop2_url = f"http://hop2.example.invalid:{port}/photo.png"
+    real_getaddrinfo = socket.getaddrinfo
+    fake = _scripted_resolver(real_getaddrinfo, {
+        "hop1.example.invalid": ("127.0.0.1", "127.0.0.1"),
+        "hop2.example.invalid": ("8.8.8.8", "127.0.0.1"),
+    })
+    monkeypatch.setattr(socket, "getaddrinfo", fake)
+    # Keep the fetch off any environment proxy, as in the main
+    # rebinding test.
+    monkeypatch.setenv(
+        "no_proxy",
+        os.environ.get("no_proxy", "")
+        + ",hop1.example.invalid,hop2.example.invalid")
+    previous_timeout = app.config.get("PHOTO_FETCH_TIMEOUT_SECONDS")
+    try:
+        app.config["ALLOW_PRIVATE_PHOTO_URLS"] = True
+        app.config["PHOTO_FETCH_TIMEOUT_SECONDS"] = 5
+        with app.app_context():
+            with pytest.raises(ValueError, match="Could not fetch"):
+                download_product_photo(
+                    f"http://hop1.example.invalid:{port}/redir")
+    finally:
+        if previous_timeout is None:
+            app.config.pop("PHOTO_FETCH_TIMEOUT_SECONDS", None)
+        else:
+            app.config["PHOTO_FETCH_TIMEOUT_SECONDS"] = previous_timeout
+        app.config["ALLOW_PRIVATE_PHOTO_URLS"] = False
+        server.shutdown()
+    assert _RebindingHandler.hits == ["/redir"]
+    hop2_calls = [c for c in fake.calls if c[0] == "hop2.example.invalid"]
+    assert len(hop2_calls) == 1 and hop2_calls[0][1] is None
+
+
+def test_host_with_any_private_address_is_rejected(monkeypatch, app):
+    """One private address among public answers rejects the host,
+    whichever order the answers arrive in."""
+    import socket
+    from backend.warranties_routes import download_product_photo
+    real_getaddrinfo = socket.getaddrinfo
+
+    def fake(host, port, *args, **kwargs):
+        if host == "multi-a.example.invalid":
+            answers = ["8.8.8.8", "10.0.0.1"]
+        elif host == "multi-b.example.invalid":
+            answers = ["10.0.0.1", "8.8.8.8"]
+        else:
+            return real_getaddrinfo(host, port, *args, **kwargs)
+        return [(socket.AF_INET, socket.SOCK_STREAM, 0, "",
+                 (ip, port or 80)) for ip in answers]
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake)
+    app.config["ALLOW_PRIVATE_PHOTO_URLS"] = False
+    with app.app_context():
+        with pytest.raises(ValueError, match="public address"):
+            download_product_photo("http://multi-a.example.invalid/photo.png")
+        with pytest.raises(ValueError, match="public address"):
+            download_product_photo("http://multi-b.example.invalid/photo.png")
+
+
+def test_pinned_pool_uses_original_hostname_for_tls(monkeypatch):
+    """Two hostnames pinned to one IP must never share a pool, and
+    each pool must carry its own hostname as SNI and as the
+    certificate check name. No live TLS server is involved; the
+    pool object itself is inspected."""
+    import socket
+    from requests import Request
+    from backend.warranties_routes import _PinnedPhotoAdapter
+    real_getaddrinfo = socket.getaddrinfo
+
+    def fake(host, port, *args, **kwargs):
+        if host in ("host-a.example.invalid", "host-b.example.invalid"):
+            return [(socket.AF_INET, socket.SOCK_STREAM, 0, "",
+                     ("93.184.216.34", port or 443))]
+        return real_getaddrinfo(host, port, *args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake)
+    adapter = _PinnedPhotoAdapter(allow_private=False)
+    req_a = Request("GET", "https://host-a.example.invalid/photo.png").prepare()
+    pool_a = adapter.get_connection_with_tls_context(req_a, True)
+    assert pool_a.host == "93.184.216.34"
+    assert pool_a.conn_kw["server_hostname"] == "host-a.example.invalid"
+    assert pool_a.assert_hostname == "host-a.example.invalid"
+    req_b = Request("GET", "https://host-b.example.invalid/photo.png").prepare()
+    pool_b = adapter.get_connection_with_tls_context(req_b, True)
+    assert pool_b is not pool_a
+    assert pool_b.host == "93.184.216.34"
+    assert pool_b.conn_kw["server_hostname"] == "host-b.example.invalid"
+    assert pool_b.assert_hostname == "host-b.example.invalid"
+
+
+def test_host_header_formatting():
+    """The Host header carries the original hostname, with a
+    non-default port when present, and no port for default ports."""
+    from requests import Request
+    from backend.warranties_routes import _PinnedPhotoAdapter
+    adapter = _PinnedPhotoAdapter()
+    req = Request("GET", "http://photos.example.invalid:8080/photo.png").prepare()
+    adapter.add_headers(req)
+    assert req.headers["Host"] == "photos.example.invalid:8080"
+    req = Request("GET", "https://photos.example.invalid/photo.png").prepare()
+    adapter.add_headers(req)
+    assert req.headers["Host"] == "photos.example.invalid"
+    req = Request("GET", "http://photos.example.invalid/photo.png").prepare()
+    adapter.add_headers(req)
+    assert req.headers["Host"] == "photos.example.invalid"
+
+
+def test_host_header_sent_is_original_hostname(monkeypatch, app):
+    """End to end over http: the canary is reached at its pinned IP,
+    but the one Host header it sees is the original hostname."""
+    import socket
+    from backend.warranties_routes import download_product_photo
+    server = _start_canary()
+    port = server.server_address[1]
+    _RebindingHandler.hits = []
+    _RebindingHandler.hosts_seen = []
+    real_getaddrinfo = socket.getaddrinfo
+
+    def fake(host, port_, *args, **kwargs):
+        if host == "host-a.example.invalid":
+            return [(socket.AF_INET, socket.SOCK_STREAM, 0, "",
+                     ("127.0.0.1", port_ or 80))]
+        return real_getaddrinfo(host, port_, *args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake)
+    # Keep the fetch off any environment proxy, as in the rebinding
+    # tests.
+    monkeypatch.setenv(
+        "no_proxy",
+        os.environ.get("no_proxy", "") + ",host-a.example.invalid")
+    try:
+        app.config["ALLOW_PRIVATE_PHOTO_URLS"] = True
+        with app.app_context():
+            data, ext = download_product_photo(
+                f"http://host-a.example.invalid:{port}/photo.png")
+        assert ext == ".png" and data == PNG_BYTES
+    finally:
+        app.config["ALLOW_PRIVATE_PHOTO_URLS"] = False
+        server.shutdown()
+    assert _RebindingHandler.hits == ["/photo.png"]
+    assert _RebindingHandler.hosts_seen == [
+        [f"host-a.example.invalid:{port}"]]
 
 
 def test_photo_fetch_timeout_env_var_enforced_end_to_end(monkeypatch):
