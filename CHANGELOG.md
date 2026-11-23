@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.8 - Unreleased
+
+- **Security and Python dependency updates (#295):** Apprise moves from 2.2.0 to 2.3.0, carrying upstream security fix GHSA-rmjg-h4cf-m74j along with OAuth token redaction in debug logs, slow-attachment timeout protection, and new notification services. Authlib moves from 1.9.5 to 1.9.10 (five patch releases for the OIDC client stack), and `email-validator` moves from 2.3.0 to 2.4.0 (enforcing IDNA Bidi rules, rejecting overlong IDN domains before encoding, and fixing quoted local-part normalization).
+  - _Files: `backend/requirements.txt`_
+- **Docker base image and BuildKit syntax refreshed (#290, #296):** the pinned `python:3.15-slim-trixie` base image digest was refreshed in both Dockerfile stages to pick up upstream Python and Debian Trixie security updates, and the BuildKit Dockerfile syntax moves from 1.28.0 to 1.29.0.
+  - _Files: `Dockerfile`_
+- **CI workflow pinning and Renovate action update (#279, #282):** pinned `actions/checkout`, `actions/setup-python`, the CI `postgres:15` service image, and Python version in the test and Docker workflows by commit SHA/digest for supply-chain safety, and updated `renovatebot/github-action` from v46.3.10 to v46.3.14.
+  - _Files: `.github/workflows/tests.yml`, `.github/workflows/docker-build.yml`, `.github/workflows/renovate.yml`_
+
 ## 1.0.7 - 2026-11-23
 
 - **Database credential defaults removed (#221, by Nam0101):** the built-in defaults for `DB_USER`, `DB_PASSWORD`, `DB_ADMIN_USER`, and `DB_ADMIN_PASSWORD` are gone, completing the deprecation announced in 1.0.5. The app, the migration runner, and the permissions script now stop with a clear message naming any missing required credential instead of falling back to known credentials. `DB_USER` and `DB_PASSWORD` (or a `DATABASE_URL` containing a username and password, now also honored by the Docker entrypoint readiness probe and `fix_permissions.py`) are required. `DB_ADMIN_USER` and `DB_ADMIN_PASSWORD` are optional with no built-in defaults: if both are omitted, existing installs upgrade without adding unused variables and fresh installs skip creating the optional PostgreSQL admin role in `010_configure_admin_roles.sql`; if only one is set, startup stops naming the missing counterpart so no role is ever created with a blank or default password. Both shipped Compose files, both env examples, and the Unraid template leave both admin variables commented out/optional with no prefilled defaults.
