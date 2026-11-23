@@ -259,6 +259,8 @@ docker run -d --name "${APP_CTR}" --network "${NET}" \
     "${IMAGE}" >/dev/null
 
 wait_for_health "${APP_CTR}" "http://127.0.0.1:18007/api/health"
+docker exec "${APP_CTR}" sh -c 'curl -fs http://127.0.0.1:5000/api/health > /dev/null && ([ "${DISABLE_NGINX:-false}" = "true" ] || curl -fs http://localhost/api/health > /dev/null)' \
+    || fail "HEALTHCHECK command failed under DISABLE_NGINX=true"
 if docker exec "${APP_CTR}" python -c "
 import glob, sys
 comms = []

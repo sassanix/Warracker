@@ -113,11 +113,11 @@ ENV PYTHONUNBUFFERED=1 \
 # Clean default nginx site
 RUN rm -f /etc/nginx/sites-enabled/default
 
-# Optimized health check - hits the backend's /api/health (which verifies DB
-# connectivity) so a frozen backend is detected instead of the container
-# reporting healthy via nginx alone (see issue #239).
+# Optimized health check - probes gunicorn directly first (avoiding transient
+# nginx "Connection refused" logs during startup and supporting DISABLE_NGINX=true),
+# then verifies nginx proxying when nginx is enabled (see issues #190 and #239).
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost/api/health || exit 1
+    CMD curl -fs http://127.0.0.1:5000/api/health > /dev/null && ([ "${DISABLE_NGINX:-false}" = "true" ] || curl -fs http://localhost/api/health > /dev/null) || exit 1
 
 # Exposed port
 EXPOSE 80
