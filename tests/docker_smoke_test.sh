@@ -146,6 +146,11 @@ grep -q "=== Warracker ${EXPECTED_VERSION} ===" <<< "${app_logs}" \
 if grep -q "Control server error" <<< "${app_logs}"; then
     fail "Gunicorn logged a control server permission error"
 fi
+sup_count="$(grep -c "supervisord started with pid 1" <<< "${app_logs}" || true)"
+[ "${sup_count}" -eq 1 ] || fail "Expected 1 supervisord start line, saw ${sup_count}"
+if grep -q 'Connection refused.*host: "localhost"' <<< "${app_logs}"; then
+    fail "Startup banner probe triggered transient nginx Connection refused error"
+fi
 
 # Persisted generated SECRET_KEY must live in /data/uploads/.secret_key with 0600 & 999:999.
 key_meta="$(docker exec "${APP_CTR}" stat -c '%u:%g:%a:%s' /data/uploads/.secret_key)"

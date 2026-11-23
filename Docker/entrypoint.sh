@@ -129,12 +129,16 @@ log "Setup completed successfully!"
 # the supervisor start below is not delayed by it, and if the app never
 # becomes healthy the banner simply never prints.
 print_banner_when_ready() {
+    local backend_url="http://127.0.0.1:5000/api/health"
     local health_url="http://localhost/api/health"
     if [ "${DISABLE_NGINX:-false}" = "true" ]; then
-        health_url="http://localhost:5000/api/health"
+        health_url="$backend_url"
     fi
     for i in {1..45}; do
-        if curl -fs "$health_url" > /dev/null 2>&1; then
+        # Check gunicorn directly first so nginx does not log transient
+        # "connect() failed (111: Connection refused)" errors during boot,
+        # then verify the public health URL (through nginx when enabled).
+        if curl -fs "$backend_url" > /dev/null 2>&1 && curl -fs "$health_url" > /dev/null 2>&1; then
             cat <<'BANNER'
 █     █                               █
 █  ▄  █  ▀▀▀▄ █▀▀▀▄ █▀▀▀▄  ▀▀▀▄ ▄▀▀▀▄ █  ▄▀ ▄▀▀▀▄ █▀▀▀▄

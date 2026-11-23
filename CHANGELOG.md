@@ -82,6 +82,8 @@
   - _Files: `backend/warranties_routes.py`, `tests/test_frontend_and_locales.py`_
 - **Docker image no longer logs a startup permission error:** Gunicorn 26 tried to write to the home directory on startup, but the container process had no home set, so every start logged a Permission denied error for /root/.gunicorn. The app still started and worked, the error was only log noise. The gunicorn process now runs with HOME set to /home/warracker, so the error is gone.
   - _Files: `Docker/supervisord.conf`, `tests/docker_smoke_test.sh`_
+- **Cleaner Docker startup logs:** the startup banner check polled Nginx before Gunicorn finished booting, which logged a few transient `connect() failed (111: Connection refused)` Nginx errors on every normal container start, and supervisord logged every lifecycle line twice because `nodaemon=true` and `logfile=/dev/stdout` both wrote to stdout. The banner check now waits for Gunicorn (`127.0.0.1:5000/api/health`) before probing Nginx, and `supervisord.conf` sets `logfile=/dev/null`, keeping startup logs clean and single-printed.
+  - _Files: `Docker/entrypoint.sh`, `Docker/supervisord.conf`, `tests/docker_smoke_test.sh`_
 
 ## 1.0.6 - 2026-11-10
 
