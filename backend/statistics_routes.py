@@ -226,7 +226,8 @@ def get_statistics():
                     expiration_date, invoice_path, manual_path, other_document_path, product_url, purchase_price, is_lifetime,
                     model_number, notes, currency, vendor, warranty_type,
                     (archived_at IS NOT NULL) AS is_archived,
-                    (voided_at IS NOT NULL) AS is_voided
+                    (voided_at IS NOT NULL) AS is_voided,
+                    (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count
                 {from_clause}
                 {where_clause}
                 ORDER BY expiration_date DESC
@@ -457,7 +458,8 @@ def get_global_statistics():
                     u.username, u.email, u.first_name, u.last_name,
                     w.model_number, w.notes, w.currency, w.vendor, w.warranty_type,
                     (w.archived_at IS NOT NULL) AS is_archived,
-                    (w.voided_at IS NOT NULL) AS is_voided
+                    (w.voided_at IS NOT NULL) AS is_voided,
+                    (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count
                 FROM warranties w
                 JOIN users u ON w.user_id = u.id
                 ORDER BY w.expiration_date DESC

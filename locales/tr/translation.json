@@ -209,7 +209,8 @@
     "confirm_void_warranty": "Bu garanti geçersiz mi? Etkin değil olarak işaretlenecek ve toplamlardan ve bildirimlerden hariç tutulacaktır. Daha sonra geri yükleyebilirsiniz.",
     "error_updating_void_status": "Geçersiz durumu güncellenemedi",
     "unvoided_success": "Garanti geçersiz durumdan geri getirildi",
-    "voided_success": "Garanti geçersiz"
+    "voided_success": "Garanti geçersiz",
+    "expiry_change_reason_too_long": "Bitiş tarihi değişiklik nedeni 255 karakter veya daha kısa olmalıdır"
   },
   "settings": {
     "title": "Ayarlar",
@@ -608,7 +609,6 @@
     "current_other_document": "Mevcut diğer belge",
     "no_other_document_uploaded": "Başka belge yüklenmedi",
     "other_document_will_be_deleted": "Diğer belge kaydetmede silinecek",
-    "files_optional": "Dosyalar (İsteğe Bağlı)",
     "invoice_receipt_short": "Fatura",
     "product_manual_short": "Kılavuz",
     "files_short": "Dosyalar",
@@ -631,7 +631,17 @@
     "unnamed_product": "Adsız Ürün",
     "unvoid_warranty": "Garantiyi geçersiz kılma",
     "void": "Geçersiz",
-    "void_warranty": "Garantiyi geçersiz kılma"
+    "void_warranty": "Garantiyi geçersiz kılma",
+    "expiry_history_title": "Bitiş Tarihi Geçmişi",
+    "expiry_history_count_title": "Bitiş Tarihi Geçmişi ({{count}})",
+    "expiry_history_tooltip": "Bitiş tarihi {{count}} kez değiştirildi — geçmişi görmek için tıklayın",
+    "expiry_history_empty": "Kaydedilmiş bitiş tarihi değişikliği yok.",
+    "expiry_history_loading": "Bitiş tarihi geçmişi yükleniyor...",
+    "expiry_history_load_error": "Bitiş tarihi geçmişi yüklenemedi.",
+    "expiry_history_changed_on": "{{date}} tarihinde değiştirildi",
+    "expiry_history_changed_on_by": "{{date}} tarihinde {{user}} tarafından değiştirildi",
+    "expiry_change_reason_label": "Bitiş Tarihi Değişiklik Nedeni (İsteğe bağlı)",
+    "expiry_change_reason_placeholder": "örn. Onarım talebi sonrası uzatıldı, üretici jesti..."
   },
   "actions": {
     "save": "Kaydet",

@@ -214,7 +214,6 @@
     "current_other_document": "Outro documento atual",
     "no_other_document_uploaded": "Nenhum outro documento carregado",
     "other_document_will_be_deleted": "O outro documento será excluído ao salvar",
-    "files_optional": "Arquivos (Opcional)",
     "invoice_receipt_short": "Fatura",
     "product_manual_short": "Manual",
     "files_short": "Arquivos",
@@ -233,7 +232,17 @@
     "unnamed_product": "Produto sem nome",
     "unvoid_warranty": "Garantia não anulada",
     "void": "Anulada",
-    "void_warranty": "Anular garantia"
+    "void_warranty": "Anular garantia",
+    "expiry_history_title": "Histórico de validade",
+    "expiry_history_count_title": "Histórico de validade ({{count}})",
+    "expiry_history_tooltip": "Validade alterada {{count}} vez(es) — clique para ver o histórico",
+    "expiry_history_empty": "Nenhuma alteração na data de validade registrada.",
+    "expiry_history_loading": "Carregando histórico de validade...",
+    "expiry_history_load_error": "Falha ao carregar o histórico de validade.",
+    "expiry_history_changed_on": "Alterado em {{date}}",
+    "expiry_history_changed_on_by": "Alterado em {{date}} por {{user}}",
+    "expiry_change_reason_label": "Motivo da alteração de validade (Opcional)",
+    "expiry_change_reason_placeholder": "ex. Estendida após reparo, cortesia do fabricante..."
   },
   "claims": {
     "claims": "Reclamações",
@@ -709,7 +718,8 @@
     "confirm_void_warranty": "Anular esta garantia? Será marcado como inativo e excluído dos totais e notificações. Você pode restaurá-lo mais tarde.",
     "error_updating_void_status": "Falha ao atualizar o status nulo",
     "unvoided_success": "Garantia restaurada do nulo",
-    "voided_success": "Garantia anulada"
+    "voided_success": "Garantia anulada",
+    "expiry_change_reason_too_long": "O motivo da alteração de validade deve ter 255 caracteres ou menos"
   },
   "languages": {
     "en": "English",

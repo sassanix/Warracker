@@ -47,6 +47,7 @@
          on window itself. Without it the Edit button throws
          ReferenceError and the modal never opens. -->
     <script type="module" src="js/components/serialNumbers.js?v=20261119001"></script>
+    <script type="module" src="js/components/expiryHistory.js?v=20261123001"></script>
     <style>
         .user-menu {
             position: relative;
@@ -659,6 +660,18 @@
                                 <label for="editExactExpirationDate" data-i18n="warranties.expiration_date_label">Expiration Date</label>
                                 <input type="date" id="editExactExpirationDate" name="exact_expiration_date" class="form-control">
                             </div>
+                        </div>
+
+                        <div class="form-group expiry-reason-group" id="editExpiryChangeReasonGroup" style="display: none;">
+                            <label for="editExpiryChangeReason" data-i18n="warranties.expiry_change_reason_label">Reason for Expiry Change (Optional)</label>
+                            <input type="text" id="editExpiryChangeReason" name="expiry_change_reason" class="form-control" maxlength="255" data-i18n-placeholder="warranties.expiry_change_reason_placeholder" placeholder="e.g. Extended after repair claim, manufacturer goodwill...">
+                        </div>
+
+                        <div class="form-group expiry-history-section" id="editExpiryHistorySection" style="display: none;">
+                            <details class="expiry-history-details" id="editExpiryHistoryDetails">
+                                <summary id="editExpiryHistorySummary" data-i18n="warranties.expiry_history_title">Expiry History</summary>
+                                <div id="editExpiryHistoryContent" class="expiry-history-content"></div>
+                            </details>
                         </div>
                         
                         <div class="form-group">

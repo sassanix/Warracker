@@ -53,6 +53,11 @@ CI runs the same suite on every pull request
   void/unvoid, cross-user ownership boundaries (stranger vs admin),
   global view visibility modes (`global`, `global/archived`,
   `global-view-status`), `admin/warranties`, `timezones`, and `locales`.
+- `test_warranty_expiry_history.py` — expiration date and lifetime
+  change history (#209): recording transitions on edit with optional
+  reason, length validation, `expiry_change_count` across list/debug/
+  statistics endpoints, global-view access control, cascade/nullability,
+  and XSS-safe DOM rendering.
 - `test_claims_crud_and_access.py` — full claim CRUD lifecycle,
   `claim_status_summary` transitions, claim document upload/delete disk
   cleanup, and cross-user claim/document privacy under global view.

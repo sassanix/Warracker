@@ -214,7 +214,6 @@
     "current_other_document": "वर्तमान अन्य दस्तावेज़",
     "no_other_document_uploaded": "कोई अन्य दस्तावेज़ अपलोड नहीं किया गया",
     "other_document_will_be_deleted": "अन्य दस्तावेज़ सेव करने पर हटा दिया जाएगा",
-    "files_optional": "फाइलें (वैकल्पिक)",
     "invoice_receipt_short": "चालान",
     "product_manual_short": "मैनुअल",
     "files_short": "फाइलें",
@@ -233,7 +232,17 @@
     "unnamed_product": "अनाम उत्पाद",
     "unvoid_warranty": "निरर्थक वारंटी",
     "void": "रद्द",
-    "void_warranty": "शून्य वारंटी"
+    "void_warranty": "शून्य वारंटी",
+    "expiry_history_title": "समाप्ति इतिहास",
+    "expiry_history_count_title": "समाप्ति इतिहास ({{count}})",
+    "expiry_history_tooltip": "समाप्ति तिथि {{count}} बार बदली गई — इतिहास देखने के लिए क्लिक करें",
+    "expiry_history_empty": "समाप्ति तिथि में कोई बदलाव दर्ज नहीं किया गया है।",
+    "expiry_history_loading": "समाप्ति इतिहास लोड हो रहा है...",
+    "expiry_history_load_error": "समाप्ति इतिहास लोड करने में विफल।",
+    "expiry_history_changed_on": "{{date}} को बदला गया",
+    "expiry_history_changed_on_by": "{{user}} द्वारा {{date}} को बदला गया",
+    "expiry_change_reason_label": "समाप्ति बदलने का कारण (वैकल्पिक)",
+    "expiry_change_reason_placeholder": "जैसे: मरम्मत दावे के बाद बढ़ाया गया, निर्माता विस्तार..."
   },
   "settings": {
     "title": "सेटिंग्स",
@@ -654,7 +663,8 @@
     "confirm_void_warranty": "यह वारंटी रद्द करें? इसे निष्क्रिय के रूप में चिह्नित किया जाएगा और कुल और सूचनाओं से बाहर रखा जाएगा। आप इसे बाद में पुनर्स्थापित कर सकते हैं.",
     "error_updating_void_status": "शून्य स्थिति अद्यतन करने में विफल",
     "unvoided_success": "वारंटी शून्य से बहाल",
-    "voided_success": "वारंटी रद्द कर दी गई"
+    "voided_success": "वारंटी रद्द कर दी गई",
+    "expiry_change_reason_too_long": "समाप्ति बदलने का कारण 255 अक्षरों या उससे कम होना चाहिए"
   },
   "languages": {
     "en": "अंग्रेज़ी",

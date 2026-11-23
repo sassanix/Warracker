@@ -220,7 +220,6 @@
     "current_other_document": "Текущий другой документ",
     "no_other_document_uploaded": "Другой документ не загружен",
     "other_document_will_be_deleted": "Другой документ будет удален при сохранении",
-    "files_optional": "Файлы (необязательно)",
     "invoice_receipt_short": "Счет",
     "product_manual_short": "Руководство",
     "files_short": "Файлы",
@@ -239,7 +238,17 @@
     "unnamed_product": "Безымянный продукт",
     "unvoid_warranty": "Отменить гарантию",
     "void": "Аннулирована",
-    "void_warranty": "Аннулирование гарантии"
+    "void_warranty": "Аннулирование гарантии",
+    "expiry_history_title": "История изменений срока",
+    "expiry_history_count_title": "История изменений срока ({{count}})",
+    "expiry_history_tooltip": "Срок окончания изменён {{count}} раз(а) — нажмите для просмотра истории",
+    "expiry_history_empty": "Изменений даты окончания не зафиксировано.",
+    "expiry_history_loading": "Загрузка истории изменений срока...",
+    "expiry_history_load_error": "Не удалось загрузить историю изменений срока.",
+    "expiry_history_changed_on": "Изменено {{date}}",
+    "expiry_history_changed_on_by": "Изменено {{date}} пользователем {{user}}",
+    "expiry_change_reason_label": "Причина изменения срока (необязательно)",
+    "expiry_change_reason_placeholder": "напр. Продлено после ремонта, продление производителем..."
   },
   "claims": {
     "claims": "Обращения",
@@ -715,7 +724,8 @@
     "confirm_void_warranty": "Аннулировать эту гарантию? Он будет помечен как неактивный и исключен из итогов и уведомлений. Вы сможете восстановить его позже.",
     "error_updating_void_status": "Не удалось обновить статус аннулирования.",
     "unvoided_success": "Гарантия восстановлена ​​из недействительной",
-    "voided_success": "Гарантия аннулирована"
+    "voided_success": "Гарантия аннулирована",
+    "expiry_change_reason_too_long": "Причина изменения срока не должна превышать 255 символов"
   },
   "languages": {
     "en": "English",

@@ -766,10 +766,18 @@
             // Build row HTML based on current view mode
             const lifetimeText = i18next.t('warranties.lifetime');
             const naText = i18next.t('warranties.na', 'N/A');
+            const expiryCount = Number(warranty.expiry_change_count) || 0;
+            const expiryTooltip = i18next.t('warranties.expiry_history_tooltip', {
+                count: expiryCount,
+                defaultValue: `Expiry changed ${expiryCount} time(s) — click to view history`
+            });
+            const expiryBadgeHtml = expiryCount > 0
+                ? ` <button type="button" class="expiry-history-badge" data-id="${warranty.id}" title="${escapeHTML(expiryTooltip)}" aria-label="${escapeHTML(expiryTooltip)}"><i class="fas fa-history" aria-hidden="true"></i><span>${expiryCount}</span></button>`
+                : '';
             let rowHTML = `
                 <td title="${escapeHTML(warranty.product_name)}">${escapeHTML(warranty.product_name)}</td>
                 <td>${warranty.purchase_date ? formatDateYYYYMMDD(new Date(warranty.purchase_date)) : naText}</td>
-                <td>${warranty.is_lifetime ? lifetimeText : (warranty.expiration_date ? formatDateYYYYMMDD(new Date(warranty.expiration_date)) : naText)}</td>
+                <td>${warranty.is_lifetime ? lifetimeText : (warranty.expiration_date ? formatDateYYYYMMDD(new Date(warranty.expiration_date)) : naText)}${expiryBadgeHtml}</td>
                 <td><span class="${statusClass}">${statusText}</span></td>
             `;
             
@@ -780,6 +788,15 @@
             }
             
             row.innerHTML = rowHTML; // Make sure escapeHTML is used on all string data from warranty
+            const badgeBtn = row.querySelector('.expiry-history-badge');
+            if (badgeBtn) {
+                badgeBtn.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    if (typeof window.openExpiryHistoryModal === 'function') {
+                        window.openExpiryHistoryModal(warranty);
+                    }
+                });
+            }
             row.addEventListener('click', () => toggleWarrantyDetails(warranty.id, row));
         });
     }
@@ -1016,6 +1033,15 @@
                 dHtml += '<div style="flex: 1 1 100%; margin-top: 10px;"><h4>Notes</h4>';
                 dHtml += `<pre style="white-space: pre-wrap; word-wrap: break-word; background-color: var(--notes-bg, #efefef); padding: 10px; border-radius: 4px;">${escapeHTML(warrantyDetails.notes)}</pre></div>`;
             }
+            const detailExpiryCount = Number(warrantyDetails.expiry_change_count) || 0;
+            if (detailExpiryCount > 0) {
+                const historyHeading = escapeHTML(i18next.t('warranties.expiry_history_count_title', {
+                    count: detailExpiryCount,
+                    defaultValue: `Expiry History (${detailExpiryCount})`
+                }));
+                const loadingText = escapeHTML(i18next.t('warranties.expiry_history_loading', 'Loading expiry history...'));
+                dHtml += `<div class="status-expiry-history-section" style="flex: 1 1 100%; margin-top: 10px;"><h4>${historyHeading}</h4><div class="status-expiry-history-list"><p class="expiry-history-loading">${loadingText}</p></div></div>`;
+            }
             dHtml += '</div>'; // end warranty-details-content
             dHtml += '<div class="warranty-details-actions" style="margin-top: 15px; text-align: right;">';
             const canEdit = canEditWarranty(warrantyDetails.user_id);
@@ -1026,6 +1052,27 @@
             detailsCell.innerHTML = dHtml;
             detailsRow.appendChild(detailsCell);
             clickedRow.parentNode.insertBefore(detailsRow, clickedRow.nextSibling);
+
+            if (detailExpiryCount > 0 && typeof window.fetchExpiryHistory === 'function' && typeof window.renderExpiryHistoryList === 'function') {
+                const historyContainer = detailsCell.querySelector('.status-expiry-history-list');
+                if (historyContainer) {
+                    window.fetchExpiryHistory(warrantyDetails.id)
+                        .then(entries => {
+                            if (detailsRow.isConnected) {
+                                window.renderExpiryHistoryList(historyContainer, entries);
+                            }
+                        })
+                        .catch(err => {
+                            if (detailsRow.isConnected) {
+                                while (historyContainer.firstChild) historyContainer.removeChild(historyContainer.firstChild);
+                                const errP = document.createElement('p');
+                                errP.className = 'expiry-history-error';
+                                errP.textContent = (err && err.message) || i18next.t('warranties.expiry_history_load_error', 'Failed to load expiry history.');
+                                historyContainer.appendChild(errP);
+                            }
+                        });
+                }
+            }
         } catch (error) {
             console.error('Error in toggleWarrantyDetails (status.js IIFE):', error);
             showToast(`Error: ${error.message}`, 'error');
