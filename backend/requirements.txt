@@ -9,14 +9,14 @@ flask-cors==6.0.5
 Flask-Login==0.6.3
 Flask-Bcrypt==1.0.1
 PyJWT==2.15.1
-email-validator==2.3.0
+email-validator==2.4.0
 APScheduler==3.11.3
 python-dateutil==3.0.0
-Authlib==1.9.5
+Authlib==1.9.10
 requests==2.34.2
 gevent==26.9.0
 psycogreen==1.0.2
 supervisor==4.3.0
-apprise==2.2.0
+apprise==2.3.0
 Flask-Babel==4.0.0
 Babel==2.18.0
