@@ -88,26 +88,27 @@ _checked_out: Dict[int, Tuple[pool.AbstractConnectionPool, threading.BoundedSema
 _init_lock = threading.Lock()
 
 def _close_stale_pool_if_forked(current_pid: int) -> None:
-    """Close any existing pool if it was created in a different process.
+    """Drop any pool created in a different process.
 
-    Gunicorn with preload_app=True forks workers after the app (and pool) may be
-    initialized. Psycopg2 connections/pools are not fork-safe. If we detect that
-    the pool was created in a different PID, we proactively close it in this
-    process so a fresh, per-process pool can be created.
+    Gunicorn with preload_app=True forks workers after the app (and
+    pool) may be initialized. Psycopg2 connections/pools are not
+    fork-safe. If we detect that the pool was created in a different
+    PID, drop the reference so a fresh, per-process pool is created.
+
+    Do NOT close the inherited connections: closing one sends a
+    Terminate message on the socket the parent still shares, which
+    kills the parent's connection ("server closed the connection
+    unexpectedly", #299). Dropping the reference is safe: the child's
+    copies of the sockets are closed by the kernel without a
+    Terminate message, and the parent keeps its own references.
     """
     global connection_pool, pool_pid, _pool_slots
     if connection_pool is not None and pool_pid is not None and pool_pid != current_pid:
-        logger.warning(f"[DB_HANDLER] Detected PID change (pool pid {pool_pid} -> current pid {current_pid}). Closing stale pool and reinitializing...")
-        try:
-            # Close all connections owned by this (forked) process copy of the pool
-            connection_pool.closeall()
-        except Exception as close_err:
-            logger.warning(f"[DB_HANDLER] Error while closing stale pool in forked process: {close_err}")
-        finally:
-            connection_pool = None
-            pool_pid = None
-            _pool_slots = None
-            _checked_out.clear()
+        logger.warning(f"[DB_HANDLER] Detected PID change (pool pid {pool_pid} -> current pid {current_pid}). Discarding inherited pool and reinitializing...")
+        connection_pool = None
+        pool_pid = None
+        _pool_slots = None
+        _checked_out.clear()
 
 def init_db_pool(max_retries=5, retry_delay=5):
     global connection_pool, pool_pid, _pool_slots # Ensure we're modifying the global variable in this module

@@ -8,6 +8,15 @@ Optimized for memory efficiency with configurable modes.
 
 import os
 
+# Mark this process tree as running under gunicorn, before the app
+# loads. The notification scheduler must start exactly once, in the
+# master from when_ready (#299), so create_app checks this flag and
+# does not start it. It cannot be set in on_starting: under
+# preload_app the app loads in Arbiter.__init__, before start() calls
+# on_starting. Workers inherit the flag through the fork, and tell
+# themselves apart with GUNICORN_WORKER_ID (set in post_fork).
+os.environ["WARRACKER_GUNICORN_MASTER"] = "1"
+
 # CRITICAL: Apply gevent monkey patching VERY EARLY to prevent SSL RecursionError
 # This must happen before any other imports that might use SSL
 memory_mode = os.environ.get('WARRACKER_MEMORY_MODE', 'optimized').lower()
@@ -98,12 +107,47 @@ def on_starting(server):
     """Called just before the master process is initialized."""
     print("Server is starting with memory-optimized configuration")
 
+def when_ready(server):
+    """Called in the master once the arbiter is ready, before workers spawn.
+
+    Start the single notification scheduler here (#299). create_app
+    does not start it under gunicorn, and workers discard the copy
+    they inherit in post_fork, so exactly one scheduler runs.
+    """
+    try:
+        try:
+            from backend.notifications import init_scheduler
+            from backend.db_handler import get_db_connection, release_db_connection
+        except ImportError:
+            from notifications import init_scheduler
+            from db_handler import get_db_connection, release_db_connection
+        app = server.app.wsgi()
+        if init_scheduler(app, get_db_connection, release_db_connection, force=True):
+            print("Notification scheduler started in the gunicorn master")
+        else:
+            print("Warning: notification scheduler did not start in the gunicorn master")
+    except Exception as e:
+        print(f"Warning: failed to start notification scheduler in the gunicorn master: {e}")
+
 def post_fork(server, worker):
     """Called just after a worker has been forked."""
     os.environ["GUNICORN_WORKER_ID"] = str(worker.age - 1)
     os.environ["GUNICORN_WORKER_PROCESS_NAME"] = f"worker-{worker.age - 1}"
     os.environ["GUNICORN_WORKER_CLASS"] = worker_class
-    
+
+    # Discard the scheduler inherited from the master (#299): the
+    # master owns the single scheduler, and a forked copy would send
+    # duplicate notifications. This runs before the worker starts
+    # serving, so the inherited scheduler never fires here.
+    try:
+        try:
+            from backend.notifications import discard_inherited_scheduler
+        except ImportError:
+            from notifications import discard_inherited_scheduler
+        discard_inherited_scheduler()
+    except Exception as e:
+        print(f"Warning: could not discard inherited scheduler: {e}")
+
     print(f"Worker {worker.pid} (ID: {worker.age - 1}) forked with memory optimization")
 
 def pre_fork(server, worker):

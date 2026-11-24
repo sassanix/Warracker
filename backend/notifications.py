@@ -31,6 +31,11 @@ except ImportError:
     BackgroundScheduler = None
 
 try:
+    from apscheduler.schedulers.base import STATE_STOPPED
+except ImportError:
+    STATE_STOPPED = 0
+
+try:
     from apscheduler.schedulers.gevent import GeventScheduler
     GEVENT_SCHEDULER_AVAILABLE = True
 except ImportError:
@@ -476,6 +481,62 @@ def mark_thresholds_sent(due_pairs, channel, conn):
         except Exception:
             pass
 
+
+def claim_thresholds(due_pairs, channel, conn):
+    """Claim due thresholds so only one process sends each one (#299).
+
+    Inserts the notification_log row up front and returns only the
+    pairs this process actually inserted (INSERT ... ON CONFLICT DO
+    NOTHING RETURNING). A concurrent copy of the job that loses the
+    race gets no row back and sends nothing, so a threshold is never
+    sent twice even if two processes run the job at once. The caller
+    must delete the claimed rows again (unclaim_thresholds) if the
+    send fails, so a failed send stays due and retries on the next
+    tick instead of being lost.
+    """
+    claimed = []
+    try:
+        with conn.cursor() as cur:
+            for w, threshold in due_pairs:
+                cur.execute(
+                    """INSERT INTO notification_log (warranty_id, days_before, channel)
+                       VALUES (%s, %s, %s) ON CONFLICT DO NOTHING
+                       RETURNING warranty_id, days_before""",
+                    (w.get('warranty_id'), threshold, channel),
+                )
+                if cur.fetchone():
+                    claimed.append((w, threshold))
+        conn.commit()
+    except Exception as e:
+        logger.error(f"Error claiming threshold notifications: {e}")
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return []
+    return claimed
+
+
+def unclaim_thresholds(pairs, channel, conn):
+    """Delete claimed rows again so a failed send stays due (#299)."""
+    if not pairs:
+        return
+    try:
+        with conn.cursor() as cur:
+            for w, threshold in pairs:
+                cur.execute(
+                    "DELETE FROM notification_log WHERE warranty_id = %s "
+                    "AND days_before = %s AND channel = %s",
+                    (w.get('warranty_id'), threshold, channel),
+                )
+        conn.commit()
+    except Exception as e:
+        logger.error(f"Error releasing claimed threshold notifications: {e}")
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
 def process_apprise_notifications(all_warranties, eligible_user_ids, is_manual, get_db_connection, release_db_connection):
     """Process and send Apprise notifications"""
     # ---> FIX: Get the handler from the application context <---
@@ -490,7 +551,13 @@ def process_apprise_notifications(all_warranties, eligible_user_ids, is_manual, 
         return
 
     logger.info(f"Processing Apprise notifications for {len(eligible_user_ids)} eligible users.")
-    
+
+    # Thresholds claimed by this run and thresholds already recorded as
+    # sent. If the run fails part-way, the claimed-but-unrecorded ones
+    # are released again so they stay due and retry (#299).
+    claimed_pairs = []
+    recorded_pairs = []
+
     try:
         # Reload configuration to ensure we have the latest settings from the database
         apprise_handler.reload_configuration()
@@ -574,6 +641,25 @@ def process_apprise_notifications(all_warranties, eligible_user_ids, is_manual, 
         if not due_pairs:
             logger.info("No threshold notifications due; skipping Apprise send")
             return
+        # Claim the due thresholds up front (#299): only the pairs this
+        # process actually inserts are sent, so a concurrent copy of the
+        # job cannot send the same threshold twice.
+        claim_conn = None
+        try:
+            claim_conn = get_db_connection()
+            claimed_pairs = claim_thresholds(due_pairs, 'apprise', claim_conn)
+        except Exception as e:
+            logger.error(f"Error claiming threshold notifications: {e}")
+        finally:
+            if claim_conn:
+                try:
+                    release_db_connection(claim_conn)
+                except Exception:
+                    pass
+        if not claimed_pairs:
+            logger.info("No threshold notifications claimed; skipping Apprise send")
+            return
+        due_pairs = claimed_pairs
         warranties_for_apprise = [w for w, _ in due_pairs]
         logger.info(f"{len(warranties_for_apprise)} warranties due for a threshold notification")
 
@@ -582,8 +668,23 @@ def process_apprise_notifications(all_warranties, eligible_user_ids, is_manual, 
             try:
                 rc = get_db_connection()
                 mark_thresholds_sent(pairs, 'apprise', rc)
+                recorded_pairs.extend(pairs)
             except Exception as e:
                 logger.error(f"Error recording sent notifications: {e}")
+            finally:
+                if rc:
+                    try:
+                        release_db_connection(rc)
+                    except Exception:
+                        pass
+
+        def _unclaim(pairs):
+            rc = None
+            try:
+                rc = get_db_connection()
+                unclaim_thresholds(pairs, 'apprise', rc)
+            except Exception as e:
+                logger.error(f"Error releasing claimed notifications: {e}")
             finally:
                 if rc:
                     try:
@@ -598,13 +699,15 @@ def process_apprise_notifications(all_warranties, eligible_user_ids, is_manual, 
             logger.info(f"Global Apprise notification result: {'Success' if success else 'Failed'}")
             if success:
                 _record_sent(due_pairs)
-        
+            else:
+                _unclaim(due_pairs)
+
         elif notification_mode == 'individual':
             # INDIVIDUAL MODE: Send one notification per user
             logger.info("Sending INDIVIDUAL Apprise notifications")
             sent_count = 0
             error_count = 0
-            
+
             # Group due warranties by user
             user_warranties = {}
             user_pairs = {}
@@ -612,7 +715,7 @@ def process_apprise_notifications(all_warranties, eligible_user_ids, is_manual, 
                 uid = w['user_id']
                 user_warranties.setdefault(uid, []).append(w)
                 user_pairs.setdefault(uid, []).append((w, threshold))
-            
+
             # Send notification for each user
             for user_id, warranties in user_warranties.items():
                 try:
@@ -624,17 +727,33 @@ def process_apprise_notifications(all_warranties, eligible_user_ids, is_manual, 
                     else:
                         error_count += 1
                         logger.warning(f"Individual Apprise notification failed for user {user_id}")
+                        _unclaim(user_pairs[user_id])
                 except Exception as e:
                     logger.error(f"Error sending individual Apprise notification for user {user_id}: {e}")
                     error_count += 1
-            
+                    _unclaim(user_pairs[user_id])
+
             logger.info(f"Individual Apprise notifications completed: {sent_count} sent, {error_count} errors")
-        
+
         else:
             logger.warning(f"Unknown Apprise notification mode: '{notification_mode}'. Skipping Apprise notifications.")
-        
+            _unclaim(due_pairs)
+
     except Exception as e:
         logger.error(f"Error sending Apprise notifications: {e}")
+        # A failure part-way through must not leave claimed thresholds
+        # marked as sent: release the ones that were never recorded so
+        # they stay due and retry on the next tick.
+        unsent = [p for p in claimed_pairs if p not in recorded_pairs]
+        if unsent:
+            try:
+                rc = get_db_connection()
+                try:
+                    unclaim_thresholds(unsent, 'apprise', rc)
+                finally:
+                    release_db_connection(rc)
+            except Exception:
+                pass
 
 def send_expiration_notifications(manual_trigger=False, get_db_connection=None, release_db_connection=None):
     """
@@ -774,62 +893,92 @@ def send_expiration_notifications(manual_trigger=False, get_db_connection=None, 
         notification_lock.release()
 
 def should_run_scheduler():
-    """Check if this is the main process that should run the scheduler."""
-    # This environment variable is set by the post_fork hook in gunicorn_config.py
+    """Check if this process should start the scheduler from create_app.
+
+    Under gunicorn the scheduler is started exactly once, in the master
+    from when_ready, so create_app must never start it there: the master
+    would start it before forking and every worker would inherit a
+    running copy (#299). Workers never run create_app under preload
+    anyway. Outside gunicorn (dev server, single process) the single
+    process runs it. WARRACKER_GUNICORN_MASTER is set by the gunicorn
+    config at import time, before the preloaded app loads.
+    """
     worker_id = os.environ.get('GUNICORN_WORKER_ID')
 
-    # Case 1: Multi-worker environment (e.g., 'optimized', 'performance' modes).
-    # The worker_id is explicitly set. Only worker '0' should run the scheduler.
     if worker_id is not None:
-        if worker_id == '0':
-            logger.info(f"✅ Scheduler will run in this primary worker (ID: {worker_id}).")
-            return True
-        else:
-            logger.info(f"ℹ️ Scheduler will NOT run in this secondary worker (ID: {worker_id}).")
-            return False
+        logger.info(f"ℹ️ Scheduler will NOT run in this worker (ID: {worker_id}); it runs in the gunicorn master.")
+        return False
 
-    # Case 2: Single-worker environment (e.g., 'ultra-light' mode or Flask dev server).
-    # The worker_id is not set (is None). In this case, the single worker must run the scheduler.
+    if os.environ.get('WARRACKER_GUNICORN_MASTER'):
+        logger.info("ℹ️ Scheduler will NOT run in the gunicorn master from create_app; it is started from when_ready.")
+        return False
+
     logger.info(f"✅ Scheduler will run: Single-worker environment detected (Worker ID not set).")
     return True
 
-def init_scheduler(app, get_db_connection, release_db_connection):
-    """Initialize the scheduler if this is the appropriate worker"""
+
+def discard_inherited_scheduler():
+    """Drop a scheduler inherited across a fork, without closing it.
+
+    Under gunicorn with preload_app the master starts the scheduler
+    before forking, so every worker inherits a running copy (#299).
+    That copy must never send. Shutting it down would join its thread,
+    which is a copy of the master's dead thread, so instead remove its
+    only job and mark it stopped: the loop then exits on its next
+    wakeup having sent nothing. The master keeps the real scheduler.
+    Safe to call when no scheduler exists.
+    """
     global scheduler, scheduler_initialized
-    
-    if should_run_scheduler():
-        try:
-            # Initialize scheduler if not already done
-            if scheduler is None:
-                # First try GeventScheduler if gevent is available and we're in a gevent worker
-                worker_class = os.environ.get('GUNICORN_WORKER_CLASS', '')
-                
-                if GEVENT_SCHEDULER_AVAILABLE and worker_class == 'gevent':
-                    try:
-                        scheduler = GeventScheduler(
-                            job_defaults={
-                                'coalesce': True,
-                                'max_instances': 1,
-                                'misfire_grace_time': 300
-                            }
-                        )
-                        logger.info("Using GeventScheduler for gevent worker compatibility")
-                    except Exception as gevent_error:
-                        logger.warning(f"Failed to initialize GeventScheduler: {gevent_error}")
-                        logger.info("Falling back to BackgroundScheduler")
-                        if BACKGROUND_SCHEDULER_AVAILABLE:
-                            scheduler = BackgroundScheduler(
-                                job_defaults={
-                                    'coalesce': True,
-                                    'max_instances': 1,
-                                    'misfire_grace_time': 300
-                                }
-                            )
-                            logger.info("Using BackgroundScheduler (GeventScheduler fallback)")
-                        else:
-                            logger.error("BackgroundScheduler not available for fallback")
-                            return False
-                else:
+    if scheduler is None:
+        return
+    try:
+        scheduler.remove_job('notification_job')
+    except Exception:
+        pass
+    try:
+        scheduler.state = STATE_STOPPED
+    except Exception:
+        pass
+    scheduler = None
+    scheduler_initialized = False
+    logger.info("ℹ️ Discarded scheduler inherited from the gunicorn master; this worker will not send notifications.")
+
+
+def init_scheduler(app, get_db_connection, release_db_connection, force=False):
+    """Initialize the scheduler if this is the appropriate process.
+
+    With force=True the should_run_scheduler check is skipped; the
+    gunicorn when_ready hook uses that to start the single scheduler
+    in the master. A second call is a no-op when the job already
+    exists, so create_app and when_ready (or app.py) cannot add the
+    job twice.
+    """
+    global scheduler, scheduler_initialized
+
+    if not force and not should_run_scheduler():
+        logger.info("ℹ️ Scheduler not started in this process")
+        scheduler_initialized = False
+        return False
+
+    try:
+        # Initialize scheduler if not already done
+        if scheduler is None:
+            # First try GeventScheduler if gevent is available and we're in a gevent worker
+            worker_class = os.environ.get('GUNICORN_WORKER_CLASS', '')
+
+            if GEVENT_SCHEDULER_AVAILABLE and worker_class == 'gevent':
+                try:
+                    scheduler = GeventScheduler(
+                        job_defaults={
+                            'coalesce': True,
+                            'max_instances': 1,
+                            'misfire_grace_time': 300
+                        }
+                    )
+                    logger.info("Using GeventScheduler for gevent worker compatibility")
+                except Exception as gevent_error:
+                    logger.warning(f"Failed to initialize GeventScheduler: {gevent_error}")
+                    logger.info("Falling back to BackgroundScheduler")
                     if BACKGROUND_SCHEDULER_AVAILABLE:
                         scheduler = BackgroundScheduler(
                             job_defaults={
@@ -838,38 +987,58 @@ def init_scheduler(app, get_db_connection, release_db_connection):
                                 'misfire_grace_time': 300
                             }
                         )
-                        if worker_class == 'gevent':
-                            logger.info("Using BackgroundScheduler with gevent worker (GeventScheduler not available)")
-                        else:
-                            logger.info(f"Using BackgroundScheduler with {worker_class} worker")
+                        logger.info("Using BackgroundScheduler (GeventScheduler fallback)")
                     else:
-                        logger.error("No scheduler available (BackgroundScheduler not found)")
+                        logger.error("BackgroundScheduler not available for fallback")
                         return False
-            
-            # ---> FIX: Create a wrapper that pushes an app context <---
-            def notification_job_with_context():
-                with app.app_context():
-                    send_expiration_notifications(
-                        manual_trigger=False,
-                        get_db_connection=get_db_connection,
-                        release_db_connection=release_db_connection
+            else:
+                if BACKGROUND_SCHEDULER_AVAILABLE:
+                    scheduler = BackgroundScheduler(
+                        job_defaults={
+                            'coalesce': True,
+                            'max_instances': 1,
+                            'misfire_grace_time': 300
+                        }
                     )
+                    if worker_class == 'gevent':
+                        logger.info("Using BackgroundScheduler with gevent worker (GeventScheduler not available)")
+                    else:
+                        logger.info(f"Using BackgroundScheduler with {worker_class} worker")
+                else:
+                    logger.error("No scheduler available (BackgroundScheduler not found)")
+                    return False
 
-            # Schedule the new context-aware wrapper
+        # ---> FIX: Create a wrapper that pushes an app context <---
+        def notification_job_with_context():
+            with app.app_context():
+                send_expiration_notifications(
+                    manual_trigger=False,
+                    get_db_connection=get_db_connection,
+                    release_db_connection=release_db_connection
+                )
+
+        # Only add the job once: a second init_scheduler call (from
+        # app.py after create_app, or from when_ready after create_app)
+        # used to re-add it and fail with ConflictingIdError.
+        if scheduler.get_job('notification_job') is None:
             scheduler.add_job(func=notification_job_with_context, trigger="interval", minutes=2, id='notification_job')
-            scheduler.start()
+            if not scheduler.running:
+                scheduler.start()
             logger.info("✅ Notification scheduler started - checking every 2 minutes")
-            
-            # Add a shutdown hook
-            atexit.register(lambda: scheduler.shutdown())
-            scheduler_initialized = True
-            return True
-        except Exception as e:
-            logger.error(f"❌ Failed to start scheduler: {e}")
-            scheduler_initialized = False
-            return False
-    else:
-        logger.info("ℹ️ Scheduler not started in this worker")
+
+            # Add a shutdown hook. Guard against the scheduler having
+            # been discarded (set to None) by a forked worker, or
+            # already stopped by another hook; the hook is inherited
+            # across the fork too, so more than one may be registered.
+            atexit.register(lambda: scheduler.shutdown()
+                            if scheduler is not None and scheduler.running
+                            else None)
+        else:
+            logger.info("ℹ️ Notification scheduler already running; keeping the existing job")
+        scheduler_initialized = True
+        return True
+    except Exception as e:
+        logger.error(f"❌ Failed to start scheduler: {e}")
         scheduler_initialized = False
         return False
 
