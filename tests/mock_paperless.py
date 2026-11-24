@@ -26,7 +26,14 @@ DOCS = [
      "tags": [2]},
 ]
 TASKS = {}  # task_id -> doc_id
+TASK_NUMERIC = {}  # task_id -> numeric task id (v10 looks tasks up by it)
+NEXT_TASK_ID = [1]
 NEXT_ID = [3]
+# Flip to serve API v10 shapes (Paperless-ngx 3.x): the detail endpoint
+# 404s for UUIDs, the list endpoint paginates, status is lower case,
+# and the document arrives in related_document_ids. Tests flip this
+# and reset it; the default stays v9.
+TASKS_V10 = False
 LAST_DOCUMENT_QUERIES = []  # parsed query dicts of /api/documents/ GETs
 
 
@@ -86,6 +93,9 @@ class Handler(BaseHTTPRequestHandler):
         m = re.match(r"^/api/tasks/([0-9a-f-]+)/$", path)
         if m:
             tid = m.group(1)
+            # v10 looks tasks up by numeric id, so a UUID never matches.
+            if TASKS_V10:
+                return self._json({"detail": "Not found"}, status=404)
             if tid in TASKS:
                 return self._json({"id": tid, "state": "SUCCESS",
                                    "result": f"document id {TASKS[tid]}"})
@@ -94,8 +104,19 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/tasks/":
             tid = qs.get("task_id", [""])[0]
             if tid in TASKS:
+                if TASKS_V10:
+                    return self._json({
+                        "count": 1, "next": None, "previous": None,
+                        "results": [{"id": TASK_NUMERIC[tid],
+                                     "task_id": tid,
+                                     "status": "success",
+                                     "related_document_ids": [TASKS[tid]],
+                                     "result_data": f"Success. New document id {TASKS[tid]} created"}]})
                 return self._json([{"id": tid, "state": "SUCCESS",
                                     "result": f"document id {TASKS[tid]}"}])
+            if TASKS_V10:
+                return self._json({"count": 0, "next": None,
+                                   "previous": None, "results": []})
             return self._json([])
 
         if path == "/api/tags/":
@@ -127,6 +148,8 @@ class Handler(BaseHTTPRequestHandler):
                          "archived_file_name": fname})
             task_id = str(uuid.uuid4())
             TASKS[task_id] = doc_id
+            TASK_NUMERIC[task_id] = NEXT_TASK_ID[0]
+            NEXT_TASK_ID[0] += 1
             # Return task UUID as plain text (like real Paperless-ngx),
             # toggleable to JSON string via ?json=1 for branch testing
             if parse_qs(urlparse(self.path).query).get("json"):

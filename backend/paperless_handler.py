@@ -7,12 +7,32 @@ for uploading, retrieving, and managing documents.
 
 import requests
 import logging
+import re
 from typing import Optional, Dict, Any, Tuple
 import os
 from io import BytesIO
 import hashlib
 
 logger = logging.getLogger(__name__)
+
+
+def _task_payload(body):
+    """Normalize a /api/tasks response to a single task dict.
+
+    Paperless API v9 returns the task as a plain object from the detail
+    endpoint and as a bare list from the filtered list endpoint. API v10
+    (Paperless-ngx 3.x) paginates the list endpoint, so it arrives as a
+    page object with the tasks under "results". Unwrap both shapes; an
+    empty list or page means the task is not visible yet.
+    """
+    if isinstance(body, list):
+        return body[0] if body else {}
+    if isinstance(body, dict):
+        results = body.get("results")
+        if isinstance(results, list):
+            return results[0] if results else {}
+        return body
+    return {}
 
 
 class PaperlessHandler:
@@ -698,25 +718,36 @@ class PaperlessHandler:
 
                 resp.raise_for_status()
 
-                # Legacy endpoint returns a list
-                if isinstance(resp.json(), list):
-                    task_info = resp.json()[0] if resp.json() else {}
-                else:
-                    task_info = resp.json()
+                # v9 returns the task as a plain object (detail endpoint)
+                # or a bare list (filtered list endpoint); v10 paginates
+                # the list endpoint, so unwrap the page object first.
+                task_info = _task_payload(resp.json())
 
-                # In newer Paperless versions the field is called "state"; fall back to
-                # "status" for backwards-compatibility.
+                # Paperless 3.x (API v10) reports the task status in lower
+                # case under "status"; v9 uses upper-case "state". Compare
+                # case-insensitively so both keep working.
                 state = task_info.get("state") or task_info.get("status")
+                if isinstance(state, str):
+                    state = state.upper()
+                # v10 drops related_document in favour of a list of ids.
                 related_doc = task_info.get("related_document")
+                if not related_doc:
+                    related_ids = task_info.get("related_document_ids")
+                    if isinstance(related_ids, list) and related_ids:
+                        related_doc = related_ids[0]
 
-                # Some Paperless versions don't fill related_document but embed the
-                # newly-created ID in the free-text "result" string, e.g.
+                # Some Paperless versions don't fill the related-document
+                # field but embed the newly-created ID in free text, e.g.
                 #   "Success. New document id 416 created"  – see GH#3064.
-                if not related_doc and isinstance(task_info.get("result"), str):
-                    import re
-                    m = re.search(r"document id (\d+)", task_info["result"])
-                    if m:
-                        related_doc = m.group(1)
+                # v10 carries that text in result_data instead of result.
+                if not related_doc:
+                    for text_field in ("result", "result_data"):
+                        text = task_info.get(text_field)
+                        if isinstance(text, str):
+                            m = re.search(r"document id (\d+)", text)
+                            if m:
+                                related_doc = m.group(1)
+                                break
 
                 if state == "SUCCESS" and related_doc:
                     try:

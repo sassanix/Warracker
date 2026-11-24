@@ -393,13 +393,19 @@ def paperless_upload():
     try:
         logger.info("Paperless upload endpoint called")
         
-        # Get Paperless handler
+        # Get Paperless handler. The handler only reads site settings from
+        # the connection, so release it right away: the upload below polls
+        # Paperless for up to 10 minutes, and holding a pooled connection
+        # idle in transaction for the whole wait starves the pool (#298).
+        # A fresh connection is taken again below for the ownership claim.
         conn = get_db_connection()
         logger.info("Database connection acquired")
-        
+
         paperless_handler = get_paperless_handler(conn)
         logger.info(f"Paperless handler: {paperless_handler is not None}")
-        
+        release_db_connection(conn)
+        conn = None
+
         if not paperless_handler:
             logger.warning("Paperless handler is None - integration not configured")
             return jsonify({"error": "Paperless-ngx integration is not enabled or configured"}), 400
@@ -464,12 +470,18 @@ def paperless_upload():
             # Record the uploader as the document's owner in Warracker, so
             # search/linking/serving can be scoped to them. Paperless may
             # return a non-numeric (task) id instead of a document id; only
-            # numeric ids can be tracked.
+            # numeric ids can be tracked. The connection was released
+            # before the upload, so take a fresh one for the claim.
             try:
                 numeric_document_id = int(document_id)
-                with conn.cursor() as cur:
-                    claim_upload_ownership(cur, numeric_document_id, request.user['id'], upload_started_at)
-                conn.commit()
+                conn = get_db_connection()
+                try:
+                    with conn.cursor() as cur:
+                        claim_upload_ownership(cur, numeric_document_id, request.user['id'], upload_started_at)
+                    conn.commit()
+                finally:
+                    release_db_connection(conn)
+                    conn = None
             except (TypeError, ValueError):
                 logger.info(f"Upload returned non-document id {document_id!r}; ownership not recorded")
             return jsonify({
@@ -484,12 +496,17 @@ def paperless_upload():
             # Reveal it only when the requester could link it anyway.
             revealed_id = document_id
             if document_id is not None:
-                with conn.cursor() as cur:
-                    if not user_can_link_paperless_document(
-                        cur, request.user['id'],
-                        request.user.get('is_admin', False), document_id
-                    ):
-                        revealed_id = None
+                conn = get_db_connection()
+                try:
+                    with conn.cursor() as cur:
+                        if not user_can_link_paperless_document(
+                            cur, request.user['id'],
+                            request.user.get('is_admin', False), document_id
+                        ):
+                            revealed_id = None
+                finally:
+                    release_db_connection(conn)
+                    conn = None
             return jsonify({
                 "success": False,
                 "document_id": revealed_id,
