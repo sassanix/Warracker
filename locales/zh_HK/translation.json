@@ -214,7 +214,6 @@
     "current_other_document": "目前其他文件",
     "no_other_document_uploaded": "未上傳其他文件",
     "other_document_will_be_deleted": "其他文件將在儲存時刪除",
-    "files_optional": "檔案（可選）",
     "invoice_receipt_short": "發票",
     "product_manual_short": "手冊",
     "files_short": "檔案",
@@ -233,7 +232,17 @@
     "unnamed_product": "未命名產品",
     "unvoid_warranty": "保固無效",
     "void": "無效",
-    "void_warranty": "保固無效"
+    "void_warranty": "保固無效",
+    "expiry_history_title": "到期變更記錄",
+    "expiry_history_count_title": "到期變更記錄 ({{count}})",
+    "expiry_history_tooltip": "到期日期已變更 {{count}} 次 — 點擊查看記錄",
+    "expiry_history_empty": "尚無到期日期變更記錄。",
+    "expiry_history_loading": "正在載入到期變更記錄...",
+    "expiry_history_load_error": "載入到期變更記錄失敗。",
+    "expiry_history_changed_on": "變更於 {{date}}",
+    "expiry_history_changed_on_by": "由 {{user}} 於 {{date}} 變更",
+    "expiry_change_reason_label": "到期變更原因（可選）",
+    "expiry_change_reason_placeholder": "例如：維修索償後延長、廠商延保..."
   },
   "settings": {
     "title": "設定",
@@ -654,7 +663,8 @@
     "confirm_void_warranty": "使本保固失效？它將被標記為非活動狀態並從總數和通知中排除。您可以稍後恢復它。",
     "error_updating_void_status": "無法更新無效狀態",
     "unvoided_success": "保固從無效狀態恢復",
-    "voided_success": "保固失效"
+    "voided_success": "保固失效",
+    "expiry_change_reason_too_long": "到期變更原因不能超過 255 個字元"
   },
   "languages": {
     "en": "English",

@@ -214,7 +214,6 @@
     "current_other_document": "Aktuelles anderes Dokument",
     "no_other_document_uploaded": "Kein anderes Dokument hochgeladen",
     "other_document_will_be_deleted": "Anderes Dokument wird beim Speichern gelöscht",
-    "files_optional": "Dateien (optional)",
     "invoice_receipt_short": "Rechnung",
     "product_manual_short": "Handbuch",
     "files_short": "Dateien",
@@ -233,7 +232,17 @@
     "unnamed_product": "Unbenanntes Produkt",
     "unvoid_warranty": "Ungültige Garantie",
     "void": "Ungültig",
-    "void_warranty": "Garantie erlischt"
+    "void_warranty": "Garantie erlischt",
+    "expiry_history_title": "Ablaufverlauf",
+    "expiry_history_count_title": "Ablaufverlauf ({{count}})",
+    "expiry_history_tooltip": "Ablaufdatum {{count}}-mal geändert — klicken für Verlauf",
+    "expiry_history_empty": "Keine Änderungen am Ablaufdatum aufgezeichnet.",
+    "expiry_history_loading": "Ablaufverlauf wird geladen...",
+    "expiry_history_load_error": "Ablaufverlauf konnte nicht geladen werden.",
+    "expiry_history_changed_on": "Geändert am {{date}}",
+    "expiry_history_changed_on_by": "Geändert am {{date}} von {{user}}",
+    "expiry_change_reason_label": "Grund für die Ablaufänderung (Optional)",
+    "expiry_change_reason_placeholder": "z. B. Verlängert nach Reparatur, Herstellerkulanz..."
   },
   "settings": {
     "title": "Einstellungen",
@@ -654,7 +663,8 @@
     "confirm_void_warranty": "Diese Garantie ungültig machen? Es wird als inaktiv markiert und von Gesamtsummen und Benachrichtigungen ausgeschlossen. Sie können es später wiederherstellen.",
     "error_updating_void_status": "Der Ungültigkeitsstatus konnte nicht aktualisiert werden",
     "unvoided_success": "Die Garantie wurde nach Ablauf der Gültigkeit wiederhergestellt",
-    "voided_success": "Garantie erlischt"
+    "voided_success": "Garantie erlischt",
+    "expiry_change_reason_too_long": "Der Grund für die Ablaufänderung darf höchstens 255 Zeichen lang sein"
   },
   "languages": {
     "en": "Englisch",

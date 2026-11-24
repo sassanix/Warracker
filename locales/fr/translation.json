@@ -161,7 +161,7 @@
     "choose_file": "Choisir un fichier",
     "browse_paperless": "Parcourir les documents Paperless-ngx",
     "product_manual_optional": "Manuel du produit (facultatif)",
-    "files_optional": "Fichiers (facultatif)",
+    "files_optional": "Fichiers (Optionnel)",
     "search_or_add_new_tag": "Rechercher ou ajouter une nouvelle étiquette...",
     "product_information": "Informations sur le produit",
     "product_url": "URL du produit",
@@ -214,7 +214,6 @@
     "current_other_document": "Document actuel",
     "no_other_document_uploaded": "Aucun autre document téléchargé",
     "other_document_will_be_deleted": "L'autre document sera supprimé lors de la sauvegarde",
-    "files_optional": "Fichiers (Optionnel)",
     "invoice_receipt_short": "Facture",
     "product_manual_short": "Manuel",
     "files_short": "Fichiers",
@@ -233,7 +232,17 @@
     "unnamed_product": "Produit sans nom",
     "unvoid_warranty": "Annuler la garantie",
     "void": "Annulée",
-    "void_warranty": "Annuler la garantie"
+    "void_warranty": "Annuler la garantie",
+    "expiry_history_title": "Historique d'expiration",
+    "expiry_history_count_title": "Historique d'expiration ({{count}})",
+    "expiry_history_tooltip": "Expiration modifiée {{count}} fois — cliquer pour voir l'historique",
+    "expiry_history_empty": "Aucune modification de la date d'expiration enregistrée.",
+    "expiry_history_loading": "Chargement de l'historique d'expiration...",
+    "expiry_history_load_error": "Échec du chargement de l'historique d'expiration.",
+    "expiry_history_changed_on": "Modifié le {{date}}",
+    "expiry_history_changed_on_by": "Modifié le {{date}} par {{user}}",
+    "expiry_change_reason_label": "Raison de la modification d'expiration (Optionnel)",
+    "expiry_change_reason_placeholder": "ex. Prolongée après réparation, geste commercial..."
   },
   "settings": {
     "title": "Paramètres",
@@ -654,7 +663,8 @@
     "confirm_void_warranty": "Annuler cette garantie ? Il sera marqué comme inactif et exclu des totaux et des notifications. Vous pourrez le restaurer plus tard.",
     "error_updating_void_status": "Échec de la mise à jour du statut d'annulation",
     "unvoided_success": "Garantie restaurée après annulation",
-    "voided_success": "Garantie annulée"
+    "voided_success": "Garantie annulée",
+    "expiry_change_reason_too_long": "La raison de la modification d'expiration doit comporter 255 caractères maximum"
   },
   "languages": {
     "en": "English",

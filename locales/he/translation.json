@@ -193,7 +193,6 @@
     "choose_file": "בחר קובץ",
     "browse_paperless": "עיין במסמכי Paperless-ngx",
     "product_manual_optional": "מדריך מוצר (אופציונלי)",
-    "files_optional": "קבצים (אופציונלי)",
     "search_or_add_tag": "חפש או הוסף תגית חדשה...",
     "search_or_add_new_tag": "חפש או הוסף תגית חדשה...",
     "product_information": "מידע על המוצר",
@@ -243,7 +242,17 @@
     "unnamed_product": "ללא שם מוצר",
     "unvoid_warranty": "אחריות ללא ביטול",
     "void": "בָּטֵל",
-    "void_warranty": "אחריות בטלה"
+    "void_warranty": "אחריות בטלה",
+    "expiry_history_title": "היסטוריית תוקף",
+    "expiry_history_count_title": "היסטוריית תוקף ({{count}})",
+    "expiry_history_tooltip": "תאריך התוקף שונה {{count}} פעמים — לחץ לצפייה בהיסטוריה",
+    "expiry_history_empty": "לא נרשמו שינויים בתאריך התפוגה.",
+    "expiry_history_loading": "טוען היסטוריית תוקף...",
+    "expiry_history_load_error": "טעינת היסטוריית התוקף נכשלה.",
+    "expiry_history_changed_on": "שונה בתאריך {{date}}",
+    "expiry_history_changed_on_by": "שונה בתאריך {{date}} על ידי {{user}}",
+    "expiry_change_reason_label": "סיבת שינוי תאריך התפוגה (אופציונלי)",
+    "expiry_change_reason_placeholder": "לדוגמה: הוארך לאחר תיקון, מחוות יצרן..."
   },
   "settings": {
     "title": "הגדרות",
@@ -664,7 +673,8 @@
     "confirm_void_warranty": "לבטל את האחריות הזו? הוא יסומן כלא פעיל ולא ייכלל בסיכומים ובהודעות. אתה יכול לשחזר אותו מאוחר יותר.",
     "error_updating_void_status": "עדכון סטטוס הריק נכשל",
     "unvoided_success": "האחריות שוחזרה מבטלה",
-    "voided_success": "האחריות בוטלה"
+    "voided_success": "האחריות בוטלה",
+    "expiry_change_reason_too_long": "סיבת שינוי התוקף חייבת להיות עד 255 תווים"
   },
   "languages": {
     "en": "אנגלית",

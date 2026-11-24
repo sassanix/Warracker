@@ -210,7 +210,6 @@
     "current_other_document": "Obecny inny dokument",
     "no_other_document_uploaded": "Brak przesłanego innego dokumentu",
     "other_document_will_be_deleted": "Inny dokument zostanie usunięty po zapisaniu",
-    "files_optional": "Pliki (opcjonalnie)",
     "invoice_receipt_short": "Faktura",
     "product_manual_short": "Instrukcja",
     "files_short": "Pliki",
@@ -233,7 +232,17 @@
     "unnamed_product": "Nienazwany produkt",
     "unvoid_warranty": "Nieunieważniona gwarancja",
     "void": "Nieważna",
-    "void_warranty": "Nieważna gwarancja"
+    "void_warranty": "Nieważna gwarancja",
+    "expiry_history_title": "Historia zmian wygaśnięcia",
+    "expiry_history_count_title": "Historia zmian wygaśnięcia ({{count}})",
+    "expiry_history_tooltip": "Data wygaśnięcia zmieniona {{count}} raz(y) — kliknij, aby zobaczyć historię",
+    "expiry_history_empty": "Brak zarejestrowanych zmian daty wygaśnięcia.",
+    "expiry_history_loading": "Ładowanie historii wygaśnięcia...",
+    "expiry_history_load_error": "Nie udało się załadować historii wygaśnięcia.",
+    "expiry_history_changed_on": "Zmieniono {{date}}",
+    "expiry_history_changed_on_by": "Zmieniono {{date}} przez {{user}}",
+    "expiry_change_reason_label": "Powód zmiany daty wygaśnięcia (Opcjonalnie)",
+    "expiry_change_reason_placeholder": "np. Przedłużono po naprawie, gest producenta..."
   },
   "settings": {
     "title": "Warracker - Ustawienia",
@@ -654,7 +663,8 @@
     "confirm_void_warranty": "Unieważnić tę gwarancję? Zostanie oznaczony jako nieaktywny i wykluczony z sum i powiadomień. Możesz go przywrócić później.",
     "error_updating_void_status": "Nie udało się zaktualizować statusu nieważnego",
     "unvoided_success": "Gwarancja przywrócona po utracie ważności",
-    "voided_success": "Gwarancja unieważniona"
+    "voided_success": "Gwarancja unieważniona",
+    "expiry_change_reason_too_long": "Powód zmiany daty wygaśnięcia może mieć maksymalnie 255 znaków"
   },
   "languages": {
     "en": "English",

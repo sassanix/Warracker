@@ -808,6 +808,15 @@ export function initEventListeners() {
 				if (typeof window.openClaimsModal === 'function' && id) window.openClaimsModal(id);
 				return;
 			}
+			if (e.target.closest('.expiry-history-badge')) {
+				e.preventDefault();
+				const id = parseInt(e.target.closest('.expiry-history-badge')?.dataset?.id, 10);
+				const warranty = storeGetWarranties().find(w => w.id === id);
+				if (typeof window.openExpiryHistoryModal === 'function' && id) {
+					window.openExpiryHistoryModal(warranty || id);
+				}
+				return;
+			}
 			if (e.target.closest('.edit-btn')) {
 				e.preventDefault();
 				const el = e.target.closest('.edit-btn');

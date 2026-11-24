@@ -191,7 +191,6 @@
     "choose_file": "اختر ملف",
     "browse_paperless": "تصفح مستندات Paperless-ngx",
     "product_manual_optional": "دليل المنتج (اختياري)",
-    "files_optional": "ملفات (اختياري)",
     "search_or_add_tag": "ابحث أو أضف علامة جديدة...",
     "product_information": "معلومات المنتج",
     "product_url": "رابط المنتج",
@@ -243,7 +242,17 @@
     "unnamed_product": "منتج غير مسمى",
     "unvoid_warranty": "ضمان غير مبطل",
     "void": "باطل",
-    "void_warranty": "ضمان باطل"
+    "void_warranty": "ضمان باطل",
+    "expiry_history_title": "سجل تغييرات تاريخ الانتهاء",
+    "expiry_history_count_title": "سجل تغييرات تاريخ الانتهاء ({{count}})",
+    "expiry_history_tooltip": "تم تغيير تاريخ الانتهاء {{count}} مرة — انقر لعرض السجل",
+    "expiry_history_empty": "لم يتم تسجيل أي تغييرات في تاريخ الانتهاء.",
+    "expiry_history_loading": "جارٍ تحميل سجل تاريخ الانتهاء...",
+    "expiry_history_load_error": "فشل تحميل سجل تاريخ الانتهاء.",
+    "expiry_history_changed_on": "تم التغيير في {{date}}",
+    "expiry_history_changed_on_by": "تم التغيير في {{date}} بواسطة {{user}}",
+    "expiry_change_reason_label": "سبب تغيير تاريخ الانتهاء (اختياري)",
+    "expiry_change_reason_placeholder": "مثل: تمديد بعد مطالبة إصلاح، تمديد من الشركة المصنعة..."
   },
   "settings": {
     "title": "الإعدادات",
@@ -664,7 +673,8 @@
     "confirm_void_warranty": "هل يبطل هذا الضمان؟ سيتم وضع علامة عليه كغير نشط واستبعاده من الإجماليات والإشعارات. ويمكنك استعادته لاحقًا.",
     "error_updating_void_status": "فشل تحديث حالة الفراغ",
     "unvoided_success": "تم استعادة الضمان من الفراغ",
-    "voided_success": "الضمان باطلة"
+    "voided_success": "الضمان باطلة",
+    "expiry_change_reason_too_long": "يجب ألا يتجاوز سبب تغيير تاريخ الانتهاء 255 حرفاً"
   },
   "languages": {
     "en": "English",

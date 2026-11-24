@@ -214,7 +214,6 @@
     "current_other_document": "当前其他文档",
     "no_other_document_uploaded": "未上传其他文档",
     "other_document_will_be_deleted": "保存后将删除其他文档",
-    "files_optional": "附件（可选）",
     "invoice_receipt_short": "发票",
     "product_manual_short": "手册",
     "files_short": "附件",
@@ -233,7 +232,17 @@
     "unnamed_product": "未命名产品",
     "unvoid_warranty": "保修无效",
     "void": "无效",
-    "void_warranty": "保修无效"
+    "void_warranty": "保修无效",
+    "expiry_history_title": "到期变更历史",
+    "expiry_history_count_title": "到期变更历史 ({{count}})",
+    "expiry_history_tooltip": "到期日期已变更 {{count}} 次 — 点击查看历史",
+    "expiry_history_empty": "暂无到期日期变更记录。",
+    "expiry_history_loading": "正在加载到期变更历史...",
+    "expiry_history_load_error": "加载到期变更历史失败。",
+    "expiry_history_changed_on": "变更于 {{date}}",
+    "expiry_history_changed_on_by": "由 {{user}} 于 {{date}} 变更",
+    "expiry_change_reason_label": "到期变更原因（可选）",
+    "expiry_change_reason_placeholder": "例如：维修索赔后延长、厂商延保..."
   },
   "settings": {
     "title": "Warracker - 设置",
@@ -654,7 +663,8 @@
     "confirm_void_warranty": "使本保修失效？它将被标记为非活动状态并从总数和通知中排除。您可以稍后恢复它。",
     "error_updating_void_status": "无法更新无效状态",
     "unvoided_success": "保修从无效状态恢复",
-    "voided_success": "保修失效"
+    "voided_success": "保修失效",
+    "expiry_change_reason_too_long": "到期变更原因不能超过 255 个字符"
   },
   "languages": {
     "en": "English",

@@ -214,7 +214,6 @@
     "current_other_document": "سند دیگر فعلی",
     "no_other_document_uploaded": "هیچ سند دیگری آپلود نشده است",
     "other_document_will_be_deleted": "سند دیگر هنگام ذخیره حذف خواهد شد",
-    "files_optional": "فایل‌ها (اختیاری)",
     "invoice_receipt_short": "فاکتور",
     "product_manual_short": "دفترچه راهنما",
     "files_short": "فایل‌ها",
@@ -233,7 +232,17 @@
     "unnamed_product": "محصول بدون نام",
     "unvoid_warranty": "گارانتی بی اعتبار",
     "void": "باطل",
-    "void_warranty": "گارانتی باطل"
+    "void_warranty": "گارانتی باطل",
+    "expiry_history_title": "تاریخچه تغییرات انقضا",
+    "expiry_history_count_title": "تاریخچه تغییرات انقضا ({{count}})",
+    "expiry_history_tooltip": "تاریخ انقضا {{count}} بار تغییر کرده — برای مشاهده تاریخچه کلیک کنید",
+    "expiry_history_empty": "هیچ تغییری در تاریخ انقضا ثبت نشده است.",
+    "expiry_history_loading": "در حال بارگذاری تاریخچه انقضا...",
+    "expiry_history_load_error": "بارگذاری تاریخچه انقضا ناموفق بود.",
+    "expiry_history_changed_on": "تغییر یافته در {{date}}",
+    "expiry_history_changed_on_by": "تغییر یافته در {{date}} توسط {{user}}",
+    "expiry_change_reason_label": "دلیل تغییر تاریخ انقضا (اختیاری)",
+    "expiry_change_reason_placeholder": "مثلاً تمدید پس از تعمیر، تمدید توسط سازنده..."
   },
   "settings": {
     "title": "تنظیمات",
@@ -654,7 +663,8 @@
     "confirm_void_warranty": "این گارانتی باطل می شود؟ غیرفعال علامت‌گذاری می‌شود و از جمع کل و اعلان‌ها حذف می‌شود. بعدا می توانید آن را بازیابی کنید.",
     "error_updating_void_status": "وضعیت خالی به‌روزرسانی نشد",
     "unvoided_success": "گارانتی از باطل بازگردانده شد",
-    "voided_success": "گارانتی باطل شد"
+    "voided_success": "گارانتی باطل شد",
+    "expiry_change_reason_too_long": "دلیل تغییر تاریخ انقضا باید حداکثر ۲۵۵ نویسه باشد"
   },
   "languages": {
     "en": "انگلیسی",

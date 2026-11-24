@@ -209,7 +209,6 @@
     "current_other_document": "Current other document",
     "no_other_document_uploaded": "No other document uploaded",
     "other_document_will_be_deleted": "Other document will be deleted on save",
-    "files_optional": "Files (Optional)",
     "invoice_receipt_short": "Invoice",
     "product_manual_short": "Manual",
     "files_short": "Files",
@@ -233,7 +232,17 @@
     "unnamed_product": "Unnamed Product",
     "void": "Void",
     "void_warranty": "Void warranty",
-    "unvoid_warranty": "Unvoid warranty"
+    "unvoid_warranty": "Unvoid warranty",
+    "expiry_history_title": "Expiry History",
+    "expiry_history_count_title": "Expiry History ({{count}})",
+    "expiry_history_tooltip": "Expiry changed {{count}} time(s) — click to view history",
+    "expiry_history_empty": "No expiration date changes recorded.",
+    "expiry_history_loading": "Loading expiry history...",
+    "expiry_history_load_error": "Failed to load expiry history.",
+    "expiry_history_changed_on": "Changed on {{date}}",
+    "expiry_history_changed_on_by": "Changed on {{date}} by {{user}}",
+    "expiry_change_reason_label": "Reason for Expiry Change (Optional)",
+    "expiry_change_reason_placeholder": "e.g. Extended after repair claim, manufacturer goodwill..."
   },
   "settings": {
     "title": "Warracker - Settings",
@@ -654,7 +663,8 @@
     "voided_success": "Warranty voided",
     "unvoided_success": "Warranty restored from void",
     "error_updating_void_status": "Failed to update void status",
-    "confirm_void_warranty": "Void this warranty? It will be marked inactive and excluded from totals and notifications. You can restore it later."
+    "confirm_void_warranty": "Void this warranty? It will be marked inactive and excluded from totals and notifications. You can restore it later.",
+    "expiry_change_reason_too_long": "Expiry change reason must be 255 characters or less"
   },
   "languages": {
     "en": "English",

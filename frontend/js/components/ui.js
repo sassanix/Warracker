@@ -49,6 +49,7 @@ export function hideLoadingSpinner() {
 // backend gains them; unknown codes fall back to the English message.
 const API_ERROR_KEYS = {
   product_name_too_long: 'messages.product_name_too_long',
+  expiry_change_reason_too_long: 'messages.expiry_change_reason_too_long',
   // Reuses the existing client-side key (same meaning, already translated)
   expiration_before_purchase: 'messages.expiration_date_after_purchase_date',
   invalid_claim_status: 'messages.invalid_claim_status',

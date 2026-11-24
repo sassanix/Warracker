@@ -6251,3 +6251,157 @@ html.dark-mode .warracker-footer a:hover {
         color: var(--text-color);
     }
 }
+
+/* ============================
+   Expiry Change History (issue #209)
+   ============================ */
+.expiry-history-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 6px;
+    padding: 1px 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--primary-color);
+    background-color: rgba(var(--primary-rgb, 52, 152, 219), 0.12);
+    border: 1px solid rgba(var(--primary-rgb, 52, 152, 219), 0.35);
+    border-radius: 999px;
+    cursor: pointer;
+    vertical-align: middle;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.expiry-history-badge:hover,
+.expiry-history-badge:focus-visible {
+    background-color: rgba(var(--primary-rgb, 52, 152, 219), 0.22);
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+.expiry-history-badge i {
+    font-size: 0.7rem;
+    margin: 0 !important;
+    width: auto !important;
+    color: inherit !important;
+}
+
+.expiry-history-modal {
+    max-width: 520px;
+}
+
+.expiry-history-header-titles {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.expiry-history-modal-subtitle {
+    font-size: 0.85rem;
+    color: var(--dark-gray);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.expiry-history-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.expiry-history-item {
+    padding: 10px 12px;
+    border-radius: 6px;
+    background-color: var(--details-bg, #f8f9fa);
+    border: 1px solid var(--border-color);
+}
+
+.expiry-history-transition {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.expiry-history-prev {
+    color: var(--dark-gray);
+    text-decoration: line-through;
+    font-weight: 500;
+}
+
+.expiry-history-arrow {
+    color: var(--primary-color);
+    font-weight: 700;
+}
+
+.expiry-history-new {
+    color: var(--text-color);
+}
+
+.expiry-history-reason {
+    margin-top: 6px;
+    font-size: 0.88rem;
+    color: var(--text-color);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.expiry-history-meta {
+    margin-top: 4px;
+    font-size: 0.78rem;
+    color: var(--dark-gray);
+}
+
+.expiry-history-empty,
+.expiry-history-loading {
+    font-size: 0.88rem;
+    color: var(--dark-gray);
+    margin: 4px 0;
+}
+
+.expiry-history-error {
+    font-size: 0.88rem;
+    color: var(--danger-color);
+    margin: 4px 0;
+}
+
+.expiry-reason-group {
+    padding: 10px 12px;
+    border-radius: 6px;
+    background-color: rgba(var(--primary-rgb, 52, 152, 219), 0.08);
+    border: 1px solid rgba(var(--primary-rgb, 52, 152, 219), 0.25);
+}
+
+.expiry-history-details {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px 12px;
+    background-color: var(--details-bg, #f8f9fa);
+}
+
+.expiry-history-details > summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--primary-color);
+    user-select: none;
+}
+
+.expiry-history-details[open] > summary {
+    margin-bottom: 10px;
+}
+
+.expiry-history-content {
+    max-height: 220px;
+    overflow-y: auto;
+}
+

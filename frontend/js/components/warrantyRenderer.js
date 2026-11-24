@@ -478,12 +478,24 @@ function buildPhotoHtml(warranty, view) {
 	`;
 }
 
+function buildExpiryHistoryBadge(warranty) {
+	const count = Number(warranty && warranty.expiry_change_count) || 0;
+	if (count <= 0) return '';
+	const tooltip = t(
+		'warranties.expiry_history_tooltip',
+		'Expiry changed {{count}} time(s) — click to view history',
+		{ count },
+	);
+	return ` <button type="button" class="expiry-history-badge" data-id="${warranty.id}" title="${escapeHtml(tooltip)}" aria-label="${escapeHtml(tooltip)}"><i class="fas fa-history" aria-hidden="true"></i><span>${count}</span></button>`;
+}
+
 function buildInfoBlock(warranty, { userInfoHtml, productAge, warrantyDurationText, expirationDateText, priceHtml, serialsHtml }) {
+	const expiryHistoryBadge = buildExpiryHistoryBadge(warranty);
 	const pieces = [
 		userInfoHtml,
 		`<div><i class="fas fa-calendar"></i> ${t('warranties.age', 'Age')}: <span>${productAge}</span></div>`,
 		`<div><i class="fas fa-file-alt"></i> ${t('warranties.warranty', 'Warranty')}: <span>${warrantyDurationText}</span></div>`,
-		`<div><i class="fas fa-wrench"></i> ${t('warranties.warranty_ends', 'Warranty Ends')}: <span>${expirationDateText}</span></div>`,
+		`<div class="warranty-ends-row"><i class="fas fa-wrench"></i> ${t('warranties.warranty_ends', 'Warranty Ends')}: <span>${expirationDateText}</span>${expiryHistoryBadge}</div>`,
 		priceHtml,
 		serialsHtml,
 		warranty.model_number ? `<div><i class="fas fa-tag"></i> ${t('warranties.model_number', 'Model Number')}: <span>${escapeHtml(warranty.model_number)}</span></div>` : '',

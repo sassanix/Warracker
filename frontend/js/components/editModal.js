@@ -6,6 +6,7 @@ import { loadWarranties, applyFilters } from '../controllers/warrantyListControl
 import { getCurrentWarrantyId, setCurrentWarrantyId, getEditSelectedTags, setEditSelectedTags } from '../store.js';
 import { renderEditTagsList, renderEditSelectedTags, loadTags, openTagManagementModal } from './tagManager.js';
 import { loadCurrencies } from '../lib/currency.js';
+import { initEditExpiryTracking, getEditExpiryChangeReason } from './expiryHistory.js';
 
 function createElement(tag, className, text) {
   const el = document.createElement(tag);
@@ -483,6 +484,7 @@ function fillWarrantyFields(warranty) {
   }
   applyLifetimeState();
   applyWarrantyMethodState();
+  initEditExpiryTracking(warranty);
   const typeSelect = document.getElementById('editWarrantyType');
   const customInput = document.getElementById('editWarrantyTypeCustom');
   if (typeSelect) {
@@ -688,6 +690,10 @@ export async function saveWarranty() {
     formData.append('warranty_duration_years', 0);
     formData.append('warranty_duration_months', 0);
     formData.append('warranty_duration_days', 0);
+  }
+  const expiryChangeReason = getEditExpiryChangeReason();
+  if (expiryChangeReason) {
+    formData.append('expiry_change_reason', expiryChangeReason);
   }
 
   // Notes and misc fields

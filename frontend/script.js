@@ -2939,6 +2939,10 @@ async function openEditModal(warranty) {
         handleEditWarrantyMethodChange();
     }
 
+    if (typeof window.initEditExpiryTracking === 'function') {
+        window.initEditExpiryTracking(warranty);
+    }
+
     // Set notes
     const notesInput = document.getElementById('editNotes');
     if (notesInput) {
@@ -5654,6 +5658,12 @@ function saveWarranty() {
         formData.append('warranty_duration_years', 0);
         formData.append('warranty_duration_months', 0);
         formData.append('warranty_duration_days', 0);
+    }
+    const expiryChangeReason = typeof window.getEditExpiryChangeReason === 'function'
+        ? window.getEditExpiryChangeReason()
+        : '';
+    if (expiryChangeReason) {
+        formData.append('expiry_change_reason', expiryChangeReason);
     }
     // Add notes
     const notes = document.getElementById('editNotes').value;

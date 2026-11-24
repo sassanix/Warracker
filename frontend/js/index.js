@@ -12,6 +12,7 @@ import { init as initAddForm } from './components/addWarrantyForm.js';
 import { init as initEditModal } from './components/editModal.js';
 import { init as initNotes } from './components/notes.js';
 import { init as initClaims } from './components/claims.js';
+import { init as initExpiryHistory } from './components/expiryHistory.js';
 import { initFormTabs } from './components/formTabs.js';
 import { addSerialNumberInput } from './components/serialNumbers.js';
 
@@ -22,6 +23,7 @@ function bootstrapModules() {
 	initEditModal();
 	initNotes();
 	initClaims();
+	initExpiryHistory();
 	initViewControls();
 	loadFilterAndSortPreferences();
 	loadViewPreference();

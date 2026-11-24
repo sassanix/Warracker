@@ -478,7 +478,8 @@ def get_warranties():
                         WHEN COUNT(c.id) = 0 THEN 'NO_CLAIMS'
                         WHEN BOOL_OR(c.status IN ('Submitted', 'In Progress')) THEN 'OPEN'
                         ELSE 'FINISHED'
-                    END AS claim_status_summary
+                    END AS claim_status_summary,
+                    (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count
                 FROM warranties w
                 LEFT JOIN warranty_claims c ON w.id = c.warranty_id
                 WHERE w.user_id = %s AND w.archived_at IS NULL
@@ -547,7 +548,8 @@ def get_archived_warranties():
                         WHEN COUNT(c.id) = 0 THEN 'NO_CLAIMS'
                         WHEN BOOL_OR(c.status IN ('Submitted', 'In Progress')) THEN 'OPEN'
                         ELSE 'FINISHED'
-                    END AS claim_status_summary
+                    END AS claim_status_summary,
+                    (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count
                 FROM warranties w
                 LEFT JOIN warranty_claims c ON w.id = c.warranty_id
                 WHERE w.user_id = %s AND w.archived_at IS NOT NULL
@@ -1143,13 +1145,15 @@ def update_warranty(warranty_id):
         with conn.cursor() as cur:
             # Check if warranty exists and belongs to the user
             if is_admin:
-                cur.execute('SELECT id, currency FROM warranties WHERE id = %s', (warranty_id,))
+                cur.execute('SELECT id, currency, expiration_date, is_lifetime FROM warranties WHERE id = %s', (warranty_id,))
             else:
-                cur.execute('SELECT id, currency FROM warranties WHERE id = %s AND user_id = %s', (warranty_id, user_id))
+                cur.execute('SELECT id, currency, expiration_date, is_lifetime FROM warranties WHERE id = %s AND user_id = %s', (warranty_id, user_id))
             warranty = cur.fetchone()
             if not warranty:
                 return jsonify({"error": "Warranty not found or you don't have permission to update it"}), 404
             existing_currency = warranty[1] if len(warranty) > 1 else None
+            existing_expiration_date = warranty[2] if len(warranty) > 2 else None
+            existing_is_lifetime = bool(warranty[3]) if len(warranty) > 3 else False
 
             # --- PATCH: Support JSON-only notes update ---
             if request.is_json and 'notes' in request.json and len(request.json) == 1:
@@ -1169,6 +1173,11 @@ def update_warranty(warranty_id):
                 if len(serial_number) > 255:
                     return jsonify({"error": "Serial number must be 255 characters or less",
                                     "code": "serial_number_too_long"}), 400
+            raw_expiry_reason = request.form.get('expiry_change_reason')
+            expiry_change_reason = raw_expiry_reason.strip() if raw_expiry_reason else None
+            if expiry_change_reason and len(expiry_change_reason) > 255:
+                return jsonify({"error": "Expiry change reason must be 255 characters or less",
+                                "code": "expiry_change_reason_too_long"}), 400
             if not request.form.get('purchase_date'):
                 return jsonify({"error": "Purchase date is required"}), 400
             logger.info(f"Received update request for warranty {warranty_id}")
@@ -1569,6 +1578,29 @@ def update_warranty(warranty_id):
             cur.execute(update_sql, sql_values)
             logger.info(f"Updated warranty with SQL: {update_sql}")
             logger.info(f"Parameters: {sql_values}")
+
+            # Record expiration date or lifetime transitions (issue #209)
+            if existing_expiration_date != expiration_date or existing_is_lifetime != bool(is_lifetime):
+                cur.execute('''
+                    INSERT INTO warranty_expiry_history (
+                        warranty_id,
+                        previous_expiration_date,
+                        new_expiration_date,
+                        previous_is_lifetime,
+                        new_is_lifetime,
+                        reason,
+                        changed_by_user_id
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ''', (
+                    warranty_id,
+                    existing_expiration_date,
+                    expiration_date,
+                    existing_is_lifetime,
+                    bool(is_lifetime),
+                    expiry_change_reason,
+                    user_id,
+                ))
             
             # Update serial numbers
             cur.execute('DELETE FROM serial_numbers WHERE warranty_id = %s', (warranty_id,))
@@ -2099,7 +2131,8 @@ def get_all_warranties():
                         WHEN COUNT(c.id) = 0 THEN 'NO_CLAIMS'
                         WHEN BOOL_OR(c.status IN ('Submitted', 'In Progress')) THEN 'OPEN'
                         ELSE 'FINISHED'
-                    END AS claim_status_summary
+                    END AS claim_status_summary,
+                    (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count
                 FROM warranties w
                 JOIN users u ON w.user_id = u.id
                 LEFT JOIN warranty_claims c ON w.id = c.warranty_id
@@ -2213,7 +2246,8 @@ def get_global_warranties():
                             WHERE c.warranty_id = w.id
                         ) THEN 'FINISHED'
                         ELSE 'NO_CLAIMS'
-                    END AS claim_status_summary
+                    END AS claim_status_summary,
+                    (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count
                 FROM warranties w
                 JOIN users u ON w.user_id = u.id
                 WHERE w.archived_at IS NULL
@@ -2326,7 +2360,8 @@ def get_global_warranties_archived():
                             WHERE c.warranty_id = w.id
                         ) THEN 'FINISHED'
                         ELSE 'NO_CLAIMS'
-                    END AS claim_status_summary
+                    END AS claim_status_summary,
+                    (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count
                 FROM warranties w
                 JOIN users u ON w.user_id = u.id
                 WHERE w.archived_at IS NOT NULL
@@ -2524,7 +2559,8 @@ def get_warranty_debug(warranty_id):
                            w.product_url, w.notes, w.purchase_price, w.user_id, w.created_at, w.updated_at, w.is_lifetime, 
                            w.vendor, w.warranty_type, w.warranty_duration_years, w.warranty_duration_months, w.warranty_duration_days, 
                            w.product_photo_path, w.currency, w.paperless_invoice_id, w.paperless_manual_id, w.paperless_photo_id, w.paperless_other_id,
-                           u.username, u.email, u.first_name, u.last_name
+                           u.username, u.email, u.first_name, u.last_name,
+                           (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count
                     FROM warranties w
                     JOIN users u ON w.user_id = u.id
                     WHERE w.id = %s
@@ -2535,7 +2571,8 @@ def get_warranty_debug(warranty_id):
                            w.product_url, w.notes, w.purchase_price, w.user_id, w.created_at, w.updated_at, w.is_lifetime, 
                            w.vendor, w.warranty_type, w.warranty_duration_years, w.warranty_duration_months, w.warranty_duration_days, 
                            w.product_photo_path, w.currency, w.paperless_invoice_id, w.paperless_manual_id, w.paperless_photo_id, w.paperless_other_id,
-                           u.username, u.email, u.first_name, u.last_name
+                           u.username, u.email, u.first_name, u.last_name,
+                           (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count
                     FROM warranties w
                     JOIN users u ON w.user_id = u.id
                     WHERE w.id = %s AND w.user_id = %s
@@ -2594,6 +2631,93 @@ def get_warranty_debug(warranty_id):
     except Exception as e:
         logger.error(f"Error retrieving warranty {warranty_id}: {e}")
         return jsonify({"error": "Failed to retrieve warranty"}), 500
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
+@warranties_bp.route('/warranties/<int:warranty_id>/expiry-history', methods=['GET'])
+@token_required
+def get_warranty_expiry_history(warranty_id):
+    """Get recorded expiration date / lifetime changes for a warranty (issue #209)."""
+    conn = None
+    try:
+        user_id = request.user['id']
+        is_admin = request.user.get('is_admin', False)
+
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            # Match get_warranty_debug access rules: owner, admin, or any
+            # authenticated user when global view is enabled and not admin-only.
+            can_view_all = is_admin
+            if not is_admin:
+                cur.execute(
+                    "SELECT key, value FROM site_settings WHERE key IN ('global_view_enabled', 'global_view_admin_only')"
+                )
+                settings = {row[0]: row[1] for row in cur.fetchall()}
+                global_view_enabled = settings.get('global_view_enabled', 'true').lower() == 'true'
+                admin_only = settings.get('global_view_admin_only', 'false').lower() == 'true'
+                can_view_all = global_view_enabled and not admin_only
+
+            if can_view_all:
+                cur.execute('SELECT id FROM warranties WHERE id = %s', (warranty_id,))
+            else:
+                cur.execute(
+                    'SELECT id FROM warranties WHERE id = %s AND user_id = %s',
+                    (warranty_id, user_id),
+                )
+            if not cur.fetchone():
+                return jsonify({"error": "Warranty not found or access denied"}), 404
+
+            cur.execute('''
+                SELECT
+                    h.id,
+                    h.warranty_id,
+                    h.previous_expiration_date,
+                    h.new_expiration_date,
+                    h.previous_is_lifetime,
+                    h.new_is_lifetime,
+                    h.reason,
+                    h.changed_at,
+                    u.first_name,
+                    u.last_name,
+                    u.username
+                FROM warranty_expiry_history h
+                LEFT JOIN users u ON h.changed_by_user_id = u.id
+                WHERE h.warranty_id = %s
+                ORDER BY h.changed_at DESC, h.id DESC
+            ''', (warranty_id,))
+
+            history = []
+            for row in cur.fetchall():
+                first_name = row[8].strip() if row[8] else ''
+                last_name = row[9].strip() if row[9] else ''
+                username = row[10].strip() if row[10] else ''
+                if first_name and last_name:
+                    changed_by = f"{first_name} {last_name}"
+                elif first_name:
+                    changed_by = first_name
+                elif username:
+                    changed_by = username
+                else:
+                    changed_by = None
+
+                history.append({
+                    'id': row[0],
+                    'warranty_id': row[1],
+                    'previous_expiration_date': row[2].isoformat() if row[2] else None,
+                    'new_expiration_date': row[3].isoformat() if row[3] else None,
+                    'previous_is_lifetime': bool(row[4]),
+                    'new_is_lifetime': bool(row[5]),
+                    'reason': row[6],
+                    'changed_at': row[7].isoformat() if row[7] else None,
+                    'changed_by': changed_by,
+                })
+
+            return jsonify(history), 200
+    except Exception as e:
+        logger.error(f"Error retrieving expiry history for warranty {warranty_id}: {e}")
+        return jsonify({"error": "Failed to retrieve expiry history"}), 500
     finally:
         if conn:
             release_db_connection(conn)

@@ -157,7 +157,7 @@
     "choose_file": "Elegir archivo",
     "browse_paperless": "Explorar documentos de Paperless-ngx",
     "product_manual_optional": "Manual del producto (opcional)",
-    "files_optional": "Archivos (opcional)",
+    "files_optional": "Archivos (Opcional)",
     "search_or_add_new_tag": "Buscar o añadir nueva etiqueta...",
     "product_information": "Información del producto",
     "product_url": "URL del producto",
@@ -210,7 +210,6 @@
     "current_other_document": "Documento actual",
     "no_other_document_uploaded": "No se ha subido ningún otro documento",
     "other_document_will_be_deleted": "El otro documento se eliminará al guardar",
-    "files_optional": "Archivos (Opcional)",
     "invoice_receipt_short": "Factura",
     "product_manual_short": "Manual",
     "files_short": "Archivos",
@@ -233,7 +232,17 @@
     "unnamed_product": "Producto sin nombre",
     "unvoid_warranty": "Garantía no nula",
     "void": "Nula",
-    "void_warranty": "Garantía nula"
+    "void_warranty": "Garantía nula",
+    "expiry_history_title": "Historial de vencimiento",
+    "expiry_history_count_title": "Historial de vencimiento ({{count}})",
+    "expiry_history_tooltip": "Vencimiento cambiado {{count}} vez/veces — clic para ver historial",
+    "expiry_history_empty": "No se han registrado cambios en la fecha de vencimiento.",
+    "expiry_history_loading": "Cargando historial de vencimiento...",
+    "expiry_history_load_error": "No se pudo cargar el historial de vencimiento.",
+    "expiry_history_changed_on": "Cambiado el {{date}}",
+    "expiry_history_changed_on_by": "Cambiado el {{date}} por {{user}}",
+    "expiry_change_reason_label": "Motivo del cambio de vencimiento (Opcional)",
+    "expiry_change_reason_placeholder": "ej. Extendida tras reparación, cortesía del fabricante..."
   },
   "settings": {
     "title": "Configuración",
@@ -654,7 +663,8 @@
     "confirm_void_warranty": "¿Anular esta garantía? Se marcará como inactivo y se excluirá de totales y notificaciones. Puedes restaurarlo más tarde.",
     "error_updating_void_status": "No se pudo actualizar el estado de anulación",
     "unvoided_success": "Garantía restaurada desde nula",
-    "voided_success": "Garantía anulada"
+    "voided_success": "Garantía anulada",
+    "expiry_change_reason_too_long": "El motivo del cambio de vencimiento debe tener 255 caracteres o menos"
   },
   "languages": {
     "en": "English",

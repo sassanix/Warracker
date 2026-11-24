@@ -220,7 +220,6 @@
     "current_other_document": "Поточний інший документ",
     "no_other_document_uploaded": "Інший документ не завантажено",
     "other_document_will_be_deleted": "Інший документ буде видалено при збереженні",
-    "files_optional": "Файли (необов'язково)",
     "invoice_receipt_short": "Рахунок",
     "product_manual_short": "Посібник",
     "files_short": "Файли",
@@ -239,7 +238,17 @@
     "unnamed_product": "Продукт без назви",
     "unvoid_warranty": "Недійсна гарантія",
     "void": "Недійсна",
-    "void_warranty": "Недійсна гарантія"
+    "void_warranty": "Недійсна гарантія",
+    "expiry_history_title": "Історія змін терміну дії",
+    "expiry_history_count_title": "Історія змін терміну дії ({{count}})",
+    "expiry_history_tooltip": "Термін дії змінено {{count}} раз(и) — натисніть для перегляду історії",
+    "expiry_history_empty": "Змін дати закінчення не зафіксовано.",
+    "expiry_history_loading": "Завантаження історії змін терміну дії...",
+    "expiry_history_load_error": "Не вдалося завантажити історію змін терміну дії.",
+    "expiry_history_changed_on": "Змінено {{date}}",
+    "expiry_history_changed_on_by": "Змінено {{date}} користувачем {{user}}",
+    "expiry_change_reason_label": "Причина зміни терміну дії (необов'язково)",
+    "expiry_change_reason_placeholder": "напр. Продовжено після ремонту, продовження виробником..."
   },
   "settings": {
     "title": "Налаштування",
@@ -660,7 +669,8 @@
     "confirm_void_warranty": "Скасувати цю гарантію? Його буде позначено як неактивний і виключено з підсумків і повідомлень. Ви можете відновити його пізніше.",
     "error_updating_void_status": "Не вдалося оновити статус анулювання",
     "unvoided_success": "Гарантія відновлена",
-    "voided_success": "Гарантія анульована"
+    "voided_success": "Гарантія анульована",
+    "expiry_change_reason_too_long": "Причина зміни терміну дії не повинна перевищувати 255 символів"
   },
   "languages": {
     "en": "English",

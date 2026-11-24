@@ -214,7 +214,6 @@
     "current_other_document": "現在のその他のドキュメント",
     "no_other_document_uploaded": "その他のドキュメントがアップロードされていません",
     "other_document_will_be_deleted": "保存時にその他のドキュメントは削除されます",
-    "files_optional": "ファイル（オプション）",
     "invoice_receipt_short": "請求書",
     "product_manual_short": "マニュアル",
     "files_short": "ファイル",
@@ -233,7 +232,17 @@
     "unnamed_product": "名前のない製品",
     "unvoid_warranty": "無効でない保証",
     "void": "無効",
-    "void_warranty": "無効な保証"
+    "void_warranty": "無効な保証",
+    "expiry_history_title": "有効期限の変更履歴",
+    "expiry_history_count_title": "有効期限の変更履歴 ({{count}})",
+    "expiry_history_tooltip": "有効期限が{{count}}回変更されました — クリックして履歴を表示",
+    "expiry_history_empty": "有効期限の変更履歴はありません。",
+    "expiry_history_loading": "変更履歴を読み込み中...",
+    "expiry_history_load_error": "有効期限の変更履歴の読み込みに失敗しました。",
+    "expiry_history_changed_on": "{{date}} に変更",
+    "expiry_history_changed_on_by": "{{date}} に {{user}} が変更",
+    "expiry_change_reason_label": "有効期限変更の理由（任意）",
+    "expiry_change_reason_placeholder": "例：修理請求後の延長、メーカー延長対応..."
   },
   "settings": {
     "title": "設定",
@@ -654,7 +663,8 @@
     "confirm_void_warranty": "この保証は無効になりますか?これは非アクティブとしてマークされ、合計と通知から除外されます。後で復元できます。",
     "error_updating_void_status": "無効ステータスの更新に失敗しました",
     "unvoided_success": "無効な保証が回復されました",
-    "voided_success": "保証が無効になる"
+    "voided_success": "保証が無効になる",
+    "expiry_change_reason_too_long": "有効期限変更の理由は255文字以内で入力してください"
   },
   "languages": {
     "en": "English",

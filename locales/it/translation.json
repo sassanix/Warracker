@@ -446,7 +446,6 @@
     "choose_file": "Scegli File",
     "browse_paperless": "Sfoglia Documenti Paperless-ngx",
     "product_manual_optional": "Manuale Prodotto (Opzionale)",
-    "files_optional": "File (Opzionale)",
     "search_or_add_tag": "Cerca o aggiungi nuovo tag...",
     "product_information": "Informazioni Prodotto",
     "product_url": "URL Prodotto",
@@ -498,7 +497,17 @@
     "unnamed_product": "Prodotto senza nome",
     "unvoid_warranty": "Garanzia non valida",
     "void": "Nulla",
-    "void_warranty": "Garanzia nulla"
+    "void_warranty": "Garanzia nulla",
+    "expiry_history_title": "Cronologia scadenza",
+    "expiry_history_count_title": "Cronologia scadenza ({{count}})",
+    "expiry_history_tooltip": "Scadenza modificata {{count}} volta/e — clicca per vedere la cronologia",
+    "expiry_history_empty": "Nessuna modifica alla data di scadenza registrata.",
+    "expiry_history_loading": "Caricamento cronologia scadenza...",
+    "expiry_history_load_error": "Impossibile caricare la cronologia scadenza.",
+    "expiry_history_changed_on": "Modificato il {{date}}",
+    "expiry_history_changed_on_by": "Modificato il {{date}} da {{user}}",
+    "expiry_change_reason_label": "Motivo della modifica scadenza (Opzionale)",
+    "expiry_change_reason_placeholder": "es. Estesa dopo riparazione, cortesia del produttore..."
   },
   "actions": {
     "save": "Salva",
@@ -747,7 +756,8 @@
     "confirm_void_warranty": "Annullare questa garanzia? Verrà contrassegnato come inattivo ed escluso dai totali e dalle notifiche. Puoi ripristinarlo in seguito.",
     "error_updating_void_status": "Impossibile aggiornare lo stato di annullamento",
     "unvoided_success": "Garanzia ripristinata da nulla",
-    "voided_success": "Garanzia annullata"
+    "voided_success": "Garanzia annullata",
+    "expiry_change_reason_too_long": "Il motivo della modifica scadenza deve contenere al massimo 255 caratteri"
   },
   "claims": {
     "claims": "Reclami",
