@@ -603,6 +603,7 @@
                 currency: warranty.currency || '',
                 warranty_type: warranty.warranty_type || '',
                 notes: warranty.notes,
+                expiry_change_count: warranty.expiry_change_count || 0,
                 manual_path: warranty.manual_path || null,
                 other_document_path: warranty.other_document_path || null,
                 is_archived: !!warranty.is_archived,
