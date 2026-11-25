@@ -178,11 +178,12 @@ function buildTagsHtml(tags = []) {
 
 function buildNotesLink(warranty) {
 	const notes = (warranty.notes || '').trim();
-	if (!notes) return { hasNotes: false, html: '' };
+	const entryCount = Number(warranty.note_entry_count) || 0;
 	const label = t('warranties.notes', 'Notes');
+	const countSuffix = entryCount > 0 ? ` (${entryCount})` : '';
 	return {
-		hasNotes: true,
-		html: `<a href="#" class="notes-link" data-id="${warranty.id}" title="${label}"><i class='fas fa-sticky-note'></i> ${label}</a>`,
+		hasNotes: Boolean(notes) || entryCount > 0,
+		html: `<a href="#" class="notes-link" data-id="${warranty.id}" title="${label}"><i class='fas fa-sticky-note'></i> ${label}${countSuffix}</a>`,
 	};
 }
 

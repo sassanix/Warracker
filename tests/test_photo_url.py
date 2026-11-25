@@ -549,3 +549,46 @@ def test_photo_fetch_timeout_env_var_enforced_end_to_end(monkeypatch):
         assert time.monotonic() - start < 10
     finally:
         server.shutdown()
+
+
+def test_dual_stack_prefers_validated_ipv4_and_still_validates_ipv6(monkeypatch, app):
+    """Dual-stack hosts returning IPv6 before IPv4 pin the validated IPv4
+    address so IPv4-only Docker containers can connect, IPv6-only hosts
+    still pin IPv6, and any private IPv4 or IPv6 in the answer rejects
+    the host."""
+    import socket
+    from backend.warranties_routes import _PinnedPhotoAdapter, _PhotoHostRejectedError
+
+    real_getaddrinfo = socket.getaddrinfo
+
+    def fake(host, port, *args, **kwargs):
+        if host == "dual.example.invalid":
+            return [
+                (socket.AF_INET6, socket.SOCK_STREAM, 0, "", ("2606:2800:220:1:248:1893:25c8:1946", port or 80, 0, 0)),
+                (socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", port or 80)),
+            ]
+        if host == "v6only.example.invalid":
+            return [
+                (socket.AF_INET6, socket.SOCK_STREAM, 0, "", ("2606:2800:220:1:248:1893:25c8:1946", port or 80, 0, 0)),
+            ]
+        if host == "mixed-private-v6.example.invalid":
+            return [
+                (socket.AF_INET6, socket.SOCK_STREAM, 0, "", ("::1", port or 80, 0, 0)),
+                (socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", port or 80)),
+            ]
+        if host == "mixed-private-v4.example.invalid":
+            return [
+                (socket.AF_INET6, socket.SOCK_STREAM, 0, "", ("2606:2800:220:1:248:1893:25c8:1946", port or 80, 0, 0)),
+                (socket.AF_INET, socket.SOCK_STREAM, 0, "", ("10.0.0.1", port or 80)),
+            ]
+        return real_getaddrinfo(host, port, *args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake)
+    adapter = _PinnedPhotoAdapter(allow_private=False)
+    assert adapter._resolve_and_pin("dual.example.invalid") == "93.184.216.34"
+    assert adapter._resolve_and_pin("v6only.example.invalid") == "2606:2800:220:1:248:1893:25c8:1946"
+    with pytest.raises(_PhotoHostRejectedError):
+        adapter._resolve_and_pin("mixed-private-v6.example.invalid")
+    with pytest.raises(_PhotoHostRejectedError):
+        adapter._resolve_and_pin("mixed-private-v4.example.invalid")
+

@@ -383,3 +383,39 @@ def test_expiry_history_frontend_uses_dom_textcontent_not_innerhtml():
     assert "innerHTML" not in src
     assert "reasonEl.textContent" in src
     assert "metaEl.textContent" in src
+
+
+def test_legacy_lifetime_with_stale_date_does_not_log_lifetime_to_lifetime(
+    client, user_factory, db_connection
+):
+    user = user_factory()
+    wid = _create_warranty(
+        client,
+        user["headers"],
+        product_name="Legacy Lifetime",
+        purchase_date="2025-01-01",
+        is_lifetime="true",
+    )
+    # Simulate a legacy lifetime row that still carried a non-null expiration_date
+    with db_connection.cursor() as cur:
+        cur.execute(
+            "UPDATE warranties SET expiration_date = '2099-01-01' WHERE id = %s",
+            (wid,),
+        )
+    db_connection.commit()
+
+    r = client.put(
+        f"/api/warranties/{wid}",
+        data={
+            "product_name": "Legacy Lifetime Renamed",
+            "purchase_date": "2025-01-01",
+            "is_lifetime": "true",
+        },
+        headers=user["headers"],
+    )
+    assert r.status_code == 200, r.get_data(as_text=True)
+
+    hist = client.get(f"/api/warranties/{wid}/expiry-history", headers=user["headers"])
+    assert hist.status_code == 200
+    assert hist.get_json() == []
+
