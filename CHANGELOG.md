@@ -2,7 +2,7 @@
 
 ## 1.0.8 - Unreleased
 
-- **Security hardening — proxy headers, Nginx/CSP, Paperless strict ownership, JWT transport, and account cleanup:**
+- **Security hardening, proxy headers, Nginx/CSP, Paperless strict ownership, JWT transport, and account cleanup:**
   - Bundled Nginx now trusts `X-Forwarded-Proto` only from loopback/LAN/Docker proxy ranges (or all peers when `TRUST_PROXY_HEADERS=true`, and none when `TRUST_PROXY_HEADERS=false`), strips `X-Forwarded-Host` and `X-Forwarded-Prefix`, removes duplicate `Access-Control-*` headers (leaving Flask-CORS as the single source of truth), removes the `/test-uploads` debug route and `X-Debug-Message` header, and emits `X-Content-Type-Options: nosniff` globally alongside Flask. Gunicorn's `forwarded_allow_ips` is scoped to loopback by default (`127.0.0.1,::1`), private proxy CIDRs when `DISABLE_NGINX=true`, and configurable via `GUNICORN_FORWARDED_ALLOW_IPS` / `TRUST_PROXY_HEADERS`. OIDC login derives `redirect_uri` from `APP_BASE_URL` / `FRONTEND_URL` when explicitly configured.
   - Replaced the remote Buy Me a Coffee script on the About page with a static styled link and removed `buymeacoffee.com` from the Content-Security-Policy.
   - Added an opt-in **Restrict Pre-Existing Documents to Admins** (`paperless_strict_ownership`, off by default) toggle in Paperless-ngx settings so shared Paperless instances can prevent standard users from claiming pre-existing unowned documents.
@@ -10,7 +10,7 @@
   - Local accounts now confirm their current password before self-deleting (`DELETE /api/auth/account`; passwordless OIDC accounts are unaffected), unreferenced uploaded warranty and claim files are deleted from disk when a user or account is deleted, password-reset emails dispatch asynchronously to avoid SMTP timing enumeration, and warranty/document web URLs are validated to `http://` or `https://` (auto-prefixing bare domains with `https://`).
   - _Files: `nginx.conf`, `Docker/entrypoint.sh`, `backend/__init__.py`, `backend/admin_routes.py`, `backend/auth_routes.py`, `backend/auth_utils.py`, `backend/gunicorn_config.py`, `backend/oidc_handler.py`, `backend/paperless_access.py`, `backend/warranties_routes.py`, `frontend/about.html`, `frontend/settings-new.html`, `frontend/settings-new.js`, `frontend/sw.js`, `tests/test_security_headers.py`, `tests/test_user_account_and_preferences.py`, `tests/test_hardening_pass2.py`_
 
-- **Security hardening — file containment, owner protection, XSS/SSRF defenses, and container permissions (#302):**
+- **Security hardening, file containment, owner protection, XSS/SSRF defenses, and container permissions (#302):**
   - Local file routes (`/api/files/` and `/api/secure-file/`) now require a matching warranty or claim database reference even for admins, reject dotfiles (such as `.secret_key`), and reject symlinks or paths escaping `UPLOAD_FOLDER`.
   - Document serving (`/api/files/`, `/api/secure-file/`, `/api/paperless-file/`) and frontend blob viewers allow inline rendering only for passive MIME types (PDF, PNG, JPEG, WebP, GIF, plain text) with `Content-Security-Policy: default-src 'none'; frame-ancestors 'self'`; active or unrecognized types are forced to download as `application/octet-stream` with `Content-Security-Policy: sandbox`.
   - Admin user updates (`PUT /api/admin/users/<id>`) strictly require boolean types for `is_admin`/`is_active`, block non-owner admins from editing any field (including email) on an Application Owner account, and perform case-insensitive email uniqueness checks.

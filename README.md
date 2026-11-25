@@ -47,12 +47,12 @@ Full guides live in the [Warracker Wiki](https://github.com/sassanix/Warracker/w
 | **Feature**                      | **Description**                                                                                          |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | 🗃️ **Centralized Management**   | Track all your product warranties in one place                                                           |
-| 🧾 **Detailed Records**          | Store purchase dates, durations, notes, multiple serial numbers, and product photos with thumbnail previews |
+| 🧾 **Detailed Records**          | Store purchase dates, durations, notes and team notes, expiry change history, multiple serial numbers, and product photos with thumbnail previews |
 | 📄 **Document Storage**          | Upload receipts, invoices, and manuals securely                                                          |
 | 📝 **[Warranty Claims](https://github.com/sassanix/Warracker/wiki/User-Guide#-claims)** | Manage warranty claims end-to-end with statuses, dates, resolutions, attached documents, and full lifecycle visibility |
 | 🔔 **[Proactive Alerts](https://github.com/sassanix/Warracker/wiki/Notifications)** | Get alerts for upcoming expirations via email or 100+ push services (Discord, Slack, etc.) using Apprise — each threshold notifies once, never daily repeats |
 | 🔍 **Quick Search and Filter**   | Search by product name, serial number, vendor, and more with real-time filtering, and organize with custom tags |
-| 👥 **Multi-User & Global View**  | Multiple accounts with admin controls; authenticated users can view global warranty data with role-based permissions |
+| 👥 **Multi-User & Global View**  | Multiple accounts with admin controls; authenticated users can view global warranty data with role-based permissions and add attributed team notes |
 | 📤 **[Data Export/Import](https://github.com/sassanix/Warracker/wiki/User-Guide#-csv-import-and-export)** | Import/export warranty data via CSV — exports include every field (notes, currency, model, warranty type), so a re-import restores your data exactly |
 | ⚙️ **Customizable Settings**     | Configure currency, date formats, notification timing, and branding                                      |
 | 📦 **Archiving**                 | Archive expired or unused warranties for better organization, while keeping records accessible when needed |
@@ -98,7 +98,7 @@ More screenshots, including the table view, the card menu, and dark mode, are in
 
 ## 🗺️Roadmap
 
-The current release is **1.0.7**. What's planned next, 1.0.8 and the feature requests under consideration, lives on the [Roadmap](https://github.com/sassanix/Warracker/wiki/Roadmap) page in the wiki. Shipped work is in the [changelog](CHANGELOG.md) and the [releases](https://github.com/sassanix/Warracker/releases).
+The current release is **1.0.8**. Planned work and the feature requests under consideration live on the [Roadmap](https://github.com/sassanix/Warracker/wiki/Roadmap) page in the wiki. Shipped work is in the [changelog](CHANGELOG.md) and the [releases](https://github.com/sassanix/Warracker/releases).
 
 ## 🚀Setup
 
