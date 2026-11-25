@@ -701,20 +701,26 @@ class PaperlessHandler:
         task_url_legacy_list = f"{self.paperless_url}/api/tasks/"
 
         deadline = time.time() + timeout_secs
+        use_list_endpoint = False
 
         while time.time() < deadline:
             try:
-                try:
-                    resp = self.get(task_url_primary, timeout=10)
-                    if resp.status_code == 404:
-                        # Fall back to legacy ?task_id=<uuid> filter
-                        resp = self.get(task_url_legacy_list, params={"task_id": task_id}, timeout=10)
-                except requests.exceptions.HTTPError as http_err:
-                    if http_err.response.status_code == 404 and http_err.response.url.rstrip('/') == task_url_primary.rstrip('/'):
-                        # Primary endpoint not available, try legacy
-                        resp = self.get(task_url_legacy_list, params={"task_id": task_id}, timeout=10)
-                    else:
-                        raise
+                if use_list_endpoint:
+                    resp = self.get(task_url_legacy_list, params={"task_id": task_id}, timeout=10)
+                else:
+                    try:
+                        resp = self.get(task_url_primary, timeout=10)
+                        if resp.status_code == 404:
+                            # Fall back to legacy ?task_id=<uuid> filter and keep using it
+                            use_list_endpoint = True
+                            resp = self.get(task_url_legacy_list, params={"task_id": task_id}, timeout=10)
+                    except requests.exceptions.HTTPError as http_err:
+                        if http_err.response.status_code == 404 and http_err.response.url.rstrip('/') == task_url_primary.rstrip('/'):
+                            # Primary endpoint not available, try legacy and remember it
+                            use_list_endpoint = True
+                            resp = self.get(task_url_legacy_list, params={"task_id": task_id}, timeout=10)
+                        else:
+                            raise
 
                 resp.raise_for_status()
 

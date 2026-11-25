@@ -70,6 +70,13 @@ else:
     worker_rlimit_as = 134217728  # 128MB per worker limit
     print("Using OPTIMIZED memory mode - balanced RAM usage and performance")
 
+# Export worker_class and master PID before when_ready so the master's
+# scheduler selects GeventScheduler when gevent monkey-patching is active
+# (avoiding BackgroundScheduler threading._active KeyErrors in forked
+# workers) and workers can read the master's live scheduler status (#299).
+os.environ["GUNICORN_WORKER_CLASS"] = worker_class
+os.environ["WARRACKER_GUNICORN_MASTER_PID"] = str(os.getpid())
+
 # Note: Gevent monkey patching was applied early at top of file for SSL compatibility
 if worker_class == "gevent":
     print(f"ℹ️ Using gevent workers with early monkey patching applied.")

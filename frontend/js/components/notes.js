@@ -267,7 +267,8 @@ async function saveNotes() {
 		hideLoadingSpinner();
 		showToast((window.i18next && window.i18next.t('messages.note_updated_successfully') || 'Note updated'), 'success');
 		updateStoreNotes(noteValue);
-		if (!noteValue) {
+		const hasTeamNotes = Boolean(dom?.thread && dom.thread.children.length > 0);
+		if (!noteValue && !hasTeamNotes) {
 			hideModal();
 		} else if (dom) {
 			dom.content.textContent = noteValue;
@@ -279,6 +280,18 @@ async function saveNotes() {
 		console.error('[notes] Failed to update note', error);
 		showToast(error.message || ((window.i18next && window.i18next.t('messages.failed_to_update_note') || 'Failed to update note')), 'error');
 	}
+}
+
+let noteEntriesRequestToken = 0;
+
+function updateStoreNoteEntryCount(count) {
+	const warranties = getWarranties();
+	const index = warranties.findIndex((w) => w.id === state.warrantyId);
+	if (index === -1) return;
+	const updated = [...warranties];
+	updated[index] = { ...updated[index], note_entry_count: count };
+	setWarranties(updated);
+	state.warranty = updated[index];
 }
 
 // Team note entries: anyone who can view the warranty may add one,
@@ -335,12 +348,17 @@ async function loadNoteEntries() {
 	if (!dom || !state.warrantyId) return;
 	const token = getToken();
 	if (!token) return;
+	const requestToken = ++noteEntriesRequestToken;
+	const requestedWarrantyId = state.warrantyId;
 	try {
 		const response = await fetch(`/api/warranties/${state.warrantyId}/notes`, {
 			headers: { Authorization: `Bearer ${token}` },
 		});
 		if (!response.ok) return;
-		renderNoteEntries(await response.json());
+		const entries = await response.json();
+		if (requestToken !== noteEntriesRequestToken || state.warrantyId !== requestedWarrantyId) return;
+		renderNoteEntries(entries);
+		updateStoreNoteEntryCount(Array.isArray(entries) ? entries.length : 0);
 	} catch (error) {
 		console.error('[notes] Failed to load note entries', error);
 	}
@@ -355,6 +373,8 @@ async function addNoteEntry() {
 		showToast((window.i18next && window.i18next.t('messages.authentication_required') || 'Authentication required'), 'error');
 		return;
 	}
+	if (dom.addBtn?.disabled) return;
+	if (dom.addBtn) dom.addBtn.disabled = true;
 	try {
 		const response = await fetch(`/api/warranties/${state.warrantyId}/notes`, {
 			method: 'POST',
@@ -367,9 +387,12 @@ async function addNoteEntry() {
 		}
 		dom.addTextarea.value = '';
 		await loadNoteEntries();
+		await refreshWarranties();
 	} catch (error) {
 		console.error('[notes] Failed to add note entry', error);
 		showToast(error.message || 'Failed to add note', 'error');
+	} finally {
+		if (dom?.addBtn) dom.addBtn.disabled = false;
 	}
 }
 
@@ -387,6 +410,7 @@ async function deleteNoteEntry(entryId) {
 			throw new Error(errorData.error || `Failed to delete note (Status: ${response.status})`);
 		}
 		await loadNoteEntries();
+		await refreshWarranties();
 	} catch (error) {
 		console.error('[notes] Failed to delete note entry', error);
 		showToast(error.message || 'Failed to delete note', 'error');
@@ -408,6 +432,7 @@ export function showNotesModal(notes, warrantyOrId = null) {
 	if (!refs.modal) return;
 	refs.content.textContent = contentText || '';
 	refs.textarea.value = contentText || '';
+	if (refs.thread) refs.thread.innerHTML = '';
 	if (refs.editWarrantyBtn) {
 		const canEdit = canEditWarranty(warranty);
 		refs.editWarrantyBtn.disabled = !canEdit;

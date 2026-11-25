@@ -1769,15 +1769,14 @@ async function renderWarranties(warrantiesToRender) {
                 ).join('')}
               </div>`
             : '';
-        // Add notes display button if present
+        // Always show the Notes link so owners and viewers can open team notes
+        // even when the warranty's own notes field is blank.
         let notesHtml = '';
-        const hasNotes = warranty.notes && warranty.notes.trim() !== '';
-        // Remove the button, and instead prepare a notes link for document-links-row
-        let notesLinkHtml = '';
-        if (hasNotes) {
-            const notesLabel = (window.i18next && window.i18next.t('warranties.notes') || 'Notes');
-            notesLinkHtml = `<a href="#" class="notes-link" data-id="${warranty.id}" title="View Notes"><i class='fas fa-sticky-note'></i> ${notesLabel}</a>`;
-        }
+        const noteEntryCount = Number(warranty.note_entry_count) || 0;
+        const hasNotes = Boolean((warranty.notes && warranty.notes.trim() !== '') || noteEntryCount > 0);
+        const notesLabel = (window.i18next && window.i18next.t('warranties.notes') || 'Notes');
+        const notesCountSuffix = noteEntryCount > 0 ? ` (${noteEntryCount})` : '';
+        const notesLinkHtml = `<a href="#" class="notes-link" data-id="${warranty.id}" title="View Notes"><i class='fas fa-sticky-note'></i> ${notesLabel}${notesCountSuffix}</a>`;
         
         const hasDocuments = Boolean(
             warranty.product_url ||
@@ -1786,7 +1785,7 @@ async function renderWarranties(warrantiesToRender) {
             warranty.other_document_path || warranty.other_document_url ||
             warranty.paperless_invoice_id || warranty.paperless_manual_id ||
             warranty.paperless_photo_id || warranty.paperless_other_id ||
-            hasNotes
+            notesLinkHtml
         );
         
         

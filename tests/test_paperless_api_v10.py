@@ -149,11 +149,13 @@ def test_v10_running_then_success():
     done = {"count": 1, "next": None, "previous": None,
             "results": [{"id": 7, "task_id": TASK_ID,
                          "status": "success", "related_document_ids": [420]}]}
-    _stub_get(handler,
-              primary=(404, {"detail": "Not found"}),
-              task_list=[running, done])
+    calls = _stub_get(handler,
+                      primary=(404, {"detail": "Not found"}),
+                      task_list=[running, done])
     assert handler._get_document_id_from_task(
         TASK_ID, timeout_secs=5, poll_interval=0.01) == 420
+    assert calls["primary"] == 1
+    assert calls["list"] == 2
 
 
 def test_v9_detail_poll_still_works():

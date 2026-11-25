@@ -106,3 +106,20 @@ def test_note_entry_endpoints_exist():
     assert "'/warranties/<int:warranty_id>/notes', methods=['GET']" in routes
     assert "'/warranties/<int:warranty_id>/notes', methods=['POST']" in routes
     assert "'/warranties/<int:warranty_id>/notes/<int:entry_id>', methods=['DELETE']" in routes
+
+
+def test_notes_link_always_rendered_and_modal_guards_race_and_double_submit():
+    renderer = (
+        REPO / "frontend" / "js" / "components" / "warrantyRenderer.js"
+    ).read_text()
+    idx = renderer.index("function buildNotesLink(warranty)")
+    block = renderer[idx:renderer.index("\n}\n", idx) + 3]
+    assert "if (!notes) return" not in block
+    assert "note_entry_count" in block
+    assert 'class="notes-link"' in block
+
+    notes = (REPO / "frontend" / "js" / "components" / "notes.js").read_text()
+    assert "refs.thread.innerHTML = ''" in notes
+    assert "noteEntriesRequestToken" in notes
+    assert "dom.addBtn.disabled = true" in notes
+

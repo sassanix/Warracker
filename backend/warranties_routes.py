@@ -226,14 +226,23 @@ class _PinnedPhotoAdapter(requests.adapters.HTTPAdapter):
 
     def _resolve_and_pin(self, hostname):
         """One resolve-validate-pin cycle for a hop hostname.
-        Returns the IP string to connect to."""
+        Returns the IP string to connect to.
+
+        Every returned address is validated against the public-address
+        guard so a mixed public/private answer is always rejected. When
+        a dual-stack host returns both IPv6 and IPv4 addresses, prefer
+        IPv4 so standard IPv4-only Docker containers do not fail with
+        ENETUNREACH on an unreachable AAAA record, while IPv6-only hosts
+        still connect via their validated IPv6 address.
+        """
         try:
             infos = socket.getaddrinfo(hostname, None)
         except Exception:
             raise _PhotoHostRejectedError(hostname)
         if not infos:
             raise _PhotoHostRejectedError(hostname)
-        pinned = None
+        first_any = None
+        first_ipv4 = None
         for info in infos:
             try:
                 addr = ipaddress.ip_address(info[4][0])
@@ -241,9 +250,11 @@ class _PinnedPhotoAdapter(requests.adapters.HTTPAdapter):
                 raise _PhotoHostRejectedError(hostname)
             if not self._allow_private and not _ip_address_is_public(addr):
                 raise _PhotoHostRejectedError(hostname)
-            if pinned is None:
-                pinned = info[4][0]
-        return pinned
+            if first_any is None:
+                first_any = info[4][0]
+            if first_ipv4 is None and addr.version == 4:
+                first_ipv4 = info[4][0]
+        return first_ipv4 or first_any
 
     def build_connection_pool_key_attributes(self, request, verify,
                                              cert=None):
@@ -479,7 +490,8 @@ def get_warranties():
                         WHEN BOOL_OR(c.status IN ('Submitted', 'In Progress')) THEN 'OPEN'
                         ELSE 'FINISHED'
                     END AS claim_status_summary,
-                    (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count
+                    (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count,
+                    (SELECT COUNT(*) FROM warranty_note_entries n WHERE n.warranty_id = w.id) AS note_entry_count
                 FROM warranties w
                 LEFT JOIN warranty_claims c ON w.id = c.warranty_id
                 WHERE w.user_id = %s AND w.archived_at IS NULL
@@ -549,7 +561,8 @@ def get_archived_warranties():
                         WHEN BOOL_OR(c.status IN ('Submitted', 'In Progress')) THEN 'OPEN'
                         ELSE 'FINISHED'
                     END AS claim_status_summary,
-                    (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count
+                    (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count,
+                    (SELECT COUNT(*) FROM warranty_note_entries n WHERE n.warranty_id = w.id) AS note_entry_count
                 FROM warranties w
                 LEFT JOIN warranty_claims c ON w.id = c.warranty_id
                 WHERE w.user_id = %s AND w.archived_at IS NOT NULL
@@ -1580,7 +1593,12 @@ def update_warranty(warranty_id):
             logger.info(f"Parameters: {sql_values}")
 
             # Record expiration date or lifetime transitions (issue #209)
-            if existing_expiration_date != expiration_date or existing_is_lifetime != bool(is_lifetime):
+            new_is_lifetime = bool(is_lifetime)
+            expiry_changed = (
+                existing_is_lifetime != new_is_lifetime
+                or (not existing_is_lifetime and not new_is_lifetime and existing_expiration_date != expiration_date)
+            )
+            if expiry_changed:
                 cur.execute('''
                     INSERT INTO warranty_expiry_history (
                         warranty_id,
@@ -1597,7 +1615,7 @@ def update_warranty(warranty_id):
                     existing_expiration_date,
                     expiration_date,
                     existing_is_lifetime,
-                    bool(is_lifetime),
+                    new_is_lifetime,
                     expiry_change_reason,
                     user_id,
                 ))
@@ -2132,7 +2150,8 @@ def get_all_warranties():
                         WHEN BOOL_OR(c.status IN ('Submitted', 'In Progress')) THEN 'OPEN'
                         ELSE 'FINISHED'
                     END AS claim_status_summary,
-                    (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count
+                    (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count,
+                    (SELECT COUNT(*) FROM warranty_note_entries n WHERE n.warranty_id = w.id) AS note_entry_count
                 FROM warranties w
                 JOIN users u ON w.user_id = u.id
                 LEFT JOIN warranty_claims c ON w.id = c.warranty_id
@@ -2247,7 +2266,8 @@ def get_global_warranties():
                         ) THEN 'FINISHED'
                         ELSE 'NO_CLAIMS'
                     END AS claim_status_summary,
-                    (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count
+                    (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count,
+                    (SELECT COUNT(*) FROM warranty_note_entries n WHERE n.warranty_id = w.id) AS note_entry_count
                 FROM warranties w
                 JOIN users u ON w.user_id = u.id
                 WHERE w.archived_at IS NULL
@@ -2361,7 +2381,8 @@ def get_global_warranties_archived():
                         ) THEN 'FINISHED'
                         ELSE 'NO_CLAIMS'
                     END AS claim_status_summary,
-                    (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count
+                    (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count,
+                    (SELECT COUNT(*) FROM warranty_note_entries n WHERE n.warranty_id = w.id) AS note_entry_count
                 FROM warranties w
                 JOIN users u ON w.user_id = u.id
                 WHERE w.archived_at IS NOT NULL
@@ -2560,7 +2581,8 @@ def get_warranty_debug(warranty_id):
                            w.vendor, w.warranty_type, w.warranty_duration_years, w.warranty_duration_months, w.warranty_duration_days, 
                            w.product_photo_path, w.currency, w.paperless_invoice_id, w.paperless_manual_id, w.paperless_photo_id, w.paperless_other_id,
                            u.username, u.email, u.first_name, u.last_name,
-                           (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count
+                           (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count,
+                    (SELECT COUNT(*) FROM warranty_note_entries n WHERE n.warranty_id = w.id) AS note_entry_count
                     FROM warranties w
                     JOIN users u ON w.user_id = u.id
                     WHERE w.id = %s
@@ -2572,7 +2594,8 @@ def get_warranty_debug(warranty_id):
                            w.vendor, w.warranty_type, w.warranty_duration_years, w.warranty_duration_months, w.warranty_duration_days, 
                            w.product_photo_path, w.currency, w.paperless_invoice_id, w.paperless_manual_id, w.paperless_photo_id, w.paperless_other_id,
                            u.username, u.email, u.first_name, u.last_name,
-                           (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count
+                           (SELECT COUNT(*) FROM warranty_expiry_history h WHERE h.warranty_id = w.id) AS expiry_change_count,
+                    (SELECT COUNT(*) FROM warranty_note_entries n WHERE n.warranty_id = w.id) AS note_entry_count
                     FROM warranties w
                     JOIN users u ON w.user_id = u.id
                     WHERE w.id = %s AND w.user_id = %s
@@ -3161,8 +3184,8 @@ def create_warranty_note_entry(warranty_id):
     try:
         user_id = request.user['id']
         is_admin = request.user.get('is_admin', False)
-        data = request.get_json()
-        if not data:
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
             return jsonify({'error': 'No data provided'}), 400
         text = data.get('text')
         if not isinstance(text, str) or not text.strip():

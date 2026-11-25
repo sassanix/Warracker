@@ -236,3 +236,59 @@ def test_missing_warranty(client, scenario):
 def test_unauthenticated(client, scenario):
     r = client.get(f"/api/warranties/{scenario.wid}/notes")
     assert r.status_code == 401
+
+
+def test_malformed_json_returns_400(client, scenario):
+    r = client.post(
+        f"/api/warranties/{scenario.wid}/notes",
+        data="not json",
+        content_type="text/plain",
+        headers=scenario.owner["headers"],
+    )
+    assert r.status_code == 400
+    r = client.post(
+        f"/api/warranties/{scenario.wid}/notes",
+        json=["not", "a", "dict"],
+        headers=scenario.owner["headers"],
+    )
+    assert r.status_code == 400
+
+
+def test_note_entry_count_exposed_on_warranty_endpoints(
+    client, user_factory, warranty_factory, _global_view
+):
+    _global_view("true", "false")
+    owner = user_factory()
+    viewer = user_factory()
+    created = warranty_factory(owner["headers"], product_name="BlankNotesWidget")
+    assert created.status_code == 201, created.get_data(as_text=True)
+    wid = created.get_json()["id"]
+
+    # Initially 0 team notes
+    personal = client.get("/api/warranties", headers=owner["headers"]).get_json()
+    assert next(w for w in personal if w["id"] == wid)["note_entry_count"] == 0
+
+    # Add two team notes (owner + viewer)
+    e1 = client.post(
+        f"/api/warranties/{wid}/notes", json={"text": "first"}, headers=owner["headers"]
+    )
+    e2 = client.post(
+        f"/api/warranties/{wid}/notes", json={"text": "second"}, headers=viewer["headers"]
+    )
+    assert e1.status_code == 201 and e2.status_code == 201
+
+    personal = client.get("/api/warranties", headers=owner["headers"]).get_json()
+    assert next(w for w in personal if w["id"] == wid)["note_entry_count"] == 2
+    global_list = client.get("/api/warranties/global", headers=viewer["headers"]).get_json()
+    assert next(w for w in global_list if w["id"] == wid)["note_entry_count"] == 2
+    debug_w = client.get(f"/api/debug/warranty/{wid}", headers=viewer["headers"]).get_json()
+    assert debug_w["note_entry_count"] == 2
+
+    # Deleting one drops the count to 1
+    d = client.delete(
+        f"/api/warranties/{wid}/notes/{e2.get_json()['id']}", headers=viewer["headers"]
+    )
+    assert d.status_code == 200
+    personal = client.get("/api/warranties", headers=owner["headers"]).get_json()
+    assert next(w for w in personal if w["id"] == wid)["note_entry_count"] == 1
+

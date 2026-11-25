@@ -229,3 +229,61 @@ def test_forked_pool_is_discarded_and_recreated(db_connection):
         # The discarded pool is gone for good; the fresh pool created
         # above is the live one now. Nothing to restore.
         pass
+
+
+def test_discard_wakes_event_and_kills_greenlet(monkeypatch):
+    events = []
+    fake = types.SimpleNamespace(
+        remove_job=lambda job_id: events.append(("remove", job_id)),
+        state=1,
+        _event=types.SimpleNamespace(set=lambda: events.append(("event_set",))),
+        _greenlet=types.SimpleNamespace(kill=lambda block=False: events.append(("kill", block))),
+    )
+    monkeypatch.setattr(notifications, "scheduler", fake)
+    monkeypatch.setattr(notifications, "scheduler_initialized", True)
+    discard_inherited_scheduler()
+    assert ("remove", "notification_job") in events
+    assert ("event_set",) in events
+    assert ("kill", False) in events
+    assert notifications.scheduler is None
+
+
+def test_worker_get_scheduler_status_reads_master_snapshot(monkeypatch):
+    """Under gunicorn, /api/admin/scheduler-status hits a worker whose local
+    scheduler was discarded; it must read the live snapshot published by the
+    gunicorn master instead of reporting the scheduler as stopped."""
+    from datetime import datetime, UTC
+
+    fake_job = types.SimpleNamespace(
+        id="notification_job",
+        next_run_time=datetime(2026, 11, 25, 12, 0, 0, tzinfo=UTC),
+        trigger="interval[0:02:00]",
+    )
+    fake_master_sched = types.SimpleNamespace(
+        running=True,
+        get_jobs=lambda: [fake_job],
+    )
+    monkeypatch.setattr(notifications, "scheduler", fake_master_sched)
+    monkeypatch.setattr(notifications, "scheduler_initialized", True)
+    monkeypatch.setenv("WARRACKER_GUNICORN_MASTER", "1")
+    monkeypatch.setenv("WARRACKER_GUNICORN_MASTER_PID", str(os.getpid()))
+    monkeypatch.delenv("GUNICORN_WORKER_ID", raising=False)
+
+    try:
+        notifications._write_master_scheduler_status()
+
+        # Simulate a gunicorn worker that discarded its inherited scheduler
+        monkeypatch.setattr(notifications, "scheduler", None)
+        monkeypatch.setattr(notifications, "scheduler_initialized", False)
+        monkeypatch.setenv("GUNICORN_WORKER_ID", "0")
+
+        status = notifications.get_scheduler_status()
+        assert status["scheduler_initialized"] is True
+        assert status["scheduler_running"] is True
+        assert status["scheduler_owner"] == "gunicorn-master"
+        assert len(status["scheduler_jobs"]) == 1
+        assert status["scheduler_jobs"][0]["id"] == "notification_job"
+    finally:
+        monkeypatch.delenv("GUNICORN_WORKER_ID", raising=False)
+        notifications._clear_master_scheduler_status()
+

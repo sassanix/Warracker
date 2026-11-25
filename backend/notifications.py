@@ -917,6 +917,90 @@ def should_run_scheduler():
     return True
 
 
+def _master_scheduler_status_path(master_pid=None):
+    """Path to the live scheduler status snapshot written by the gunicorn master."""
+    import tempfile
+    pid = master_pid or os.environ.get('WARRACKER_GUNICORN_MASTER_PID') or os.getpid()
+    return os.path.join(tempfile.gettempdir(), f'warracker_scheduler_status_{pid}.json')
+
+
+def _collect_local_scheduler_jobs():
+    """Return serializable job descriptors from the in-process scheduler."""
+    if not (scheduler and hasattr(scheduler, 'get_jobs')):
+        return False, []
+    try:
+        jobs = scheduler.get_jobs()
+        return bool(scheduler.running), [
+            {
+                'id': job.id,
+                'next_run_time': job.next_run_time.isoformat() if job.next_run_time else None,
+                'trigger': str(job.trigger),
+            }
+            for job in jobs
+        ]
+    except Exception as e:
+        logger.error(f"Error getting scheduler jobs: {e}")
+        return False, []
+
+
+def _write_master_scheduler_status():
+    """Publish the master's live scheduler status so gunicorn workers can read it (#299)."""
+    if not os.environ.get('WARRACKER_GUNICORN_MASTER') or os.environ.get('GUNICORN_WORKER_ID') is not None:
+        return
+    try:
+        import json
+        running, jobs = _collect_local_scheduler_jobs()
+        payload = {
+            'master_pid': os.getpid(),
+            'scheduler_initialized': bool(scheduler_initialized),
+            'scheduler_running': running,
+            'scheduler_jobs': jobs,
+            'updated_at': datetime.now(UTC).isoformat(),
+        }
+        path = _master_scheduler_status_path(os.getpid())
+        tmp_path = f"{path}.{os.getpid()}.tmp"
+        with open(tmp_path, 'w', encoding='utf-8') as fh:
+            json.dump(payload, fh)
+        os.replace(tmp_path, path)
+    except Exception as e:
+        logger.debug(f"Could not write master scheduler status snapshot: {e}")
+
+
+def _clear_master_scheduler_status():
+    """Remove the master scheduler status snapshot on master shutdown."""
+    if not os.environ.get('WARRACKER_GUNICORN_MASTER') or os.environ.get('GUNICORN_WORKER_ID') is not None:
+        return
+    try:
+        path = _master_scheduler_status_path(os.getpid())
+        if os.path.exists(path):
+            os.remove(path)
+    except Exception:
+        pass
+
+
+def _read_master_scheduler_status():
+    """Read the gunicorn master's scheduler snapshot from a worker process."""
+    master_pid_str = os.environ.get('WARRACKER_GUNICORN_MASTER_PID')
+    if not master_pid_str:
+        return None
+    try:
+        master_pid = int(master_pid_str)
+        # Verify the master process is alive before trusting the snapshot.
+        os.kill(master_pid, 0)
+    except (ValueError, OSError):
+        return None
+    try:
+        import json
+        path = _master_scheduler_status_path(master_pid)
+        with open(path, 'r', encoding='utf-8') as fh:
+            data = json.load(fh)
+        if data.get('master_pid') != master_pid:
+            return None
+        return data
+    except Exception:
+        return None
+
+
 def discard_inherited_scheduler():
     """Drop a scheduler inherited across a fork, without closing it.
 
@@ -924,19 +1008,33 @@ def discard_inherited_scheduler():
     before forking, so every worker inherits a running copy (#299).
     That copy must never send. Shutting it down would join its thread,
     which is a copy of the master's dead thread, so instead remove its
-    only job and mark it stopped: the loop then exits on its next
-    wakeup having sent nothing. The master keeps the real scheduler.
-    Safe to call when no scheduler exists.
+    only job, mark it stopped, and wake/stop any inherited event or
+    greenlet so it exits immediately without sending anything. The
+    master keeps the real scheduler. Safe to call when no scheduler
+    exists.
     """
     global scheduler, scheduler_initialized
     if scheduler is None:
         return
+    old_scheduler = scheduler
     try:
-        scheduler.remove_job('notification_job')
+        old_scheduler.remove_job('notification_job')
     except Exception:
         pass
     try:
-        scheduler.state = STATE_STOPPED
+        old_scheduler.state = STATE_STOPPED
+    except Exception:
+        pass
+    try:
+        ev = getattr(old_scheduler, '_event', None)
+        if ev is not None and hasattr(ev, 'set'):
+            ev.set()
+    except Exception:
+        pass
+    try:
+        greenlet = getattr(old_scheduler, '_greenlet', None)
+        if greenlet is not None and hasattr(greenlet, 'kill'):
+            greenlet.kill(block=False)
     except Exception:
         pass
     scheduler = None
@@ -1010,12 +1108,15 @@ def init_scheduler(app, get_db_connection, release_db_connection, force=False):
 
         # ---> FIX: Create a wrapper that pushes an app context <---
         def notification_job_with_context():
-            with app.app_context():
-                send_expiration_notifications(
-                    manual_trigger=False,
-                    get_db_connection=get_db_connection,
-                    release_db_connection=release_db_connection
-                )
+            try:
+                with app.app_context():
+                    send_expiration_notifications(
+                        manual_trigger=False,
+                        get_db_connection=get_db_connection,
+                        release_db_connection=release_db_connection
+                    )
+            finally:
+                _write_master_scheduler_status()
 
         # Only add the job once: a second init_scheduler call (from
         # app.py after create_app, or from when_ready after create_app)
@@ -1030,12 +1131,16 @@ def init_scheduler(app, get_db_connection, release_db_connection, force=False):
             # been discarded (set to None) by a forked worker, or
             # already stopped by another hook; the hook is inherited
             # across the fork too, so more than one may be registered.
-            atexit.register(lambda: scheduler.shutdown()
-                            if scheduler is not None and scheduler.running
-                            else None)
+            def _shutdown_scheduler():
+                _clear_master_scheduler_status()
+                if scheduler is not None and scheduler.running:
+                    scheduler.shutdown()
+
+            atexit.register(_shutdown_scheduler)
         else:
             logger.info("ℹ️ Notification scheduler already running; keeping the existing job")
         scheduler_initialized = True
+        _write_master_scheduler_status()
         return True
     except Exception as e:
         logger.error(f"❌ Failed to start scheduler: {e}")
@@ -1058,29 +1163,31 @@ def get_scheduler_status():
     worker_name = os.environ.get('GUNICORN_WORKER_PROCESS_NAME', 'unknown')
     worker_class = os.environ.get('GUNICORN_WORKER_CLASS', 'unknown')
     
-    scheduler_jobs = []
-    scheduler_running = False
-    
-    if scheduler and hasattr(scheduler, 'get_jobs'):
-        try:
-            jobs = scheduler.get_jobs()
-            scheduler_running = scheduler.running
-            scheduler_jobs = [
-                {
-                    'id': job.id,
-                    'next_run_time': job.next_run_time.isoformat() if job.next_run_time else None,
-                    'trigger': str(job.trigger)
-                }
-                for job in jobs
-            ]
-        except Exception as e:
-            logger.error(f"Error getting scheduler jobs: {e}")
+    scheduler_running, scheduler_jobs = _collect_local_scheduler_jobs()
+    effective_initialized = scheduler_initialized
+    scheduler_owner = 'current-process'
+
+    # Under gunicorn, HTTP requests always hit a worker whose local copy
+    # was discarded in post_fork; read the live snapshot published by the
+    # gunicorn master so admin diagnostics reflect reality (#299).
+    if (
+        not scheduler_running
+        and os.environ.get('WARRACKER_GUNICORN_MASTER')
+        and os.environ.get('GUNICORN_WORKER_ID') is not None
+    ):
+        master_status = _read_master_scheduler_status()
+        if master_status is not None:
+            effective_initialized = bool(master_status.get('scheduler_initialized'))
+            scheduler_running = bool(master_status.get('scheduler_running'))
+            scheduler_jobs = master_status.get('scheduler_jobs', [])
+            scheduler_owner = 'gunicorn-master'
     
     return {
-        'scheduler_initialized': scheduler_initialized,
+        'scheduler_initialized': effective_initialized,
         'scheduler_retry_attempted': scheduler_retry_attempted,
         'scheduler_running': scheduler_running,
         'scheduler_jobs': scheduler_jobs,
+        'scheduler_owner': scheduler_owner,
         'worker_info': {
             'worker_id': worker_id,
             'worker_name': worker_name,
