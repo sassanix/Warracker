@@ -1213,6 +1213,66 @@ input.invalid {
   flex-grow: 1; /* Allow body to take available space */
   background-color: var(--card-bg); /* Ensure background */
 }
+
+/* Team note entries in the notes modal */
+.note-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border-top: 1px solid var(--border-color, #ddd);
+  padding: 10px 0;
+}
+
+.note-entry-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.note-entry-meta {
+  font-size: 0.85em;
+  color: var(--text-muted, #666);
+  margin-bottom: 2px;
+  overflow-wrap: anywhere;
+}
+
+.note-entry-text {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.note-entry-delete {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted, #666);
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.note-entry-delete:hover {
+  color: var(--danger-color, #c0392b);
+  background-color: rgba(231, 76, 60, 0.08);
+  border-color: rgba(231, 76, 60, 0.18);
+}
+
+.note-entry-delete:focus-visible {
+  color: var(--danger-color, #c0392b);
+  background-color: rgba(231, 76, 60, 0.08);
+  outline: 2px solid var(--danger-color, #c0392b);
+  outline-offset: 2px;
+}
+
+.note-entry-delete i {
+  font-size: 1rem;
+  line-height: 1;
+}
 /* Mobile-friendly layout for Manage Tags */
 @media (max-width: 600px) {
   #tagManagementModal .modal {

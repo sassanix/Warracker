@@ -301,23 +301,29 @@ function renderNoteEntries(entries) {
 	for (const entry of entries) {
 		const row = document.createElement('div');
 		row.className = 'note-entry';
-		row.style.cssText = 'border-top: 1px solid var(--border-color, #ddd); padding: 8px 0;';
+		const content = document.createElement('div');
+		content.className = 'note-entry-content';
 		const meta = document.createElement('div');
 		meta.className = 'note-entry-meta';
-		meta.style.cssText = 'font-size: 0.85em; color: var(--text-muted, #666);';
 		const when = entry.created_at ? new Date(entry.created_at).toLocaleString() : '';
 		meta.textContent = entry.username + ' - ' + when;
 		const text = document.createElement('div');
 		text.className = 'note-entry-text';
-		text.style.whiteSpace = 'pre-line';
 		text.textContent = entry.text;
-		row.appendChild(meta);
-		row.appendChild(text);
+		content.appendChild(meta);
+		content.appendChild(text);
+		row.appendChild(content);
 		if (canDeleteNoteEntry(entry)) {
 			const del = document.createElement('button');
 			del.type = 'button';
-			del.className = 'btn btn-sm btn-danger note-entry-delete';
-			del.textContent = 'Delete';
+			del.className = 'note-entry-delete';
+			const deleteLabel = entry.username ? `Delete note by ${entry.username}` : 'Delete note';
+			del.setAttribute('aria-label', deleteLabel);
+			del.title = 'Delete note';
+			const icon = document.createElement('i');
+			icon.className = 'fas fa-trash';
+			icon.setAttribute('aria-hidden', 'true');
+			del.appendChild(icon);
 			del.addEventListener('click', () => deleteNoteEntry(entry.id));
 			row.appendChild(del);
 		}

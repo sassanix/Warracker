@@ -81,7 +81,17 @@ def test_notes_modal_renders_team_entry_thread():
     assert "new Date(entry.created_at).toLocaleString()" in notes
     assert "meta.textContent = entry.username + ' - ' + when" in notes
     assert "text.textContent = entry.text" in notes
+    assert "del.className = 'note-entry-delete'" in notes
+    assert "del.setAttribute('aria-label', deleteLabel)" in notes
+    assert "icon.className = 'fas fa-trash'" in notes
+    assert "btn-danger note-entry-delete" not in notes
     assert "refs.editBtn.disabled = !canEdit" in notes
+    css = (REPO / "frontend" / "style.css").read_text()
+    assert ".note-entry {" in css
+    assert "display: flex;" in css
+    assert ".note-entry-delete {" in css
+    assert "width: 40px;" in css
+    assert "height: 40px;" in css
     # The live modal markup is the legacy one script.js injects at load
     # time; the module reuses it when it exists. It must carry the same
     # thread and add-box elements, or the modal opens without them.
