@@ -232,6 +232,27 @@
             font-size: 1.1rem;
         }
 
+        .bmc-static-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            background: #FFDD00;
+            color: #000000;
+            border: 2px solid #000000;
+            font-weight: 600;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .bmc-static-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            color: #000000;
+        }
+
         /* Dark mode adjustments */
         [data-theme="dark"] .social-link.github {
             border-color: #f0f6fc;
@@ -404,7 +425,10 @@
             <div class="coffee-section">
                 <h3><i class="fas fa-coffee"></i> <span data-i18n="about.support_project">Support the Project</span></h3>
                 <p data-i18n="about.support_description">If you find Warracker useful, consider supporting its development!</p>
-                <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="sassanix" data-color="#FFDD00" data-emoji=""  data-font="Poppins" data-text="Buy me a coffee" data-outline-color="#000000" data-font-color="#000000" data-coffee-color="#ffffff" ></script>
+                <a href="https://www.buymeacoffee.com/sassanix" target="_blank" rel="noopener noreferrer" class="bmc-static-btn">
+                    <i class="fas fa-coffee" aria-hidden="true"></i>
+                    <span>Buy me a coffee</span>
+                </a>
             </div>
 
         </div> 

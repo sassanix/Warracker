@@ -724,6 +724,19 @@
                                     </div>
                                 </div>
 
+                                <div class="form-group">
+                                    <div class="preference-item">
+                                        <div>
+                                            <label for="paperlessStrictOwnership">Restrict Pre-Existing Documents to Admins</label>
+                                            <p class="text-muted">When enabled, non-admin users can only link Paperless documents they uploaded through Warracker (prevents claiming unowned documents in a shared Paperless-ngx instance).</p>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="paperlessStrictOwnership">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+
                                 <div class="form-group" style="margin-top: 20px;">
                                     <label data-i18n="settings.connection_testing">Connection Testing</label>
                                     <div class="paperless-button-group">
@@ -996,6 +1009,10 @@
             <div class="modal-body">
                 <p class="text-danger"><strong>Warning: This action cannot be undone.</strong></p>
                 <p>All your data, including warranties, will be permanently deleted.</p>
+                <div id="deleteAccountPasswordGroup" class="form-group" style="margin-bottom: 12px;">
+                    <label for="deleteAccountPassword">Current Password</label>
+                    <input type="password" id="deleteAccountPassword" class="form-control" placeholder="Enter your current password" autocomplete="current-password">
+                </div>
                 <p>To confirm, please type "DELETE" in the field below:</p>
                 <input type="text" id="deleteConfirmInput" class="form-control" placeholder="Type DELETE to confirm">
             </div>

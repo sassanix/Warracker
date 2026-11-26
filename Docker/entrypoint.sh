@@ -109,8 +109,26 @@ if ! echo "${EFFECTIVE_SIZE}" | grep -Eq "^[0-9]+[mMkKgG]?$"; then
     log "Warning: Invalid NGINX_MAX_BODY_SIZE_VALUE. Using default 32M"
     EFFECTIVE_SIZE="32M"
 fi
+TRUST_PROXY_MODE="${TRUST_PROXY_HEADERS:-}"
+case "${TRUST_PROXY_MODE,,}" in
+    true)
+        NGINX_TRUST_ALL_PROXIES=1
+        NGINX_TRUST_PRIVATE_PROXIES=1
+        ;;
+    false)
+        NGINX_TRUST_ALL_PROXIES=0
+        NGINX_TRUST_PRIVATE_PROXIES=0
+        ;;
+    *)
+        NGINX_TRUST_ALL_PROXIES=0
+        NGINX_TRUST_PRIVATE_PROXIES=1
+        ;;
+esac
 mkdir -p -m 700 /run/nginx-init
-sed "s|__NGINX_MAX_BODY_SIZE_CONFIG_VALUE__|${EFFECTIVE_SIZE}|g" \
+sed \
+    -e "s|__NGINX_MAX_BODY_SIZE_CONFIG_VALUE__|${EFFECTIVE_SIZE}|g" \
+    -e "s|__NGINX_TRUST_ALL_PROXIES__|${NGINX_TRUST_ALL_PROXIES}|g" \
+    -e "s|__NGINX_TRUST_PRIVATE_PROXIES__|${NGINX_TRUST_PRIVATE_PROXIES}|g" \
     /etc/nginx/conf.d/default.conf.template > /run/nginx-init/default.conf
 
 log "Nginx config prepared (size: ${EFFECTIVE_SIZE})"

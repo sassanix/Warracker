@@ -1,4 +1,4 @@
-const CACHE_NAME = 'warracker-cache-v20261123001';
+const CACHE_NAME = 'warracker-cache-v20261126001';
 const urlsToCache = [
   // HTML pages
   './',
@@ -70,6 +70,17 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
+function responseAllowsCaching(networkResponse) {
+  if (!networkResponse || networkResponse.status !== 200) {
+    return false;
+  }
+  const cacheControl = (networkResponse.headers.get('Cache-Control') || '').toLowerCase();
+  if (cacheControl.includes('no-store')) {
+    return false;
+  }
+  return true;
+}
+
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') {
     return;
@@ -78,13 +89,18 @@ self.addEventListener('fetch', event => {
   const requestUrl = new URL(event.request.url);
   const isSameOrigin = requestUrl.origin === self.location.origin;
 
+  // Never intercept or cache authenticated API / file-download endpoints (L-01).
+  if (isSameOrigin && requestUrl.pathname.startsWith('/api/')) {
+    return;
+  }
+
   // Network-first for scripts: always fetch fresh JS so code updates are
   // picked up immediately, falling back to cache only when offline.
   if (event.request.destination === 'script') {
     event.respondWith(
       fetch(event.request)
         .then(networkResponse => {
-          if (isSameOrigin && networkResponse && networkResponse.status === 200) {
+          if (isSameOrigin && responseAllowsCaching(networkResponse)) {
             const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
           }
@@ -105,7 +121,7 @@ self.addEventListener('fetch', event => {
     caches.match(event.request).then(cachedResponse => {
       const fetchPromise = fetch(event.request)
         .then(networkResponse => {
-          const okToCache = isSameOrigin && networkResponse && networkResponse.status === 200 &&
+          const okToCache = isSameOrigin && responseAllowsCaching(networkResponse) &&
             ['document', 'style', 'image', 'font'].includes(event.request.destination);
 
           if (okToCache) {

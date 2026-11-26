@@ -42,7 +42,30 @@ import multiprocessing
 
 # Server configurations - Dynamic based on memory mode
 bind = "0.0.0.0:5000"
-forwarded_allow_ips = '*'  # Trust proxy headers from any source (safe in containerized environment)
+
+
+def _resolve_forwarded_allow_ips():
+    """Limit which peers Gunicorn trusts for X-Forwarded-* headers (H-03).
+
+    In the default container, bundled Nginx connects over loopback so only
+    127.0.0.1/::1 should be trusted. When DISABLE_NGINX=true, allow loopback
+    and private LAN/Docker proxy CIDRs matching backend._forwarded_headers_trusted.
+    Operators can override via GUNICORN_FORWARDED_ALLOW_IPS or TRUST_PROXY_HEADERS.
+    """
+    explicit = os.environ.get('GUNICORN_FORWARDED_ALLOW_IPS', '').strip()
+    if explicit:
+        return explicit
+    trust_override = os.environ.get('TRUST_PROXY_HEADERS', '').strip().lower()
+    if trust_override == 'true':
+        return '*'
+    if trust_override == 'false':
+        return ''
+    if os.environ.get('DISABLE_NGINX', 'false').strip().lower() == 'true':
+        return '127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10'
+    return '127.0.0.1,::1'
+
+
+forwarded_allow_ips = _resolve_forwarded_allow_ips()
 
 # Determine worker class first, then apply appropriate monkey patching
 if memory_mode == 'ultra-light':

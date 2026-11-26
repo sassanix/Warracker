@@ -112,10 +112,13 @@ const paperlessEnabledToggle = document.getElementById('paperlessEnabled');
 const paperlessUrlInput = document.getElementById('paperlessUrl');
 const paperlessApiTokenInput = document.getElementById('paperlessApiToken');
 const paperlessViewInAppToggle = document.getElementById('paperlessViewInApp');
+const paperlessStrictOwnershipToggle = document.getElementById('paperlessStrictOwnership');
 const paperlessSettingsContainer = document.getElementById('paperlessSettingsContainer');
 const testPaperlessConnectionBtn = document.getElementById('testPaperlessConnectionBtn');
 const savePaperlessSettingsBtn = document.getElementById('savePaperlessSettingsBtn');
 const paperlessConnectionStatus = document.getElementById('paperlessConnectionStatus');
+const deleteAccountPasswordGroup = document.getElementById('deleteAccountPasswordGroup');
+const deleteAccountPasswordInput = document.getElementById('deleteAccountPassword');
 
 // Global variable to store currencies data for currency code lookup
 let globalCurrenciesData = [];
@@ -1295,18 +1298,44 @@ function setupEventListeners() {
         });
     }
     
+    function requiresDeletePassword() {
+        const user = window.auth && window.auth.getCurrentUser ? window.auth.getCurrentUser() : null;
+        if (!user) return true;
+        if (typeof user.has_password === 'boolean') return user.has_password;
+        return !user.oidc_managed;
+    }
+
+    function updateDeleteAccountButtonState() {
+        if (!confirmDeleteAccountBtn || !deleteConfirmInput) return;
+        const confirmedText = deleteConfirmInput.value === 'DELETE';
+        const needsPassword = requiresDeletePassword();
+        const hasPasswordInput = !needsPassword || Boolean(deleteAccountPasswordInput && deleteAccountPasswordInput.value);
+        confirmDeleteAccountBtn.disabled = !(confirmedText && hasPasswordInput);
+    }
+
     // Delete account button
     if (deleteAccountBtn) {
         deleteAccountBtn.addEventListener('click', function() {
+            if (deleteAccountPasswordGroup) {
+                deleteAccountPasswordGroup.style.display = requiresDeletePassword() ? '' : 'none';
+            }
+            if (deleteAccountPasswordInput) {
+                deleteAccountPasswordInput.value = '';
+            }
+            if (deleteConfirmInput) {
+                deleteConfirmInput.value = '';
+            }
+            updateDeleteAccountButtonState();
             openModal(deleteAccountModal);
         });
     }
     
     // Delete confirm input
     if (deleteConfirmInput) {
-        deleteConfirmInput.addEventListener('input', function() {
-            confirmDeleteAccountBtn.disabled = this.value !== 'DELETE';
-        });
+        deleteConfirmInput.addEventListener('input', updateDeleteAccountButtonState);
+    }
+    if (deleteAccountPasswordInput) {
+        deleteAccountPasswordInput.addEventListener('input', updateDeleteAccountButtonState);
     }
     
     // Confirm delete account button
@@ -1922,16 +1951,29 @@ async function deleteAccount() {
         showToast('Please type DELETE to confirm', 'error');
         return;
     }
+
+    const passwordVisible = deleteAccountPasswordGroup && deleteAccountPasswordGroup.style.display !== 'none';
+    const password = deleteAccountPasswordInput ? deleteAccountPasswordInput.value : '';
+    if (passwordVisible && !password) {
+        showToast('Please enter your current password to confirm', 'error');
+        return;
+    }
     
     showLoading();
     
     try {
-        const response = await fetch('/api/auth/account', {
+        const headers = {
+            'Authorization': `Bearer ${window.auth.getToken()}`
+        };
+        const fetchOptions = {
             method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${window.auth.getToken()}`
-            }
-        });
+            headers
+        };
+        if (passwordVisible) {
+            headers['Content-Type'] = 'application/json';
+            fetchOptions.body = JSON.stringify({ password });
+        }
+        const response = await fetch('/api/auth/account', fetchOptions);
         
         if (response.ok) {
             // Clear auth data
@@ -1976,8 +2018,11 @@ async function deleteAccount() {
         // Close modal
         deleteAccountModal.style.display = 'none';
         
-        // Reset delete confirm input
+        // Reset delete confirm inputs
         deleteConfirmInput.value = '';
+        if (deleteAccountPasswordInput) {
+            deleteAccountPasswordInput.value = '';
+        }
         confirmDeleteAccountBtn.disabled = true;
     }
 }
@@ -4919,6 +4964,9 @@ async function loadPaperlessSettings() {
         if (paperlessUrlInput && settings.paperless_url) {
             paperlessUrlInput.value = settings.paperless_url;
         }
+        if (paperlessStrictOwnershipToggle) {
+            paperlessStrictOwnershipToggle.checked = settings.paperless_strict_ownership === 'true';
+        }
         
         // Update API token field placeholder to indicate if token is saved
         if (paperlessApiTokenInput) {
@@ -4956,7 +5004,8 @@ async function savePaperlessSettings() {
         // Prepare settings data
         const settingsData = {
             paperless_enabled: paperlessEnabledToggle.checked.toString(),
-            paperless_url: url
+            paperless_url: url,
+            paperless_strict_ownership: paperlessStrictOwnershipToggle ? paperlessStrictOwnershipToggle.checked.toString() : 'false'
         };
         
         // Only include API token if it's provided (not empty)
