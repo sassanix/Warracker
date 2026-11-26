@@ -69,19 +69,13 @@ def token_required(f):
     def decorated(*args, **kwargs):
         token = None
         
-        # Get token from Authorization header
+        # Get token exclusively from the Authorization Bearer header (L-01).
+        # Query-string ?token= and form-field fallbacks are rejected so JWTs
+        # never leak into browser history, referrer headers, or access logs.
         auth_header = request.headers.get('Authorization')
         if auth_header and auth_header.startswith('Bearer '):
-            token = auth_header.split(' ')[1]
-        
-        # If no token in header, check form data for POST requests
-        if not token and request.method == 'POST':
-            token = request.form.get('auth_token')  # Check form data
-        
-        # If still no token, check URL query parameters
-        if not token:
-            token = request.args.get('token')  # Check query parameters
-            
+            token = auth_header.split(' ', 1)[1].strip()
+
         # If no token is provided
         if not token:
             current_app.logger.warning(f"Authentication attempt without token: {request.path}")

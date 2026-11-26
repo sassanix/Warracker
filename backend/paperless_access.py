@@ -118,6 +118,19 @@ def _referenced_by(cur, document_id, user_id, own):
     return cur.fetchone() is not None
 
 
+def is_paperless_strict_ownership_enabled(cur):
+    """True when admin enabled strict ownership (preventing non-admins from
+    claiming pre-existing unowned Paperless documents)."""
+    try:
+        cur.execute(
+            "SELECT value FROM site_settings WHERE key = 'paperless_strict_ownership'"
+        )
+        row = cur.fetchone()
+        return bool(row and str(row[0]).lower() == 'true')
+    except Exception:
+        return False
+
+
 def user_can_link_paperless_document(cur, user_id, is_admin, document_id):
     """True when the user may link this Paperless document to their own
     warranty or claim. See the module docstring for the rules."""
@@ -131,6 +144,10 @@ def user_can_link_paperless_document(cur, user_id, is_admin, document_id):
     if _referenced_by(cur, document_id, user_id, own=True):
         return True
     if _referenced_by(cur, document_id, user_id, own=False):
+        return False
+    # Unowned and unreferenced document: allowed by default for first-linker
+    # claiming, or restricted to admins when paperless_strict_ownership=true.
+    if is_paperless_strict_ownership_enabled(cur):
         return False
     return True
 

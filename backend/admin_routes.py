@@ -248,6 +248,33 @@ def delete_user(user_id):
                 return jsonify({"message": "The application owner cannot be deleted."}), 403
             
             logger.info(f"Deleting user {user[1]} (ID: {user[0]})")
+
+            # Collect local uploaded file paths owned by this user before deleting
+            # their rows so orphaned files on disk can be removed post-commit.
+            user_file_paths = []
+            cur.execute('''
+                SELECT invoice_path, manual_path, other_document_path, product_photo_path
+                FROM warranties
+                WHERE user_id = %s
+            ''', (user_id,))
+            for row in cur.fetchall():
+                for p in row:
+                    if p:
+                        user_file_paths.append(p)
+            try:
+                cur.execute('''
+                    SELECT d.file_path
+                    FROM claim_documents d
+                    JOIN warranty_claims c ON d.claim_id = c.id
+                    JOIN warranties w ON c.warranty_id = w.id
+                    WHERE w.user_id = %s AND d.file_path IS NOT NULL
+                ''', (user_id,))
+                for (p,) in cur.fetchall():
+                    if p:
+                        user_file_paths.append(p)
+            except Exception as claim_doc_err:
+                logger.warning(f"Could not collect claim document paths for user {user_id}: {claim_doc_err}")
+                conn.rollback()
             
             # Delete user's warranties first
             cur.execute('DELETE FROM warranties WHERE user_id = %s', (user_id,))
@@ -276,6 +303,16 @@ def delete_user(user_id):
             
             conn.commit()
             logger.info(f"User {user_id} deleted successfully")
+
+            # Remove unreferenced local files on disk after commit succeeds.
+            if user_file_paths:
+                try:
+                    from .warranties_routes import _delete_stored_file
+                except ImportError:
+                    from warranties_routes import _delete_stored_file
+                for stored_path in set(user_file_paths):
+                    _delete_stored_file(cur, stored_path)
+                conn.rollback()
 
             # Audit log for user deletion
             try:
@@ -417,6 +454,7 @@ SITE_SETTING_KEYS = frozenset({
     'paperless_enabled',
     'paperless_url',
     'paperless_api_token',
+    'paperless_strict_ownership',
 })
 
 # Setting keys whose values must never appear in audit entries, beyond
@@ -499,6 +537,7 @@ def get_site_settings():
                 # Paperless-ngx integration settings
                 'paperless_enabled': 'false',
                 'paperless_url': '',
+                'paperless_strict_ownership': 'false',
                 # 'paperless_api_token': '', # Not returned directly
             }
 
@@ -512,7 +551,7 @@ def get_site_settings():
                     continue
                 
                 # For boolean-like string settings, ensure they are 'true' or 'false'
-                if key in ['registration_enabled', 'oidc_enabled', 'oidc_only_mode', 'oidc_skip_login_screen', 'apprise_enabled', 'global_view_enabled', 'global_view_admin_only', 'paperless_enabled']:
+                if key in ['registration_enabled', 'oidc_enabled', 'oidc_only_mode', 'oidc_skip_login_screen', 'apprise_enabled', 'global_view_enabled', 'global_view_admin_only', 'paperless_enabled', 'paperless_strict_ownership']:
                     settings_to_return[key] = 'true' if value.lower() == 'true' else 'false'
                 else:
                     settings_to_return[key] = value

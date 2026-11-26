@@ -175,23 +175,22 @@ def ensure_owner_exists():
 # styles throughout, so script-src and style-src keep 'unsafe-inline';
 # the policy still pins the fetchable origins, blocks plugins and
 # foreign framing, and keeps form submissions and base URIs
-# same-origin. The third-party allowances are load-bearing: the About
-# page loads the Buy Me a Coffee button script, which fetches its
-# font and images from the buymeacoffee and Google Fonts hosts,
-# version-checker.js fetches the latest release from api.github.com,
-# and style.css uses an Unsplash photo as a page background.
+# same-origin. The third-party allowances are load-bearing: Google
+# Fonts serves stylesheet/font assets, version-checker.js fetches the
+# latest release from api.github.com, and style.css uses an Unsplash
+# photo as a page background.
 # upgrade-insecure-requests is intentionally omitted: self-hosted
 # installs on plain HTTP (LAN IP, localhost, Unraid, Proxmox, TrueNAS)
 # would otherwise have browsers rewrite same-origin subresources to
 # https:// and fail to load.
 _CONTENT_SECURITY_POLICY = (
     "default-src 'self'; "
-    "script-src 'self' 'unsafe-inline' https://cdnjs.buymeacoffee.com; "
+    "script-src 'self' 'unsafe-inline'; "
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-    "img-src 'self' data: blob: https://*.buymeacoffee.com https://images.unsplash.com; "
+    "img-src 'self' data: blob: https://images.unsplash.com; "
     "font-src 'self' data: https://fonts.gstatic.com; "
     "connect-src 'self' https://api.github.com; "
-    "frame-src 'self' https://*.buymeacoffee.com; "
+    "frame-src 'self'; "
     "object-src 'none'; "
     "base-uri 'self'; "
     "form-action 'self'; "
@@ -231,6 +230,8 @@ def create_app(config_name=None):
         # origin cross-origin, and nothing on an HTTPS to HTTP drop.
         response.headers.setdefault(
             'Referrer-Policy', 'strict-origin-when-cross-origin')
+        # Prevent MIME-type sniffing globally on all Flask responses.
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
         return response
     
     # Load configuration

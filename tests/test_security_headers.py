@@ -20,6 +20,7 @@ def test_csp_and_referrer_policy_on_api_response(client):
     assert r.status_code == 200
     assert r.headers.get("Content-Security-Policy") == _CONTENT_SECURITY_POLICY
     assert r.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
+    assert r.headers.get("X-Content-Type-Options") == "nosniff"
 
 
 def test_csp_and_referrer_policy_on_error_response(client):
@@ -27,6 +28,7 @@ def test_csp_and_referrer_policy_on_error_response(client):
     assert r.status_code == 404
     assert r.headers.get("Content-Security-Policy") == _CONTENT_SECURITY_POLICY
     assert r.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
+    assert r.headers.get("X-Content-Type-Options") == "nosniff"
 
 
 def test_nginx_conf_repeats_the_same_csp_and_referrer_policy():
@@ -41,6 +43,9 @@ def test_nginx_conf_repeats_the_same_csp_and_referrer_policy():
     assert all(
         value == "strict-origin-when-cross-origin"
         for value in referrer_values)
+    nosniff_values = re.findall(
+        r'add_header X-Content-Type-Options "nosniff" always;', text)
+    assert len(nosniff_values) >= 2
 
 
 def test_csp_keeps_inline_scripts_and_styles_working():
@@ -48,9 +53,8 @@ def test_csp_keeps_inline_scripts_and_styles_working():
     assert "style-src 'self' 'unsafe-inline'" in _CONTENT_SECURITY_POLICY
 
 
-def test_csp_allows_the_about_page_widget_and_version_check():
-    assert "https://cdnjs.buymeacoffee.com" in _CONTENT_SECURITY_POLICY
-    assert "https://*.buymeacoffee.com" in _CONTENT_SECURITY_POLICY
+def test_csp_allows_version_check_and_drops_remote_bmc_script():
+    assert "buymeacoffee.com" not in _CONTENT_SECURITY_POLICY
     assert "https://api.github.com" in _CONTENT_SECURITY_POLICY
     assert "https://images.unsplash.com" in _CONTENT_SECURITY_POLICY
 

@@ -154,8 +154,15 @@ def oidc_login_route():
         logger.error("[OIDC_HANDLER] OIDC is enabled but provider name not configured.")
         return jsonify({'message': 'OIDC provider not configured correctly.'}), 500
 
-    # Corrected url_for to use blueprint name
-    redirect_uri = url_for('oidc.oidc_callback_route', _external=True)
+    # Prefer an explicitly configured public base URL so OIDC redirect_uri
+    # cannot be influenced by spoofed Host/X-Forwarded-* headers (H-03).
+    # Falls back to url_for(..., _external=True) for zero-config installs.
+    configured_base = (os.environ.get('APP_BASE_URL') or os.environ.get('FRONTEND_URL') or '').strip()
+    if configured_base.startswith(('http://', 'https://')):
+        callback_path = url_for('oidc.oidc_callback_route', _external=False)
+        redirect_uri = f"{configured_base.rstrip('/')}{callback_path}"
+    else:
+        redirect_uri = url_for('oidc.oidc_callback_route', _external=True)
 
     # HTTPS check for production
     if os.environ.get('FLASK_ENV') == 'production' and not redirect_uri.startswith('https'):

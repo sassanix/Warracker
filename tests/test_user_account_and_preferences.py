@@ -204,7 +204,15 @@ def test_self_account_deletion_cleans_data_and_blocks_owner(
         "/api/auth/preferences", headers=h, json={"theme": "dark"}
     ).status_code == 200
 
-    r_del = client.delete("/api/auth/account", headers=h)
+    # Missing or wrong password must be rejected for local accounts (L-03).
+    assert client.delete("/api/auth/account", headers=h).status_code == 400
+    assert client.delete(
+        "/api/auth/account", headers=h, json={"password": "WrongPassword999!"}
+    ).status_code == 401
+
+    r_del = client.delete(
+        "/api/auth/account", headers=h, json={"password": "TestPass123!"}
+    )
     assert r_del.status_code == 200, r_del.get_data(as_text=True)
 
     # Old token is immediately rejected, and DB rows are gone.
@@ -219,7 +227,11 @@ def test_self_account_deletion_cleans_data_and_blocks_owner(
 
     # Owner cannot delete their own account.
     if owner_row is None or owner_row[1] == admin_user["username"]:
-        r_owner_del = client.delete("/api/auth/account", headers=admin_user["headers"])
+        r_owner_del = client.delete(
+            "/api/auth/account",
+            headers=admin_user["headers"],
+            json={"password": "TestPass123!"},
+        )
         assert r_owner_del.status_code == 403
 
 

@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 import re
+import threading
 import pytz
 import psycopg2
 from psycopg2.extras import Json
@@ -438,23 +439,23 @@ def get_user():
             # Try to get user with is_owner column, fall back to without it if column doesn't exist
             try:
                 cur.execute(
-                    'SELECT id, username, email, first_name, last_name, is_admin, is_owner, oidc_sub FROM users WHERE id = %s',
+                    'SELECT id, username, email, first_name, last_name, is_admin, is_owner, oidc_sub, (password_hash IS NOT NULL) FROM users WHERE id = %s',
                     (user_id,)
                 )
                 user_data = cur.fetchone()
                 has_owner_column = True
-                columns = ['id', 'username', 'email', 'first_name', 'last_name', 'is_admin', 'is_owner', 'oidc_managed']
+                columns = ['id', 'username', 'email', 'first_name', 'last_name', 'is_admin', 'is_owner', 'oidc_managed', 'has_password']
             except Exception as e:
                 # If the query fails (likely because is_owner column doesn't exist), rollback and try again
                 current_app.logger.warning(f"Failed to query with is_owner column in get_user, falling back: {e}")
                 conn.rollback()  # Rollback the failed transaction
                 cur.execute(
-                    'SELECT id, username, email, first_name, last_name, is_admin FROM users WHERE id = %s',
+                    'SELECT id, username, email, first_name, last_name, is_admin, (password_hash IS NOT NULL) FROM users WHERE id = %s',
                     (user_id,)
                 )
                 user_data = cur.fetchone()
                 has_owner_column = False
-                columns = ['id', 'username', 'email', 'first_name', 'last_name', 'is_admin', 'oidc_managed']
+                columns = ['id', 'username', 'email', 'first_name', 'last_name', 'is_admin', 'has_password']
         # --- END DATABASE QUERY ---
 
         if not user_data:
@@ -466,9 +467,11 @@ def get_user():
         # Add is_owner field if it wasn't included in the query
         if not has_owner_column:
             user_info['is_owner'] = False
-
-        # Turn oidc_sub into a boolean
-        user_info['oidc_managed'] = user_info['oidc_managed'] is not None
+            user_info['oidc_managed'] = False
+        else:
+            # Turn oidc_sub into a boolean
+            user_info['oidc_managed'] = user_info['oidc_managed'] is not None
+        user_info['has_password'] = bool(user_info.get('has_password', False))
 
         # Return the full user information
         return jsonify(user_info), 200
@@ -494,8 +497,8 @@ def request_password_reset():
         
         conn = db_handler.get_db_connection()
         with conn.cursor() as cur:
-            # Check if user exists
-            cur.execute('SELECT id, oidc_sub FROM users WHERE email = %s', (email,))
+            # Check if user exists (case-insensitive)
+            cur.execute('SELECT id, oidc_sub, email FROM users WHERE LOWER(email) = LOWER(%s)', (email,))
             user = cur.fetchone()
             
             if not user:
@@ -503,6 +506,7 @@ def request_password_reset():
                 return jsonify({'message': 'If your email is registered, you will receive a password reset link.'}), 200
 
             user_id = user[0]
+            stored_email = user[2]
 
             # AUTH-12: under OIDC-only mode, an OIDC-managed account must
             # never gain a local password from a reset. Answer with the
@@ -515,9 +519,9 @@ def request_password_reset():
             # gets the same generic 200 as an unknown address, and no
             # token is minted and no mail is sent, so the endpoint
             # cannot be used as an unauthenticated mail relay.
-            if reset_request_limited(email):
+            if reset_request_limited(stored_email):
                 current_app.logger.warning(
-                    f"Password reset requests rate-limited for {email}.")
+                    f"Password reset requests rate-limited for {stored_email}.")
                 return jsonify({'message': 'If your email is registered, you will receive a password reset link.'}), 200
 
             # Generate reset token. Only its hash is stored (AUTH-08), so
@@ -536,7 +540,7 @@ def request_password_reset():
             )
             
             conn.commit()
-            record_reset_request(email)
+            record_reset_request(stored_email)
 
             # Get email base URL from settings with correct precedence
             # Priority: Environment Variable > Database Setting > Hardcoded Default
@@ -553,28 +557,35 @@ def request_password_reset():
                         current_app.logger.warning("email_base_url setting not found for password reset, using default.")
                 except Exception as e:
                      current_app.logger.error(f"Error fetching email_base_url from settings for password reset: {e}. Using default.")
-            
-            # Ensure base URL doesn't end with a slash
-            email_base_url = email_base_url.rstrip('/')
 
-            # Construct the full reset link
-            reset_link = f"{email_base_url}/reset-password.html?token={reset_token}" # Use base URL and correct page
-            
-            # Send password reset email
-            current_app.logger.info(f"Password reset requested for user {user_id}. Preparing to send email.")
-            try:
-                send_password_reset_email(email, reset_link)
-                current_app.logger.info(f"Password reset email initiated for {email}")
-            except Exception as e:
-                current_app.logger.error(f"Failed to send password reset email to {email}: {e}")
-                # Even if email fails, don't tell the user. 
-                # This prevents leaking information about registered emails or email server issues.
-                # The user journey remains the same: "If registered, you'll get an email."
-            
-            # Always return success to the user, regardless of email success/failure
-            return jsonify({
-                'message': 'If your email is registered, you will receive a password reset link.'
-            }), 200
+        # Release the DB connection before dispatching background SMTP work.
+        db_handler.release_db_connection(conn)
+        conn = None
+
+        # Ensure base URL doesn't end with a slash
+        email_base_url = email_base_url.rstrip('/')
+
+        # Construct the full reset link
+        reset_link = f"{email_base_url}/reset-password.html?token={reset_token}"
+
+        # Dispatch email asynchronously so SMTP latency cannot be used as a
+        # timing oracle to enumerate registered email addresses (L-03).
+        current_app.logger.info(f"Password reset requested for user {user_id}. Dispatching async email.")
+        app_obj = current_app._get_current_object()
+
+        def _send_async():
+            with app_obj.app_context():
+                try:
+                    send_password_reset_email(stored_email, reset_link)
+                except Exception as mail_err:
+                    app_obj.logger.error(f"Failed to send password reset email to {stored_email}: {mail_err}")
+
+        threading.Thread(target=_send_async, daemon=True).start()
+
+        # Always return success to the user, regardless of email success/failure
+        return jsonify({
+            'message': 'If your email is registered, you will receive a password reset link.'
+        }), 200
 
     except Exception as e:
         current_app.logger.error(f"Password reset request error: {e}")
@@ -719,6 +730,8 @@ def update_profile():
 @token_required
 def delete_account():
     user_id = request.user['id']
+    data = request.get_json(silent=True) or {}
+    supplied_password = data.get('password')
     
     try:
         # Get database connection
@@ -729,21 +742,65 @@ def delete_account():
             # Begin transaction
             cursor.execute("BEGIN")
             
-            # Check if the current user is the owner
+            # Check if the current user is the owner and whether they have a local password
             try:
-                cursor.execute('SELECT is_owner FROM users WHERE id = %s', (user_id,))
+                cursor.execute('SELECT is_owner, password_hash FROM users WHERE id = %s', (user_id,))
                 user_data = cursor.fetchone()
                 is_owner = user_data[0] if user_data and len(user_data) > 0 else False
+                current_password_hash = user_data[1] if user_data and len(user_data) > 1 else None
             except Exception as e:
                 # If the query fails (likely because is_owner column doesn't exist), try without it
                 current_app.logger.warning(f"Failed to query with is_owner column in delete_account, falling back: {e}")
                 cursor.execute("ROLLBACK")  # Rollback the failed transaction
                 cursor.execute("BEGIN")     # Start a new transaction
+                cursor.execute('SELECT password_hash FROM users WHERE id = %s', (user_id,))
+                pw_row = cursor.fetchone()
                 is_owner = False
+                current_password_hash = pw_row[0] if pw_row else None
             
             if is_owner:
                 cursor.execute("ROLLBACK")
                 return jsonify({'message': 'The application owner cannot delete their own account. Please transfer ownership first.'}), 403
+
+            # Require current password confirmation for local accounts (L-03).
+            # Passwordless OIDC-only accounts (password_hash IS NULL) are unaffected.
+            if current_password_hash:
+                if not supplied_password or not isinstance(supplied_password, str):
+                    cursor.execute("ROLLBACK")
+                    return jsonify({'message': 'Current password is required to delete your account'}), 400
+                if not bcrypt.check_password_hash(current_password_hash, supplied_password):
+                    cursor.execute("ROLLBACK")
+                    return jsonify({'message': 'Incorrect password'}), 401
+
+            # Collect local uploaded file paths owned by this user before deleting
+            # their rows so orphaned files on disk can be removed post-commit.
+            user_file_paths = []
+            cursor.execute('''
+                SELECT invoice_path, manual_path, other_document_path, product_photo_path
+                FROM warranties
+                WHERE user_id = %s
+            ''', (user_id,))
+            for row in cursor.fetchall():
+                for p in row:
+                    if p:
+                        user_file_paths.append(p)
+            try:
+                cursor.execute("SAVEPOINT collect_claim_docs")
+                cursor.execute('''
+                    SELECT d.file_path
+                    FROM claim_documents d
+                    JOIN warranty_claims c ON d.claim_id = c.id
+                    JOIN warranties w ON c.warranty_id = w.id
+                    WHERE w.user_id = %s AND d.file_path IS NOT NULL
+                ''', (user_id,))
+                for (p,) in cursor.fetchall():
+                    if p:
+                        user_file_paths.append(p)
+                cursor.execute("RELEASE SAVEPOINT collect_claim_docs")
+            except Exception as claim_doc_err:
+                current_app.logger.warning(f"Could not collect claim document paths for user {user_id}: {claim_doc_err}")
+                cursor.execute("ROLLBACK TO SAVEPOINT collect_claim_docs")
+                cursor.execute("RELEASE SAVEPOINT collect_claim_docs")
             
             # Delete user's warranties
             cursor.execute("DELETE FROM warranties WHERE user_id = %s", (user_id,))
@@ -768,6 +825,16 @@ def delete_account():
             
             # Commit transaction
             cursor.execute("COMMIT")
+
+            # Remove unreferenced local files on disk after commit succeeds.
+            if user_file_paths:
+                try:
+                    from .warranties_routes import _delete_stored_file
+                except ImportError:
+                    from warranties_routes import _delete_stored_file
+                for stored_path in set(user_file_paths):
+                    _delete_stored_file(cursor, stored_path)
+                conn.rollback()
             
             return jsonify({'message': 'Account deleted successfully'}), 200
             
@@ -1015,9 +1082,7 @@ def send_password_reset_email(recipient_email, reset_link):
         app_name = "Warracker"
         
         subject = f"Password Reset - {app_name}"
-        
-        app_base_url = os.environ.get('APP_BASE_URL', request.url_root.rstrip('/'))
-        
+
         html_content = f"""
         <html>
             <body>

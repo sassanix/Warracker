@@ -220,6 +220,42 @@ def _ip_address_is_public(addr):
     return _is_strictly_public_unicast(addr)
 
 
+def _validate_http_url(raw_url, field_label="URL"):
+    """Validate and normalize an optional user-supplied web URL (M-01).
+
+    Empty/None values pass through unchanged. Control characters and
+    non-HTTP(S) schemes (javascript:, data:, vbscript:, file:, ftp:, etc.)
+    are rejected with ValueError. Bare hostnames without a scheme (e.g.
+    'example.com/item') are normalized to 'https://...' so existing user
+    entry habits continue to work without surprises.
+    """
+    if raw_url is None:
+        return None
+    if not isinstance(raw_url, str):
+        raise ValueError(f"{field_label} must be a valid http:// or https:// URL")
+    trimmed = raw_url.strip()
+    if not trimmed:
+        return ''
+    if any(ord(ch) < 0x20 or ord(ch) == 0x7f for ch in trimmed):
+        raise ValueError(f"{field_label} contains invalid control characters")
+    parsed = urllib.parse.urlparse(trimmed)
+    if parsed.scheme:
+        if parsed.scheme.lower() not in ('http', 'https') or not parsed.netloc:
+            raise ValueError(f"{field_label} must use an http:// or https:// URL")
+        return trimmed
+    # Reject protocol-relative or ambiguous colon-before-slash strings
+    # (e.g. '//evil.com' or 'javascript:alert(1)' obfuscations).
+    first_part = trimmed.split('/', 1)[0]
+    if trimmed.startswith('//') or ':' in first_part:
+        raise ValueError(f"{field_label} must use an http:// or https:// URL")
+    candidate = f"https://{trimmed}"
+    parsed_candidate = urllib.parse.urlparse(candidate)
+    host = parsed_candidate.hostname or ''
+    if not parsed_candidate.netloc or ('.' not in host and host.lower() != 'localhost'):
+        raise ValueError(f"{field_label} must use an http:// or https:// URL")
+    return candidate
+
+
 class _PhotoHostRejectedError(Exception):
     """A photo URL host failed SSRF validation inside the transport
     adapter. Deliberately not a ValueError: requests converts a
@@ -704,10 +740,17 @@ def add_warranty():
         warranty_type = request.form.get('warranty_type', None)
         model_number = request.form.get('model_number', None)
         
-        # Get URL fields for documents
+        # Get URL fields for documents and validate HTTP(S) schemes (M-01)
         invoice_url = request.form.get('invoice_url', None)
         manual_url = request.form.get('manual_url', None)
         other_document_url = request.form.get('other_document_url', None)
+        try:
+            product_url = _validate_http_url(product_url, "Product URL")
+            invoice_url = _validate_http_url(invoice_url, "Invoice URL")
+            manual_url = _validate_http_url(manual_url, "Manual URL")
+            other_document_url = _validate_http_url(other_document_url, "Other document URL")
+        except ValueError as url_err:
+            return jsonify({"error": str(url_err)}), 400
         
         # Get tag IDs if provided
         tag_ids = []
@@ -1296,10 +1339,17 @@ def update_warranty(warranty_id):
             warranty_type = request.form.get('warranty_type', None)
             model_number = request.form.get('model_number', None)
             
-            # Get URL fields for documents
+            # Get URL fields for documents and validate HTTP(S) schemes (M-01)
             invoice_url = request.form.get('invoice_url', None)
             manual_url = request.form.get('manual_url', None)
             other_document_url = request.form.get('other_document_url', None)
+            try:
+                product_url = _validate_http_url(product_url, "Product URL")
+                invoice_url = _validate_http_url(invoice_url, "Invoice URL")
+                manual_url = _validate_http_url(manual_url, "Manual URL")
+                other_document_url = _validate_http_url(other_document_url, "Other document URL")
+            except ValueError as url_err:
+                return jsonify({"error": str(url_err)}), 400
             tag_ids = []
             if request.form.get('tag_ids'):
                 try:
@@ -1619,16 +1669,16 @@ def update_warranty(warranty_id):
                     sql_fields.append("paperless_other_id = %s")
                     sql_values.append(paperless_other_id)
 
-                # Handle URL fields for documents
+                # Handle URL fields for documents (validated above)
                 if 'invoice_url' in request.form:
                     sql_fields.append("invoice_url = %s")
-                    sql_values.append(request.form.get('invoice_url'))
+                    sql_values.append(invoice_url)
                 if 'manual_url' in request.form:
                     sql_fields.append("manual_url = %s")
-                    sql_values.append(request.form.get('manual_url'))
+                    sql_values.append(manual_url)
                 if 'other_document_url' in request.form:
                     sql_fields.append("other_document_url = %s")
-                    sql_values.append(request.form.get('other_document_url'))
+                    sql_values.append(other_document_url)
 
                 sql_fields.append("updated_at = NOW()") # Use SQL function, no parameter needed
                 sql_values.append(warranty_id)
@@ -1860,6 +1910,11 @@ def import_warranties():
                         errors.append("ProductName must be 255 characters or less.")
                     if not purchase_date_str:
                         errors.append("PurchaseDate is required.")
+                    if product_url:
+                        try:
+                            product_url = _validate_http_url(product_url, "ProductURL")
+                        except ValueError as url_err:
+                            errors.append(str(url_err))
 
                     # --- Type/Format Validation --- 
                     try:
