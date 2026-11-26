@@ -159,7 +159,7 @@ class Config:
     JSON_SORT_KEYS = False
     JSONIFY_PRETTYPRINT_REGULAR = False
     SEND_FILE_MAX_AGE_DEFAULT = 31536000  # Cache static files for 1 year
-    PROPAGATE_EXCEPTIONS = True
+    PROPAGATE_EXCEPTIONS = False
     
     # Session Configuration
     SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
@@ -224,14 +224,13 @@ class Config:
     def _upgrade_session_cookie_secure(app):
         """Emit the session cookie with Secure when the deployment serves HTTPS.
 
-        The default configuration is DevelopmentConfig, whose session
-        cookie has no Secure flag (CFG-01c). Flipping the default to the
-        production config would break plain-HTTP installs, whose browsers
-        would refuse to store a Secure cookie and break the OIDC login
-        flow state kept in the session. Instead, upgrade to Secure when
-        the deployment's own public URL uses https, which the operator
-        already configures for login redirects. This only ever adds the
-        flag, never removes a Secure setting the active config provides.
+        The default configuration keeps SESSION_COOKIE_SECURE=False so
+        plain-HTTP self-hosted installs still work (browsers refuse to
+        store a Secure cookie over HTTP, which would break the OIDC
+        login state). Upgrade to Secure when the deployment's own public
+        URL uses https, which the operator already configures for login
+        redirects. This only ever adds the flag, never removes a Secure
+        setting the active config provides.
         """
         if app.config.get('SESSION_COOKIE_SECURE'):
             return
@@ -261,6 +260,15 @@ class Config:
         # Log configuration status
         logger.info("Application configuration initialized successfully")
 
+class DefaultConfig(Config):
+    """Default runtime configuration (non-debug, plain-HTTP compatible)."""
+    DEBUG = False
+
+    @staticmethod
+    def init_app(app):
+        Config.init_app(app)
+        logger.info("Default configuration loaded")
+
 class DevelopmentConfig(Config):
     """Development configuration."""
     DEBUG = True
@@ -286,6 +294,7 @@ class TestingConfig(Config):
     """Testing configuration."""
     TESTING = True
     DEBUG = True
+    PROPAGATE_EXCEPTIONS = True
     
     # Use in-memory database for testing
     DB_HOST = 'localhost'
@@ -301,5 +310,5 @@ config = {
     'development': DevelopmentConfig,
     'production': ProductionConfig,
     'testing': TestingConfig,
-    'default': DevelopmentConfig
+    'default': DefaultConfig
 } 

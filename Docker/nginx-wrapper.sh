@@ -4,8 +4,8 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Nginx..."
 
 # Wait for setup to create the nginx config
 for i in {1..30}; do
-    if [ -f /tmp/nginx-default.conf ]; then
-        mv /tmp/nginx-default.conf /etc/nginx/conf.d/default.conf
+    if [ -f /run/nginx-init/default.conf ]; then
+        mv /run/nginx-init/default.conf /etc/nginx/conf.d/default.conf
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Nginx configuration applied"
         break
     fi

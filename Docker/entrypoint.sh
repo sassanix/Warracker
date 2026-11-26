@@ -102,15 +102,16 @@ log "Compiling translations..."
 cd /app
 pybabel compile -d locales 2>/dev/null || log "Warning: Translation compilation failed"
 
-# Nginx configuration (create temp file, root will move it)
+# Nginx configuration (written into root-only /run/nginx-init, never world-writable /tmp)
 log "Preparing nginx configuration..."
 EFFECTIVE_SIZE="${NGINX_MAX_BODY_SIZE_VALUE:-32M}"
 if ! echo "${EFFECTIVE_SIZE}" | grep -Eq "^[0-9]+[mMkKgG]?$"; then
     log "Warning: Invalid NGINX_MAX_BODY_SIZE_VALUE. Using default 32M"
     EFFECTIVE_SIZE="32M"
 fi
+mkdir -p -m 700 /run/nginx-init
 sed "s|__NGINX_MAX_BODY_SIZE_CONFIG_VALUE__|${EFFECTIVE_SIZE}|g" \
-    /etc/nginx/conf.d/default.conf.template > /tmp/nginx-default.conf
+    /etc/nginx/conf.d/default.conf.template > /run/nginx-init/default.conf
 
 log "Nginx config prepared (size: ${EFFECTIVE_SIZE})"
 

@@ -1,6 +1,8 @@
 # backend/file_routes.py
 from flask import Blueprint, request, jsonify, current_app, send_from_directory, Response
 from datetime import datetime, UTC
+from pathlib import PurePosixPath
+from werkzeug.security import safe_join
 import os
 import mimetypes
 import logging
@@ -39,23 +41,91 @@ file_bp = Blueprint('file_bp', __name__)
 # Set up logging
 logger = logging.getLogger(__name__)
 
+# Strictly passive MIME types that may be rendered inline in a browser tab.
+# Active formats (text/html, image/svg+xml, application/xhtml+xml, XML, etc.)
+# are forced to application/octet-stream + attachment + sandbox CSP so an
+# uploaded or Paperless-ingested document can never execute script on our origin.
+_SAFE_INLINE_MIME_TYPES = frozenset({
+    'application/pdf',
+    'image/png',
+    'image/jpeg',
+    'image/webp',
+    'image/gif',
+    'text/plain',
+})
+
+
+def _safe_serving_headers(raw_mimetype, filename_for_disposition):
+    """Return (mimetype, content_disposition, csp) safe for serving user/Paperless files."""
+    base_mime = (raw_mimetype or '').split(';', 1)[0].strip().lower()
+    safe_name = os.path.basename(filename_for_disposition or 'document').replace('"', '').replace('\r', '').replace('\n', '')
+    if base_mime in _SAFE_INLINE_MIME_TYPES:
+        return (
+            base_mime,
+            f'inline; filename="{safe_name}"',
+            "default-src 'none'; frame-ancestors 'self'",
+        )
+    return (
+        'application/octet-stream',
+        f'attachment; filename="{safe_name}"',
+        'sandbox',
+    )
+
+
+def _is_safe_upload_subpath(rel_path):
+    """Reject traversal, backslashes, absolute paths, and dotfiles (e.g. .secret_key)."""
+    if not rel_path or rel_path.startswith('/') or '\\' in rel_path or '\x00' in rel_path:
+        return False
+    parts = PurePosixPath(rel_path).parts
+    if not parts:
+        return False
+    for part in parts:
+        if part in ('', '.', '..') or part.startswith('.'):
+            return False
+    return True
+
+
+def _resolve_upload_file_path(upload_dir, rel_path):
+    """Safely resolve a file inside upload_dir, rejecting symlinks and escapes."""
+    if not _is_safe_upload_subpath(rel_path):
+        return None
+    joined = safe_join(upload_dir, rel_path)
+    if not joined:
+        return None
+    if os.path.islink(joined):
+        return None
+    real_root = os.path.realpath(upload_dir)
+    real_target = os.path.realpath(joined)
+    try:
+        if os.path.commonpath([real_root, real_target]) != real_root or real_target == real_root:
+            return None
+    except ValueError:
+        return None
+    return real_target
+
+
 # ============================
 # Shared file authorization
 # ============================
 
-def _check_file_authorization(cur, db_search_path, user_id, is_admin):
+def _check_file_access(cur, db_search_path, user_id, is_admin):
     """
     Shared authorization check for serving uploaded files.
     db_search_path is the path as stored in the DB (e.g. 'uploads/abc.pdf').
-    Returns True when the user may access the file, False otherwise.
+    Returns:
+      - 'ok'        when the user may access the file
+      - 'not_found' when no warranty or claim row references the path and caller is admin
+      - 'forbidden' when unauthorized (or unreferenced for non-admins)
 
     Rules (identical for /files/ and /secure-file/):
-      - admins: always allowed
-      - the owner of the warranty the file is attached to: allowed
-      - anyone else: allowed only for shared document types (product photo,
-        invoice, manual) when the admin setting global_view_enabled is true
-        (and, if global_view_admin_only is true, only admins)
-    Files not linked to any warranty are unauthorized for non-admins.
+      - only paths referenced by a warranty or claim_documents row may ever
+        be served (even for admins, so unreferenced files such as .secret_key
+        in UPLOAD_FOLDER are never downloadable)
+      - admins: allowed for any referenced warranty or claim file
+      - the owner of the warranty/claim the file is attached to: allowed
+      - anyone else: allowed only for shared warranty document types (product
+        photo, invoice, manual) when global_view_enabled is true and
+        global_view_admin_only is false
     """
     query = """
         SELECT w.id, w.user_id
@@ -65,12 +135,7 @@ def _check_file_authorization(cur, db_search_path, user_id, is_admin):
     cur.execute(query, (db_search_path, db_search_path, db_search_path, db_search_path))
     results = cur.fetchall()
 
-    if is_admin:
-        logger.info(f"[FILE_AUTH] Admin access granted for '{db_search_path}'")
-        return True
-
-    # Claim documents (issue #148): owner-only, like warranty "other
-    # documents" they never participate in global view.
+    claim_owners = []
     if not results:
         cur.execute("""
             SELECT w.user_id
@@ -79,18 +144,30 @@ def _check_file_authorization(cur, db_search_path, user_id, is_admin):
             JOIN warranties w ON c.warranty_id = w.id
             WHERE d.file_path = %s
         """, (db_search_path,))
-        for (claim_owner_id,) in (cur.fetchall() or []):
-            if claim_owner_id == user_id:
-                logger.info(f"[FILE_AUTH] Claim document ownership confirmed for '{db_search_path}'")
-                return True
+        claim_owners = [row[0] for row in (cur.fetchall() or [])]
+
+    if not results and not claim_owners:
+        logger.warning(f"[FILE_AUTH] Unreferenced file access attempt: '{db_search_path}' by user {user_id}")
+        return "not_found" if is_admin else "forbidden"
+
+    if is_admin:
+        logger.info(f"[FILE_AUTH] Admin access granted for referenced file '{db_search_path}'")
+        return "ok"
+
+    # Claim documents (issue #148): owner-only, like warranty "other
+    # documents" they never participate in global view.
+    if not results:
+        if user_id in claim_owners:
+            logger.info(f"[FILE_AUTH] Claim document ownership confirmed for '{db_search_path}'")
+            return "ok"
         logger.warning(f"[FILE_AUTH] Unauthorized file access attempt: '{db_search_path}' by user {user_id}")
-        return False
+        return "forbidden"
 
     # Ownership authorization
     for warranty_id_db, warranty_user_id_db in (results or []):
         if warranty_user_id_db == user_id:
             logger.info(f"[FILE_AUTH] Ownership confirmed for warranty_id={warranty_id_db}")
-            return True
+            return "ok"
 
     # Global view permissions for shared documents (photos, invoices, manuals)
     if results:
@@ -107,10 +184,15 @@ def _check_file_authorization(cur, db_search_path, user_id, is_admin):
 
                 if global_view_enabled and (not admin_only or is_admin):
                     logger.info(f"[FILE_AUTH] Global view access granted for shared document: '{db_search_path}'")
-                    return True
+                    return "ok"
 
     logger.warning(f"[FILE_AUTH] Unauthorized file access attempt: '{db_search_path}' by user {user_id}")
-    return False
+    return "forbidden"
+
+
+def _check_file_authorization(cur, db_search_path, user_id, is_admin):
+    """Backward-compatible boolean wrapper around _check_file_access."""
+    return _check_file_access(cur, db_search_path, user_id, is_admin) == "ok"
 
 
 def _paperless_next_path(next_url):
@@ -142,29 +224,37 @@ def serve_file(filename):
             logger.warning(f"Attempted access to non-uploads file: {filename}")
             return jsonify({"message": "Access denied"}), 403
 
-        # Security check for path traversal
-        if '..' in filename or filename.startswith('/'):
-            logger.warning(f"Potential path traversal attempt detected: {filename} by user {request.user['id']}")
+        # Remove 'uploads/' prefix and validate subpath (rejects traversal and dotfiles)
+        file_path = filename[8:]
+        if not _is_safe_upload_subpath(file_path):
+            logger.warning(f"Potential path traversal or hidden file access attempt: {filename} by user {request.user['id']}")
             return jsonify({"message": "Invalid file path"}), 400
 
         conn = get_db_connection()
         with conn.cursor() as cur:
             user_id = request.user['id']
             is_admin = request.user.get('is_admin', False)
-            if not _check_file_authorization(cur, filename, user_id, is_admin):
-                return jsonify({"message": "You are not authorized to access this file"}), 403
+            access = _check_file_access(cur, filename, user_id, is_admin)
+        release_db_connection(conn)
+        conn = None
 
-        # Remove 'uploads/' prefix for send_from_directory
-        file_path = filename[8:] if filename.startswith('uploads/') else filename
+        if access == "not_found":
+            return jsonify({"message": "File not found"}), 404
+        if access != "ok":
+            return jsonify({"message": "You are not authorized to access this file"}), 403
 
-        full_path = os.path.join(current_app.config['UPLOAD_FOLDER'], file_path)
-        if not os.path.isfile(full_path):
+        full_path = _resolve_upload_file_path(current_app.config['UPLOAD_FOLDER'], file_path)
+        if not full_path or not os.path.isfile(full_path):
             return jsonify({"message": "File not found"}), 404
 
         # FILE-01: these bytes are authorization-gated, so they must not
         # sit in a shared cache for a year (the Flask default) and must
         # not be content-sniffed. Match the /secure-file/ headers.
         response = send_from_directory(current_app.config['UPLOAD_FOLDER'], file_path)
+        safe_mime, disposition, csp = _safe_serving_headers(response.mimetype, file_path)
+        response.mimetype = safe_mime
+        response.headers['Content-Disposition'] = disposition
+        response.headers['Content-Security-Policy'] = csp
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
@@ -196,108 +286,95 @@ def secure_file_access(filename):
         logger.info(f"[SECURE_FILE] Raw filename from route: '{filename}' (len: {len(filename)})")
         logger.info(f"[SECURE_FILE] repr(filename): {repr(filename)}")
 
-        # Security check for path traversal
-        if '..' in filename or filename.startswith('/'):
-            logger.warning(f"[SECURE_FILE] Potential path traversal attempt detected: {filename} by user {request.user['id']}")
+        # Security check for path traversal and dotfiles (e.g. .secret_key)
+        if not _is_safe_upload_subpath(filename):
+            logger.warning(f"[SECURE_FILE] Potential path traversal or hidden file attempt: {filename} by user {request.user['id']}")
             return jsonify({"message": "Invalid file path"}), 400
+
+        user_id = request.user['id']
+        is_admin = request.user.get('is_admin', False)
+        db_search_path = f"uploads/{filename}"
 
         conn = get_db_connection()
         with conn.cursor() as cur:
-            db_search_path = f"uploads/{filename}"
             logger.info(f"[SECURE_FILE] Searching DB for paths like: '{db_search_path}' (repr: {repr(db_search_path)})")
+            access = _check_file_access(cur, db_search_path, user_id, is_admin)
+        release_db_connection(conn)
+        conn = None
 
-            user_id = request.user['id']
-            is_admin = request.user.get('is_admin', False)
+        if access == "not_found":
+            return jsonify({"message": "File not found"}), 404
+        if access != "ok":
+            logger.warning(f"[SECURE_FILE] Unauthorized file access attempt: '{filename}' (repr: {repr(filename)}) by user {user_id}")
+            return jsonify({"message": "You are not authorized to access this file"}), 403
 
-            # Shared authorization (same rules as /files/)
-            if not _check_file_authorization(cur, db_search_path, user_id, is_admin):
-                logger.warning(f"[SECURE_FILE] Unauthorized file access attempt: '{filename}' (repr: {repr(filename)}) by user {user_id}")
-                return jsonify({"message": "You are not authorized to access this file"}), 403
+        upload_dir = current_app.config['UPLOAD_FOLDER']
+        logger.info(f"[SECURE_FILE] User {user_id} authorized for file '{filename}'. Attempting to serve from {upload_dir}.")
 
-            upload_dir = current_app.config['UPLOAD_FOLDER']
-            
-            logger.info(f"[SECURE_FILE] User {user_id} authorized for file '{filename}'. Attempting to serve from {upload_dir}.")
-            
-            # Construct the full file path
-            target_file_path_for_send = os.path.join(upload_dir, filename)
-            logger.info(f"[SECURE_FILE] Path for verification: '{target_file_path_for_send}' (repr: {repr(target_file_path_for_send)})")
-            
-            # Enhanced file existence and readability checks
-            if not os.path.exists(target_file_path_for_send):
-                logger.error(f"[SECURE_FILE] File '{target_file_path_for_send}' does not exist")
+        target_file_path_for_send = _resolve_upload_file_path(upload_dir, filename)
+        if not target_file_path_for_send or not os.path.exists(target_file_path_for_send):
+            logger.error(f"[SECURE_FILE] File '{filename}' does not exist in {upload_dir}")
+            return jsonify({"message": "File not found"}), 404
+
+        if not os.path.isfile(target_file_path_for_send):
+            logger.error(f"[SECURE_FILE] Path '{target_file_path_for_send}' exists but is not a file")
+            return jsonify({"message": "Invalid file"}), 400
+
+        # Check file size and readability
+        try:
+            file_size = os.path.getsize(target_file_path_for_send)
+            logger.info(f"[SECURE_FILE] File size: {file_size} bytes")
+
+            with open(target_file_path_for_send, 'rb') as f:
+                f.read(1)
+                f.seek(0)
+
+        except (OSError, IOError) as e:
+            logger.error(f"[SECURE_FILE] Cannot read file '{target_file_path_for_send}': {e}")
+            return jsonify({"message": "File read error"}), 500
+
+        try:
+            guessed_mime, _ = mimetypes.guess_type(target_file_path_for_send)
+            safe_mime, disposition, csp = _safe_serving_headers(guessed_mime, filename)
+
+            logger.info(f"[SECURE_FILE] Serving file with size {file_size} bytes, mimetype: {safe_mime}")
+
+            def generate():
                 try:
-                    dir_contents = os.listdir(upload_dir)
-                    logger.info(f"[SECURE_FILE] Contents of {upload_dir}: {dir_contents}")
-                except Exception as list_err:
-                    logger.error(f"[SECURE_FILE] Error listing {upload_dir}: {list_err}")
-                return jsonify({"message": "File not found"}), 404
-            
-            if not os.path.isfile(target_file_path_for_send):
-                logger.error(f"[SECURE_FILE] Path '{target_file_path_for_send}' exists but is not a file")
-                return jsonify({"message": "Invalid file"}), 400
-            
-            # Check file size and readability
-            try:
-                file_size = os.path.getsize(target_file_path_for_send)
-                logger.info(f"[SECURE_FILE] File size: {file_size} bytes")
-                
-                # Verify we can read the file
-                with open(target_file_path_for_send, 'rb') as f:
-                    # Try to read first byte to ensure file is readable
-                    f.read(1)
-                    f.seek(0)  # Reset file pointer
-                    
-            except (OSError, IOError) as e:
-                logger.error(f"[SECURE_FILE] Cannot read file '{target_file_path_for_send}': {e}")
-                return jsonify({"message": "File read error"}), 500
-            
-            # Use Flask's send_from_directory with enhanced error handling
-            try:
-                # Get MIME type
-                mimetype, _ = mimetypes.guess_type(target_file_path_for_send)
-                if not mimetype:
-                    mimetype = 'application/octet-stream'
-                
-                logger.info(f"[SECURE_FILE] Serving file with size {file_size} bytes, mimetype: {mimetype}")
-                
-                # Use streaming for ALL files to prevent Content-Length mismatches
-                logger.info(f"[SECURE_FILE] Using streaming response for file: {filename}")
-                
-                def generate():
-                    try:
-                        with open(target_file_path_for_send, 'rb') as f:
-                            chunk_size = 4096  # 4KB chunks
-                            total_sent = 0
-                            while True:
-                                chunk = f.read(chunk_size)
-                                if not chunk:
-                                    break
-                                total_sent += len(chunk)
-                                logger.debug(f"[SECURE_FILE] Streaming chunk: {len(chunk)} bytes, total sent: {total_sent}/{file_size}")
-                                yield chunk
-                            logger.info(f"[SECURE_FILE] Streaming completed: {total_sent}/{file_size} bytes sent")
-                    except Exception as e:
-                        logger.error(f"[SECURE_FILE] Error during streaming: {e}")
-                        raise
-                
-                response = Response(
-                    generate(),
-                    mimetype=mimetype,
-                    headers={
-                        'Content-Length': str(file_size),
-                        'Content-Disposition': f'inline; filename="{os.path.basename(filename)}"',
-                        'Accept-Ranges': 'bytes',
-                        'Cache-Control': 'no-cache, no-store, must-revalidate',
-                        'Pragma': 'no-cache',
-                        'Expires': '0',
-                        'X-Content-Type-Options': 'nosniff',
-                        'Connection': 'close'
-                    }
-                )
-                return response
-            except Exception as send_error:
-                logger.error(f"[SECURE_FILE] Error serving file: {send_error}")
-                return jsonify({"message": "Error serving file"}), 500
+                    with open(target_file_path_for_send, 'rb') as f:
+                        chunk_size = 4096  # 4KB chunks
+                        total_sent = 0
+                        while True:
+                            chunk = f.read(chunk_size)
+                            if not chunk:
+                                break
+                            total_sent += len(chunk)
+                            logger.debug(f"[SECURE_FILE] Streaming chunk: {len(chunk)} bytes, total sent: {total_sent}/{file_size}")
+                            yield chunk
+                        logger.info(f"[SECURE_FILE] Streaming completed: {total_sent}/{file_size} bytes sent")
+                except Exception as e:
+                    logger.error(f"[SECURE_FILE] Error during streaming: {e}")
+                    raise
+
+            response = Response(
+                generate(),
+                mimetype=safe_mime,
+                headers={
+                    'Content-Length': str(file_size),
+                    'Content-Disposition': disposition,
+                    'Content-Security-Policy': csp,
+                    'Accept-Ranges': 'bytes',
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0',
+                    'X-Content-Type-Options': 'nosniff',
+                    'Connection': 'close'
+                }
+            )
+            return response
+        except Exception as send_error:
+            logger.error(f"[SECURE_FILE] Error serving file: {send_error}")
+            return jsonify({"message": "Error serving file"}), 500
                 
     except Exception as e:
         logger.error(f"[SECURE_FILE] Error in secure file access for '{filename}' (repr: {repr(filename)}): {e}", exc_info=True)
@@ -315,23 +392,22 @@ def serve_paperless_document(paperless_id: int):
         user_id = request.user['id']
         is_admin = request.user.get('is_admin', False)
         
-        # Get database connection
+        # Authorize and fetch Paperless settings, then release the pooled
+        # DB connection BEFORE performing outbound HTTP I/O to Paperless.
         conn = get_db_connection()
-        
-        # Authorization is based on document ownership and references, not
-        # on the presence of a link alone: linking is gated separately (see
-        # paperless_access), so a reference here was created legitimately.
         with conn.cursor() as cur:
             access = check_paperless_document_access(cur, user_id, is_admin, paperless_id)
-            if access == "not_found":
-                logger.warning(f"[PAPERLESS_FILE] No Warracker record of Paperless document ID {paperless_id}")
-                return jsonify({"message": "Document not found"}), 404
-            if access != "ok":
-                logger.warning(f"[PAPERLESS_FILE] Unauthorized access to Paperless document {paperless_id} by user {user_id}")
-                return jsonify({"message": "You are not authorized to access this document"}), 403
-        
-        # Get Paperless handler and retrieve document
+        if access == "not_found":
+            logger.warning(f"[PAPERLESS_FILE] No Warracker record of Paperless document ID {paperless_id}")
+            return jsonify({"message": "Document not found"}), 404
+        if access != "ok":
+            logger.warning(f"[PAPERLESS_FILE] Unauthorized access to Paperless document {paperless_id} by user {user_id}")
+            return jsonify({"message": "You are not authorized to access this document"}), 403
+
         paperless_handler = get_paperless_handler(conn)
+        release_db_connection(conn)
+        conn = None
+
         if not paperless_handler:
             return jsonify({"message": "Paperless-ngx integration not available"}), 503
         
@@ -340,7 +416,7 @@ def serve_paperless_document(paperless_id: int):
         
         if not success:
             logger.error(f"[PAPERLESS_FILE] Failed to retrieve document {paperless_id}: {message}")
-            return jsonify({"message": message}), 404
+            return jsonify({"message": "Document not found"}), 404
         
         # Stream the document content
         def generate():
@@ -354,14 +430,19 @@ def serve_paperless_document(paperless_id: int):
                 total_sent += chunk_size_actual
                 remaining -= chunk_size_actual
                 yield chunk
-        
-        # Return streaming response
+
+        # Only passive MIME types (PDF, raster images, plain text) may be served
+        # inline; active content (HTML, SVG, XML, etc.) is forced to download
+        # as application/octet-stream with a sandbox CSP.
+        safe_mime, disposition, csp = _safe_serving_headers(content_type, f"paperless_document_{paperless_id}")
+
         response = Response(
             generate(),
-            mimetype=content_type or 'application/octet-stream',
+            mimetype=safe_mime,
             headers={
                 'Content-Length': str(len(content)),
-                'Content-Disposition': f'inline; filename="paperless_document_{paperless_id}"',
+                'Content-Disposition': disposition,
+                'Content-Security-Policy': csp,
                 'Cache-Control': 'no-cache, no-store, must-revalidate',
                 'Pragma': 'no-cache',
                 'Expires': '0',
@@ -445,7 +526,7 @@ def paperless_upload():
             logger.info(f"File content read successfully: {len(file_content)} bytes")
         except Exception as file_read_error:
             logger.error(f"Error reading file content: {file_read_error}")
-            return jsonify({"error": f"Error reading file: {str(file_read_error)}"}), 400
+            return jsonify({"error": "Error reading uploaded file"}), 400
         
         # Upload to Paperless-ngx. The start time bounds the PPL-03
         # reclaim window: claims recorded after it cannot predate the
@@ -463,7 +544,7 @@ def paperless_upload():
             logger.info(f"Upload result: success={success}, document_id={document_id}, message='{message}'")
         except Exception as upload_error:
             logger.error(f"Error during paperless upload: {upload_error}")
-            return jsonify({"error": f"Upload to Paperless-ngx failed: {str(upload_error)}"}), 500
+            return jsonify({"error": "Upload to Paperless-ngx failed"}), 500
         
         if success:
             logger.info("Upload successful")
@@ -515,7 +596,7 @@ def paperless_upload():
             
     except Exception as e:
         logger.error(f"Error in Paperless upload: {e}")
-        return jsonify({"error": f"Upload failed: {str(e)}"}), 500
+        return jsonify({"error": "Upload failed"}), 500
     finally:
         if conn:
             release_db_connection(conn)
@@ -543,6 +624,8 @@ def test_paperless_connection():
         else:
             conn = get_db_connection()
             paperless_handler = get_paperless_handler(conn)
+            release_db_connection(conn)
+            conn = None
 
         if not paperless_handler:
             return jsonify({"error": "Paperless-ngx integration is not enabled or configured"}), 400
@@ -575,8 +658,15 @@ def paperless_search():
     """
     conn = None
     try:
+        is_admin = request.user.get('is_admin', False)
+        visible_ids = None
         conn = get_db_connection()
         paperless_handler = get_paperless_handler(conn)
+        if paperless_handler and not is_admin:
+            with conn.cursor() as cur:
+                visible_ids = visible_paperless_document_ids(cur, request.user['id'], False)
+        release_db_connection(conn)
+        conn = None
         
         if not paperless_handler:
             return jsonify({'success': False, 'message': 'Paperless-ngx not configured'}), 400
@@ -668,9 +758,7 @@ def paperless_search():
         # Scope results to the requesting user: the shared Paperless token
         # can see every document in the instance, so non-admin users only
         # receive documents they own or reference (GHSA-fv62-3hrm-gf83).
-        if not request.user.get('is_admin', False):
-            with conn.cursor() as cur:
-                visible_ids = visible_paperless_document_ids(cur, request.user['id'], False)
+        if not is_admin:
             filtered = [d for d in search_result.get('results', []) if d.get('id') in visible_ids]
             search_result['results'] = filtered
             search_result['count'] = len(filtered)
@@ -699,8 +787,15 @@ def paperless_tags():
     """
     conn = None
     try:
+        is_admin = request.user.get('is_admin', False)
+        visible_ids = None
         conn = get_db_connection()
         paperless_handler = get_paperless_handler(conn)
+        if paperless_handler and not is_admin:
+            with conn.cursor() as cur:
+                visible_ids = visible_paperless_document_ids(cur, request.user['id'], False)
+        release_db_connection(conn)
+        conn = None
         
         if not paperless_handler:
             return jsonify({'success': False, 'message': 'Paperless-ngx integration not available'}), 400
@@ -721,23 +816,27 @@ def paperless_tags():
             # PPL-06: non-admin users only receive tags attached to
             # documents they may see. Without this, any signed-in user
             # learned every instance tag, including tags used only on
-            # other users' documents.
-            if not request.user.get('is_admin', False):
-                with conn.cursor() as cur:
-                    visible_ids = visible_paperless_document_ids(cur, request.user['id'], False)
+            # other users' documents. Batch via id__in so large Paperless
+            # instances are not scanned end-to-end per user request.
+            if not is_admin:
                 if not visible_ids:
                     all_tags = []
                 else:
                     used_tag_ids = set()
-                    url = '/api/documents/?page_size=100'
-                    while url:
-                        response = paperless_handler.get(url, timeout=30)
-                        response.raise_for_status()
-                        page = response.json()
-                        for doc in page.get('results', []):
-                            if doc.get('id') in visible_ids:
-                                used_tag_ids.update(doc.get('tags') or [])
-                        url = _paperless_next_path(page.get('next'))
+                    sorted_ids = sorted(visible_ids)
+                    batch_size = 50
+                    for idx in range(0, len(sorted_ids), batch_size):
+                        batch = sorted_ids[idx:idx + batch_size]
+                        id_csv = ','.join(str(doc_id) for doc_id in batch)
+                        url = f'/api/documents/?id__in={id_csv}&page_size={batch_size}'
+                        while url:
+                            response = paperless_handler.get(url, timeout=30)
+                            response.raise_for_status()
+                            page = response.json()
+                            for doc in page.get('results', []):
+                                if doc.get('id') in visible_ids:
+                                    used_tag_ids.update(doc.get('tags') or [])
+                            url = _paperless_next_path(page.get('next'))
                     all_tags = [t for t in all_tags if t.get('id') in used_tag_ids]
         except Exception as e:
             # See CFG-10 in paperless_search: exception text can carry
@@ -819,32 +918,37 @@ def paperless_debug():
             "test_connection_result": None
         }
         
-        # Try to get paperless handler
+        # Try to get paperless handler, then release DB connection before network probe
+        paperless_handler = None
         try:
             paperless_handler = get_paperless_handler(conn)
             debug_info["paperless_handler_available"] = paperless_handler is not None
-            
-            if paperless_handler:
-                # Test connection
-                try:
-                    success, message = paperless_handler.test_connection()
-                    debug_info["test_connection_result"] = {
-                        "success": success,
-                        "message": message
-                    }
-                except Exception as test_error:
-                    debug_info["test_connection_result"] = {
-                        "success": False,
-                        "error": str(test_error)
-                    }
         except Exception as handler_error:
-            debug_info["paperless_handler_error"] = str(handler_error)
+            logger.error(f"Error initializing Paperless handler in debug: {handler_error}")
+            debug_info["paperless_handler_error"] = "Failed to initialize Paperless handler"
+        finally:
+            release_db_connection(conn)
+            conn = None
+
+        if paperless_handler:
+            try:
+                success, message = paperless_handler.test_connection()
+                debug_info["test_connection_result"] = {
+                    "success": success,
+                    "message": message
+                }
+            except Exception as test_error:
+                logger.error(f"Error testing Paperless connection in debug: {test_error}")
+                debug_info["test_connection_result"] = {
+                    "success": False,
+                    "error": "Connection test failed"
+                }
         
         return jsonify(debug_info), 200
         
     except Exception as e:
         logger.error(f"Error in Paperless debug: {e}")
-        return jsonify({"error": f"Debug failed: {str(e)}"}), 500
+        return jsonify({"error": "Debug failed"}), 500
     finally:
         if conn:
             release_db_connection(conn)
@@ -882,7 +986,7 @@ def test_file_upload():
         
     except Exception as e:
         logger.error(f"Test upload error: {e}", exc_info=True)
-        return jsonify({"error": f"Test upload failed: {str(e)}"}), 500
+        return jsonify({"error": "Test upload failed"}), 500
 
 @file_bp.route('/paperless/debug-document/<int:document_id>', methods=['GET'])
 @admin_required
@@ -898,10 +1002,7 @@ def paperless_debug_document(document_id: int):
         if not paperless_handler:
             return jsonify({"error": "Paperless-ngx integration not available"}), 400
         
-        # Get debug information about the document
-        debug_info = paperless_handler.debug_document_status(document_id)
-        
-        # Also check if this document ID exists in our database
+        # Query DB references before releasing connection prior to Paperless HTTP calls
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT w.id, w.product_name, w.user_id,
@@ -919,21 +1020,26 @@ def paperless_debug_document(document_id: int):
                   document_id, document_id, document_id, document_id))
             
             db_results = cur.fetchall()
-            debug_info['database_references'] = [
-                {
-                    'warranty_id': row[0],
-                    'product_name': row[1],
-                    'user_id': row[2],
-                    'document_type': row[3]
-                }
-                for row in db_results
-            ]
+        release_db_connection(conn)
+        conn = None
+
+        # Get debug information about the document
+        debug_info = paperless_handler.debug_document_status(document_id)
+        debug_info['database_references'] = [
+            {
+                'warranty_id': row[0],
+                'product_name': row[1],
+                'user_id': row[2],
+                'document_type': row[3]
+            }
+            for row in db_results
+        ]
         
         return jsonify(debug_info), 200
         
     except Exception as e:
         logger.error(f"Error in Paperless document debug: {e}")
-        return jsonify({"error": f"Debug failed: {str(e)}"}), 500
+        return jsonify({"error": "Debug failed"}), 500
     finally:
         if conn:
             release_db_connection(conn)
@@ -988,56 +1094,61 @@ def cleanup_invalid_paperless_documents():
                 """, (user_id,))
             
             warranties = cur.fetchall()
+        # Release pooled DB connection before performing outbound Paperless checks
+        release_db_connection(conn)
+        conn = None
+
+        to_clear = []
+        for warranty in warranties:
+            warranty_id, product_name, invoice_id, manual_id, photo_id, other_id = warranty
             
-            for warranty in warranties:
-                warranty_id, product_name, invoice_id, manual_id, photo_id, other_id = warranty
-                
-                # Check each document ID
-                document_fields = [
-                    ('paperless_invoice_id', invoice_id),
-                    ('paperless_manual_id', manual_id),
-                    ('paperless_photo_id', photo_id),
-                    ('paperless_other_id', other_id)
-                ]
-                
-                for field_name, doc_id in document_fields:
-                    if doc_id is not None:
-                        cleanup_results['checked'] += 1
-                        
-                        try:
-                            existence = paperless_handler.document_existence(doc_id)
-                            if existence == 'unknown':
-                                # Paperless is unreachable or answered
-                                # oddly: leave the reference in place and
-                                # report it, never unlink on an outage.
-                                cleanup_results['skipped'] += 1
-                                cleanup_results['errors'].append(
-                                    f"Could not check document {doc_id}: "
-                                    "Paperless-ngx is unreachable; "
-                                    "reference left in place.")
-                                logger.warning(
-                                    f"Cleanup skipped document {doc_id}: "
-                                    "Paperless-ngx unreachable, reference kept")
-                                continue
-                            if existence == 'gone':
-                                cleanup_results['invalid_found'] += 1
-                                logger.info(f"Found invalid Paperless document ID {doc_id} in warranty {warranty_id} ({product_name})")
-                                
-                                # Clear the invalid reference
-                                cur.execute(f"""
-                                    UPDATE warranties 
-                                    SET {field_name} = NULL 
-                                    WHERE id = %s
-                                """, (warranty_id,))
-                                
-                                cleanup_results['cleaned_up'] += 1
-                                logger.info(f"Cleaned up invalid {field_name} reference for warranty {warranty_id}")
-                                
-                        except Exception as e:
-                            error_msg = f"Error checking document {doc_id}: {str(e)}"
-                            cleanup_results['errors'].append(error_msg)
-                            logger.error(error_msg)
+            # Check each document ID
+            document_fields = [
+                ('paperless_invoice_id', invoice_id),
+                ('paperless_manual_id', manual_id),
+                ('paperless_photo_id', photo_id),
+                ('paperless_other_id', other_id)
+            ]
             
+            for field_name, doc_id in document_fields:
+                if doc_id is not None:
+                    cleanup_results['checked'] += 1
+                    
+                    try:
+                        existence = paperless_handler.document_existence(doc_id)
+                        if existence == 'unknown':
+                            # Paperless is unreachable or answered
+                            # oddly: leave the reference in place and
+                            # report it, never unlink on an outage.
+                            cleanup_results['skipped'] += 1
+                            cleanup_results['errors'].append(
+                                f"Could not check document {doc_id}: "
+                                "Paperless-ngx is unreachable; "
+                                "reference left in place.")
+                            logger.warning(
+                                f"Cleanup skipped document {doc_id}: "
+                                "Paperless-ngx unreachable, reference kept")
+                            continue
+                        if existence == 'gone':
+                            cleanup_results['invalid_found'] += 1
+                            logger.info(f"Found invalid Paperless document ID {doc_id} in warranty {warranty_id} ({product_name})")
+                            to_clear.append((field_name, warranty_id, doc_id))
+                    except Exception as e:
+                        logger.error(f"Error checking document {doc_id}: {e}")
+                        cleanup_results['errors'].append(f"Error checking document {doc_id}")
+
+        if to_clear:
+            conn = get_db_connection()
+            with conn.cursor() as cur:
+                for field_name, warranty_id, doc_id in to_clear:
+                    cur.execute(f"""
+                        UPDATE warranties 
+                        SET {field_name} = NULL 
+                        WHERE id = %s AND {field_name} = %s
+                    """, (warranty_id, doc_id))
+                    if cur.rowcount > 0:
+                        cleanup_results['cleaned_up'] += 1
+                        logger.info(f"Cleaned up invalid {field_name} reference for warranty {warranty_id}")
             conn.commit()
         
         message = (
@@ -1057,7 +1168,7 @@ def cleanup_invalid_paperless_documents():
         
     except Exception as e:
         logger.error(f"Error in Paperless cleanup: {e}")
-        return jsonify({"error": f"Cleanup failed: {str(e)}"}), 500
+        return jsonify({"error": "Cleanup failed"}), 500
     finally:
         if conn:
             release_db_connection(conn)
@@ -1067,7 +1178,7 @@ def cleanup_invalid_paperless_documents():
 def paperless_search_and_link():
     """Search for a Paperless document by title and link it to a warranty."""
 
-    conn = None  # Single connection for the full request lifecycle
+    conn = None
     try:
         logger.info("paperless_search_and_link called by user: %s", request.user)
 
@@ -1092,11 +1203,13 @@ def paperless_search_and_link():
         if document_type not in valid_types:
             return jsonify({"success": False, "message": "Invalid document type"}), 400
 
-        # Get DB connection once and reuse it throughout
+        # Fetch Paperless settings and release the pooled DB connection
+        # BEFORE performing outbound HTTP search to Paperless-ngx.
         conn = get_db_connection()
-
-        # Obtain Paperless handler (uses same connection to fetch settings)
         paperless_handler = get_paperless_handler(conn)
+        release_db_connection(conn)
+        conn = None
+
         if not paperless_handler:
             return jsonify({"success": False, "message": "Paperless-ngx not configured"}), 400
 
@@ -1105,11 +1218,14 @@ def paperless_search_and_link():
         logger.info("Paperless search result: success=%s, document_id=%s, message=%s", success, document_id, message)
 
         if not success or not document_id:
-            return jsonify({"success": False, "message": f"Document not found: {message}"}), 404
+            # PPL-05: answer identically to the foreign-owner rejection below
+            # so neither status nor message reveals whether a title exists.
+            return jsonify({"success": False, "message": "Document not found"}), 404
 
         # Update warranty with the found document ID
         db_field = valid_types[document_type]
 
+        conn = get_db_connection()
         with conn.cursor() as cursor:
             # The found document must belong to the requesting user (or be
             # unclaimed); linking another user's document is what used to
@@ -1182,7 +1298,7 @@ def get_paperless_url():
         
     except Exception as e:
         logger.error(f"Error getting Paperless URL: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': 'Failed to retrieve Paperless URL'}), 500
     finally:
         if conn:
             release_db_connection(conn) 

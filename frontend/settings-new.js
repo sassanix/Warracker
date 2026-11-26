@@ -577,7 +577,7 @@ function renderAuditTrail(logs) {
             const details = log.details ? escapeHtmlSafe(log.details) : 'N/A';
 
             row.innerHTML = `
-                <td title='${log.ip_address || ''}'>${timestamp}</td>
+                <td title='${escapeHtmlSafe(log.ip_address || '')}'>${escapeHtmlSafe(timestamp)}</td>
                 <td>${escapeHtmlSafe(username)}</td>
                 <td><span class='badge'>${escapeHtmlSafe(action)}</span></td>
                 <td style='white-space: pre-wrap; word-break: break-word;'>${details}</td>

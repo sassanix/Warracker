@@ -166,35 +166,58 @@ def unique_upload_filename(original_name, infix=""):
     stamp = datetime.now().strftime('%Y%m%d%H%M%S')
     return f"{stamp}_{uuid.uuid4().hex[:8]}_{infix}{safe}"
 
-# NAT64 well-known prefix (RFC 6052): the low 32 bits embed an IPv4
-# address, so 64:ff9b::/96 can smuggle a private IPv4 past is_global.
+# NAT64 well-known prefix (RFC 6052), NAT64 local-use prefix (RFC 8215),
+# and SIIT IPv4-translated prefix (RFC 2765): the low 32 bits embed an IPv4
+# address and Python's ipaddress.is_global reports True for them.
 _NAT64_WELL_KNOWN_PREFIX = ipaddress.ip_network('64:ff9b::/96')
+_NAT64_LOCAL_USE_PREFIX = ipaddress.ip_network('64:ff9b:1::/48')
+_IPV4_TRANSLATED_PREFIX = ipaddress.ip_network('::ffff:0:0:0/96')
+
+
+def _is_strictly_public_unicast(addr):
+    """True only for globally routable unicast addresses (never private,
+    loopback, link-local, multicast, reserved, or unspecified)."""
+    return (
+        addr.is_global
+        and not addr.is_private
+        and not addr.is_loopback
+        and not addr.is_link_local
+        and not addr.is_multicast
+        and not addr.is_reserved
+        and not addr.is_unspecified
+    )
 
 
 def _ip_address_is_public(addr):
-    """True when an address is a genuine public destination (SSRF-02).
+    """True when an address is a genuine public unicast destination (SSRF-02).
 
-    ipaddress.is_global alone is not enough: on the interpreters tested
-    it reports True for the NAT64 well-known prefix embedding a private
-    IPv4 (64:ff9b::a9fe:a9fe, the cloud metadata address, passes). The
-    NAT64 prefix is rejected wholesale, and translation addresses
-    (IPv4-mapped, 6to4, Teredo) must pass both the wrapper check and
-    the check on the IPv4 they embed. Nothing previously allowed
-    becomes allowed; only translation tricks are removed.
+    ipaddress.is_global alone is not enough: it reports True for the NAT64
+    prefix (64:ff9b::/96), SIIT IPv4-translated addresses (::ffff:0:0:0/96),
+    and multicast ranges (224.0.0.0/4, ff00::/8). Translation prefixes are
+    rejected wholesale, and IPv4-mapped / 6to4 / Teredo wrappers must pass
+    the strict public-unicast check on both the wrapper and embedded IPv4.
     """
     if addr.version == 6:
-        if addr in _NAT64_WELL_KNOWN_PREFIX:
+        if (
+            addr in _NAT64_WELL_KNOWN_PREFIX
+            or addr in _NAT64_LOCAL_USE_PREFIX
+            or addr in _IPV4_TRANSLATED_PREFIX
+        ):
             return False
         mapped = addr.ipv4_mapped
         if mapped is not None:
-            return addr.is_global and mapped.is_global
+            return _is_strictly_public_unicast(mapped)
         sixtofour = addr.sixtofour
         if sixtofour is not None:
-            return addr.is_global and sixtofour.is_global
+            return _is_strictly_public_unicast(addr) and _is_strictly_public_unicast(sixtofour)
         teredo = addr.teredo
         if teredo is not None:
-            return addr.is_global and teredo[0].is_global and teredo[1].is_global
-    return addr.is_global
+            return (
+                _is_strictly_public_unicast(addr)
+                and _is_strictly_public_unicast(teredo[0])
+                and _is_strictly_public_unicast(teredo[1])
+            )
+    return _is_strictly_public_unicast(addr)
 
 
 class _PhotoHostRejectedError(Exception):
@@ -373,7 +396,7 @@ def download_product_photo(url):
             if resp.status_code != 200:
                 resp.close()
                 raise ValueError("Could not fetch the photo URL.")
-            chunks, total = [], 0
+            buf = bytearray()
             # A per-chunk deadline check alone does not bound a slow drip:
             # a read for a full chunk blocks until the chunk fills or the
             # connection closes, so the check may never run. A timer shuts
@@ -390,10 +413,9 @@ def download_product_photo(url):
                 for chunk in resp.iter_content(chunk_size=65536):
                     if time.monotonic() >= deadline:
                         raise ValueError("Timed out fetching the photo URL.")
-                    total += len(chunk)
-                    if total > max_bytes:
+                    if len(buf) + len(chunk) > max_bytes:
                         raise ValueError("Photo URL file is too large.")
-                    chunks.append(chunk)
+                    buf.extend(chunk)
             except requests.RequestException:
                 if time.monotonic() >= deadline:
                     raise ValueError("Timed out fetching the photo URL.")
@@ -403,11 +425,10 @@ def download_product_photo(url):
                 resp.close()
             if time.monotonic() >= deadline:
                 raise ValueError("Timed out fetching the photo URL.")
-            data = b''.join(chunks)
-            ext = _detect_image_extension(data)
+            ext = _detect_image_extension(buf)
             if not ext:
                 raise ValueError("Product photo must be an image file (PNG, JPG, JPEG, WEBP, GIF)")
-            return data, ext
+            return bytes(buf), ext
         raise ValueError("Too many redirects fetching the photo URL.")
     finally:
         session.close()
@@ -1329,6 +1350,26 @@ def update_warranty(warranty_id):
 
             logger.info(f"[UPDATE] Converted Paperless IDs: invoice={paperless_invoice_id}, manual={paperless_manual_id}, photo={paperless_photo_id}, other={paperless_other_id}")
 
+            # Validate uploaded file extensions up front before touching disk or
+            # running outbound photo URL downloads.
+            if not paperless_invoice_id and 'invoice' in request.files and request.files['invoice'].filename != '':
+                if not allowed_file(request.files['invoice'].filename):
+                    return jsonify({"error": "File type not allowed. Use PDF, PNG, JPG, or JPEG"}), 400
+            if not paperless_manual_id and 'manual' in request.files and request.files['manual'].filename != '':
+                if not allowed_file(request.files['manual'].filename):
+                    return jsonify({"error": "File type not allowed. Use PDF, PNG, JPG, or JPEG"}), 400
+            if not paperless_other_id and 'other_document' in request.files and request.files['other_document'].filename != '':
+                if not allowed_file(request.files['other_document'].filename):
+                    return jsonify({"error": "File type not allowed for other document. Use PDF, PNG, JPG, JPEG, ZIP, or RAR"}), 400
+            has_uploaded_photo = (
+                not paperless_photo_id
+                and 'product_photo' in request.files
+                and request.files['product_photo'].filename != ''
+            )
+            if has_uploaded_photo:
+                if not (request.files['product_photo'].filename.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.gif'))):
+                    return jsonify({"error": "Product photo must be an image file (PNG, JPG, JPEG, WEBP, GIF)"}), 400
+
             # Same linking rule as warranty creation: a Paperless document
             # owned by another user cannot be linked (GHSA-fv62-3hrm-gf83).
             # Ownership of newly linked documents is recorded just before
@@ -1338,324 +1379,340 @@ def update_warranty(warranty_id):
                 if _pid is not None and not user_can_link_paperless_document(cur, user_id, is_admin, _pid):
                     return jsonify({"error": "You are not authorized to link one of the specified Paperless documents",
                                     "code": "paperless_document_not_owned"}), 403
-            
-            # File handling for invoice
-            db_invoice_path = None
-            if not paperless_invoice_id and 'invoice' in request.files:
-                invoice = request.files['invoice']
-                if invoice.filename != '':
-                    if not allowed_file(invoice.filename):
-                        return jsonify({"error": "File type not allowed. Use PDF, PNG, JPG, or JPEG"}), 400
-                    cur.execute('SELECT invoice_path FROM warranties WHERE id = %s', (warranty_id,))
-                    old_invoice_path = cur.fetchone()[0]
-                    if old_invoice_path:
-                        _delete_stored_file(cur, old_invoice_path, exclude=('warranties', 'invoice_path', warranty_id))
-                    filename = unique_upload_filename(invoice.filename)
-                    invoice_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-                    logger.info(f"Attempting to save updated invoice to: {invoice_path}")
-                    try:
-                        invoice.save(invoice_path)
-                        db_invoice_path = os.path.join('uploads', filename)
-                        logger.info(f"Successfully saved updated invoice: {db_invoice_path}")
-                    except Exception as e:
-                        logger.error(f"Error saving updated invoice {filename} to {invoice_path}: {e}")
-                        return jsonify({"error": f"Failed to save updated invoice: {str(e)}"}), 500
-            elif paperless_invoice_id:
-                logger.info(f"Invoice updated to Paperless-ngx with ID: {paperless_invoice_id}")
-                # Clear local path when storing in Paperless-ngx
-                cur.execute('SELECT invoice_path FROM warranties WHERE id = %s', (warranty_id,))
-                old_invoice_path = cur.fetchone()[0]
-                if old_invoice_path:
-                    _delete_stored_file(cur, old_invoice_path, exclude=('warranties', 'invoice_path', warranty_id))
-                db_invoice_path = None  # Clear local path
-            elif request.form.get('delete_invoice', 'false').lower() == 'true':
-                cur.execute('SELECT invoice_path FROM warranties WHERE id = %s', (warranty_id,))
-                old_invoice_path = cur.fetchone()[0]
-                if old_invoice_path:
-                    _delete_stored_file(cur, old_invoice_path, exclude=('warranties', 'invoice_path', warranty_id))
-                db_invoice_path = None  # Set to None to clear in DB
-            
-            # File handling for manual
-            db_manual_path = None
-            if not paperless_manual_id and 'manual' in request.files:
-                manual = request.files['manual']
-                if manual.filename != '':
-                    if not allowed_file(manual.filename):
-                        return jsonify({"error": "File type not allowed. Use PDF, PNG, JPG, or JPEG"}), 400
-                    cur.execute('SELECT manual_path FROM warranties WHERE id = %s', (warranty_id,))
-                    old_manual_path = cur.fetchone()[0]
-                    if old_manual_path:
-                        _delete_stored_file(cur, old_manual_path, exclude=('warranties', 'manual_path', warranty_id))
-                    filename = unique_upload_filename(manual.filename, "manual_")
-                    manual_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-                    logger.info(f"Attempting to save updated manual to: {manual_path}")
-                    try:
-                        manual.save(manual_path)
-                        db_manual_path = os.path.join('uploads', filename)
-                        logger.info(f"Successfully saved updated manual: {db_manual_path}")
-                    except Exception as e:
-                        logger.error(f"Error saving updated manual {filename} to {manual_path}: {e}")
-                        return jsonify({"error": f"Failed to save updated manual: {str(e)}"}), 500
-            elif paperless_manual_id:
-                logger.info(f"Manual updated to Paperless-ngx with ID: {paperless_manual_id}")
-                # Clear local path when storing in Paperless-ngx
-                cur.execute('SELECT manual_path FROM warranties WHERE id = %s', (warranty_id,))
-                old_manual_path = cur.fetchone()[0]
-                if old_manual_path:
-                    _delete_stored_file(cur, old_manual_path, exclude=('warranties', 'manual_path', warranty_id))
-                db_manual_path = None  # Clear local path
-            elif request.form.get('delete_manual', 'false').lower() == 'true':
-                cur.execute('SELECT manual_path FROM warranties WHERE id = %s', (warranty_id,))
-                old_manual_path = cur.fetchone()[0]
-                if old_manual_path:
-                    _delete_stored_file(cur, old_manual_path, exclude=('warranties', 'manual_path', warranty_id))
-                db_manual_path = None  # Set to None to clear in DB
-            
-            # File handling for other document
-            db_other_document_path = None
-            if not paperless_other_id and 'other_document' in request.files:
-                other_document = request.files['other_document']
-                if other_document.filename != '':
-                    if not allowed_file(other_document.filename):
-                        return jsonify({"error": "File type not allowed for other document. Use PDF, PNG, JPG, JPEG, ZIP, or RAR"}), 400
-                    cur.execute('SELECT other_document_path FROM warranties WHERE id = %s', (warranty_id,))
-                    old_other_document_path = cur.fetchone()[0]
-                    if old_other_document_path:
-                        _delete_stored_file(cur, old_other_document_path, exclude=('warranties', 'other_document_path', warranty_id))
-                    filename = unique_upload_filename(other_document.filename, "other_")
-                    other_document_path_on_disk = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-                    logger.info(f"Attempting to save updated other_document to: {other_document_path_on_disk}")
-                    try:
-                        other_document.save(other_document_path_on_disk)
-                        db_other_document_path = os.path.join('uploads', filename)
-                        logger.info(f"Successfully saved updated other_document: {db_other_document_path}")
-                    except Exception as e:
-                        logger.error(f"Error saving updated other_document {filename} to {other_document_path_on_disk}: {e}")
-                        return jsonify({"error": f"Failed to save updated other_document: {str(e)}"}), 500
-            elif paperless_other_id:
-                logger.info(f"Other document updated to Paperless-ngx with ID: {paperless_other_id}")
-                # Clear local path when storing in Paperless-ngx
-                cur.execute('SELECT other_document_path FROM warranties WHERE id = %s', (warranty_id,))
-                old_other_document_path = cur.fetchone()[0]
-                if old_other_document_path:
-                    _delete_stored_file(cur, old_other_document_path, exclude=('warranties', 'other_document_path', warranty_id))
-                db_other_document_path = None  # Clear local path
-            elif request.form.get('delete_other_document', 'false').lower() == 'true':
-                cur.execute('SELECT other_document_path FROM warranties WHERE id = %s', (warranty_id,))
-                old_other_document_path = cur.fetchone()[0]
-                if old_other_document_path:
-                    _delete_stored_file(cur, old_other_document_path, exclude=('warranties', 'other_document_path', warranty_id))
-                db_other_document_path = None # Set to None to clear in DB
 
-            # Handle product photo file upload (only if not stored in Paperless-ngx)
-            db_product_photo_path = None
-            if not paperless_photo_id and 'product_photo' in request.files:
-                product_photo = request.files['product_photo']
-                if product_photo.filename != '':
-                    # Check if it's an image file
-                    if not (product_photo.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.gif'))):
-                        return jsonify({"error": "Product photo must be an image file (PNG, JPG, JPEG, WEBP, GIF)"}), 400
-                    
-                    # Delete old photo if it exists
-                    cur.execute('SELECT product_photo_path FROM warranties WHERE id = %s', (warranty_id,))
-                    old_product_photo_path = cur.fetchone()[0]
+            # Fetch existing file paths while holding the initial connection.
+            cur.execute(
+                'SELECT invoice_path, manual_path, other_document_path, product_photo_path '
+                'FROM warranties WHERE id = %s',
+                (warranty_id,),
+            )
+            old_paths_row = cur.fetchone() or (None, None, None, None)
+            old_invoice_path, old_manual_path, old_other_document_path, old_product_photo_path = old_paths_row
+
+        # Product photo by URL (#207): download BEFORE holding a pooled DB
+        # connection open for the update transaction so slow hosts cannot
+        # starve the connection pool.
+        product_photo_url = (request.form.get('product_photo_url') or '').strip()
+        downloaded_photo = None
+        if (not has_uploaded_photo and not paperless_photo_id and product_photo_url
+                and request.form.get('delete_product_photo', 'false').lower() != 'true'):
+            release_db_connection(conn)
+            conn = None
+            try:
+                downloaded_photo = download_product_photo(product_photo_url)
+            except ValueError as e:
+                return jsonify({"error": str(e)}), 400
+            conn = get_db_connection()
+
+        newly_saved_files = []
+        deferred_deletes = []
+
+        def _cleanup_new_files():
+            for saved_path in newly_saved_files:
+                try:
+                    if os.path.exists(saved_path):
+                        os.remove(saved_path)
+                except OSError as cleanup_err:
+                    logger.error(f"Error cleaning up newly saved file {saved_path}: {cleanup_err}")
+
+        try:
+            with conn.cursor() as cur:
+                # File handling for invoice
+                db_invoice_path = None
+                if not paperless_invoice_id and 'invoice' in request.files:
+                    invoice = request.files['invoice']
+                    if invoice.filename != '':
+                        if old_invoice_path:
+                            deferred_deletes.append((old_invoice_path, ('warranties', 'invoice_path', warranty_id)))
+                        filename = unique_upload_filename(invoice.filename)
+                        invoice_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                        logger.info(f"Attempting to save updated invoice to: {invoice_path}")
+                        try:
+                            invoice.save(invoice_path)
+                            newly_saved_files.append(invoice_path)
+                            db_invoice_path = os.path.join('uploads', filename)
+                            logger.info(f"Successfully saved updated invoice: {db_invoice_path}")
+                        except Exception as e:
+                            logger.error(f"Error saving updated invoice {filename} to {invoice_path}: {e}")
+                            _cleanup_new_files()
+                            return jsonify({"error": "Failed to save updated invoice"}), 500
+                elif paperless_invoice_id:
+                    logger.info(f"Invoice updated to Paperless-ngx with ID: {paperless_invoice_id}")
+                    if old_invoice_path:
+                        deferred_deletes.append((old_invoice_path, ('warranties', 'invoice_path', warranty_id)))
+                    db_invoice_path = None
+                elif request.form.get('delete_invoice', 'false').lower() == 'true':
+                    if old_invoice_path:
+                        deferred_deletes.append((old_invoice_path, ('warranties', 'invoice_path', warranty_id)))
+                    db_invoice_path = None
+
+                # File handling for manual
+                db_manual_path = None
+                if not paperless_manual_id and 'manual' in request.files:
+                    manual = request.files['manual']
+                    if manual.filename != '':
+                        if old_manual_path:
+                            deferred_deletes.append((old_manual_path, ('warranties', 'manual_path', warranty_id)))
+                        filename = unique_upload_filename(manual.filename, "manual_")
+                        manual_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                        logger.info(f"Attempting to save updated manual to: {manual_path}")
+                        try:
+                            manual.save(manual_path)
+                            newly_saved_files.append(manual_path)
+                            db_manual_path = os.path.join('uploads', filename)
+                            logger.info(f"Successfully saved updated manual: {db_manual_path}")
+                        except Exception as e:
+                            logger.error(f"Error saving updated manual {filename} to {manual_path}: {e}")
+                            _cleanup_new_files()
+                            return jsonify({"error": "Failed to save updated manual"}), 500
+                elif paperless_manual_id:
+                    logger.info(f"Manual updated to Paperless-ngx with ID: {paperless_manual_id}")
+                    if old_manual_path:
+                        deferred_deletes.append((old_manual_path, ('warranties', 'manual_path', warranty_id)))
+                    db_manual_path = None
+                elif request.form.get('delete_manual', 'false').lower() == 'true':
+                    if old_manual_path:
+                        deferred_deletes.append((old_manual_path, ('warranties', 'manual_path', warranty_id)))
+                    db_manual_path = None
+
+                # File handling for other document
+                db_other_document_path = None
+                if not paperless_other_id and 'other_document' in request.files:
+                    other_document = request.files['other_document']
+                    if other_document.filename != '':
+                        if old_other_document_path:
+                            deferred_deletes.append((old_other_document_path, ('warranties', 'other_document_path', warranty_id)))
+                        filename = unique_upload_filename(other_document.filename, "other_")
+                        other_document_path_on_disk = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                        logger.info(f"Attempting to save updated other_document to: {other_document_path_on_disk}")
+                        try:
+                            other_document.save(other_document_path_on_disk)
+                            newly_saved_files.append(other_document_path_on_disk)
+                            db_other_document_path = os.path.join('uploads', filename)
+                            logger.info(f"Successfully saved updated other_document: {db_other_document_path}")
+                        except Exception as e:
+                            logger.error(f"Error saving updated other_document {filename} to {other_document_path_on_disk}: {e}")
+                            _cleanup_new_files()
+                            return jsonify({"error": "Failed to save updated other document"}), 500
+                elif paperless_other_id:
+                    logger.info(f"Other document updated to Paperless-ngx with ID: {paperless_other_id}")
+                    if old_other_document_path:
+                        deferred_deletes.append((old_other_document_path, ('warranties', 'other_document_path', warranty_id)))
+                    db_other_document_path = None
+                elif request.form.get('delete_other_document', 'false').lower() == 'true':
+                    if old_other_document_path:
+                        deferred_deletes.append((old_other_document_path, ('warranties', 'other_document_path', warranty_id)))
+                    db_other_document_path = None
+
+                # Handle product photo file upload (only if not stored in Paperless-ngx)
+                db_product_photo_path = None
+                if has_uploaded_photo:
+                    product_photo = request.files['product_photo']
                     if old_product_photo_path:
-                        _delete_stored_file(cur, old_product_photo_path, exclude=('warranties', 'product_photo_path', warranty_id))
-                    
+                        deferred_deletes.append((old_product_photo_path, ('warranties', 'product_photo_path', warranty_id)))
                     filename = unique_upload_filename(product_photo.filename, "photo_")
                     product_photo_path_on_disk = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                     logger.info(f"Attempting to save updated product_photo to: {product_photo_path_on_disk}")
                     try:
                         product_photo.save(product_photo_path_on_disk)
+                        newly_saved_files.append(product_photo_path_on_disk)
                         db_product_photo_path = os.path.join('uploads', filename)
                         logger.info(f"Successfully saved updated product_photo: {db_product_photo_path}")
                     except Exception as e:
                         logger.error(f"Error saving updated product_photo {filename} to {product_photo_path_on_disk}: {e}")
-                        return jsonify({"error": f"Failed to save updated product_photo: {str(e)}"}), 500
-            elif paperless_photo_id:
-                logger.info(f"Product photo updated to Paperless-ngx with ID: {paperless_photo_id}")
-                # Clear local path when storing in Paperless-ngx
-                cur.execute('SELECT product_photo_path FROM warranties WHERE id = %s', (warranty_id,))
-                old_product_photo_path = cur.fetchone()[0]
-                if old_product_photo_path:
-                    _delete_stored_file(cur, old_product_photo_path, exclude=('warranties', 'product_photo_path', warranty_id))
-                db_product_photo_path = None  # Clear local path
-            elif request.form.get('delete_product_photo', 'false').lower() == 'true':
-                cur.execute('SELECT product_photo_path FROM warranties WHERE id = %s', (warranty_id,))
-                old_product_photo_path = cur.fetchone()[0]
-                if old_product_photo_path:
-                    _delete_stored_file(cur, old_product_photo_path, exclude=('warranties', 'product_photo_path', warranty_id))
-                db_product_photo_path = None  # Set to None to clear in DB
+                        _cleanup_new_files()
+                        return jsonify({"error": "Failed to save updated product photo"}), 500
+                elif paperless_photo_id:
+                    logger.info(f"Product photo updated to Paperless-ngx with ID: {paperless_photo_id}")
+                    if old_product_photo_path:
+                        deferred_deletes.append((old_product_photo_path, ('warranties', 'product_photo_path', warranty_id)))
+                    db_product_photo_path = None
+                elif request.form.get('delete_product_photo', 'false').lower() == 'true':
+                    if old_product_photo_path:
+                        deferred_deletes.append((old_product_photo_path, ('warranties', 'product_photo_path', warranty_id)))
+                    db_product_photo_path = None
+                elif downloaded_photo is not None:
+                    photo_bytes, photo_ext = downloaded_photo
+                    if old_product_photo_path:
+                        deferred_deletes.append((old_product_photo_path, ('warranties', 'product_photo_path', warranty_id)))
+                    filename = unique_upload_filename(f"downloaded{photo_ext}", "photo_")
+                    product_photo_path_on_disk = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                    try:
+                        with open(product_photo_path_on_disk, 'wb') as fh:
+                            fh.write(photo_bytes)
+                        newly_saved_files.append(product_photo_path_on_disk)
+                        db_product_photo_path = os.path.join('uploads', filename)
+                        logger.info(f"Successfully saved updated product_photo from URL: {db_product_photo_path}")
+                    except Exception as e:
+                        logger.error(f"Error saving updated product_photo from URL {filename}: {e}")
+                        _cleanup_new_files()
+                        return jsonify({"error": "Failed to save product photo"}), 500
 
-            # Product photo by URL (#207): replace the photo with a downloaded
-            # image when no file was uploaded and no delete was requested.
-            product_photo_url = (request.form.get('product_photo_url') or '').strip()
-            if (not db_product_photo_path and not paperless_photo_id and product_photo_url
-                    and request.form.get('delete_product_photo', 'false').lower() != 'true'):
-                try:
-                    photo_bytes, photo_ext = download_product_photo(product_photo_url)
-                except ValueError as e:
-                    return jsonify({"error": str(e)}), 400
-                cur.execute('SELECT product_photo_path FROM warranties WHERE id = %s', (warranty_id,))
-                old_product_photo_path = cur.fetchone()[0]
-                if old_product_photo_path:
-                    _delete_stored_file(cur, old_product_photo_path, exclude=('warranties', 'product_photo_path', warranty_id))
-                filename = unique_upload_filename(f"downloaded{photo_ext}", "photo_")
-                product_photo_path_on_disk = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-                try:
-                    with open(product_photo_path_on_disk, 'wb') as fh:
-                        fh.write(photo_bytes)
-                    db_product_photo_path = os.path.join('uploads', filename)
-                    logger.info(f"Successfully saved updated product_photo from URL: {db_product_photo_path}")
-                except Exception as e:
-                    logger.error(f"Error saving updated product_photo from URL {filename}: {e}")
-                    return jsonify({"error": f"Failed to save product_photo: {str(e)}"}), 500
+                # Prepare update parameters
+                update_params = {
+                    'product_name': product_name,
+                    'purchase_date': purchase_date,
+                    'is_lifetime': is_lifetime,
+                    'warranty_duration_years': warranty_duration_years,
+                    'warranty_duration_months': warranty_duration_months,
+                    'warranty_duration_days': warranty_duration_days,
+                    'expiration_date': expiration_date, # Will be None if lifetime
+                    'product_url': product_url,
+                    'purchase_price': purchase_price,
+                    'vendor': vendor,
+                    'warranty_type': warranty_type,
+                    'currency': currency,
+                    'model_number': model_number
+                }
+                sql_fields = []
+                sql_values = []
+                for key, value in update_params.items():
+                    sql_fields.append(f"{key} = %s")
+                    sql_values.append(value)
+                if notes is not None:
+                    sql_fields.append("notes = %s")
+                    sql_values.append(notes)
+                if db_invoice_path is not None:
+                    sql_fields.append("invoice_path = %s")
+                    sql_values.append(db_invoice_path)
+                elif paperless_invoice_id is not None:
+                    sql_fields.append("invoice_path = NULL")
+                elif 'delete_invoice' in request.form and request.form.get('delete_invoice', 'false').lower() == 'true':
+                    sql_fields.append("invoice_path = NULL")
+                    sql_fields.append("paperless_invoice_id = NULL")  # Also clear Paperless ID
+                if db_manual_path is not None:
+                    sql_fields.append("manual_path = %s")
+                    sql_values.append(db_manual_path)
+                elif paperless_manual_id is not None:
+                    sql_fields.append("manual_path = NULL")
+                elif 'delete_manual' in request.form and request.form.get('delete_manual', 'false').lower() == 'true':
+                    sql_fields.append("manual_path = NULL")
+                    sql_fields.append("paperless_manual_id = NULL")  # Also clear Paperless ID
+                if db_other_document_path is not None:
+                    sql_fields.append("other_document_path = %s")
+                    sql_values.append(db_other_document_path)
+                elif paperless_other_id is not None:
+                    sql_fields.append("other_document_path = NULL")
+                elif 'delete_other_document' in request.form and request.form.get('delete_other_document', 'false').lower() == 'true':
+                    sql_fields.append("other_document_path = NULL")
+                    sql_fields.append("paperless_other_id = NULL")  # Also clear Paperless ID
+                if db_product_photo_path is not None:
+                    sql_fields.append("product_photo_path = %s")
+                    sql_values.append(db_product_photo_path)
+                elif paperless_photo_id is not None:
+                    sql_fields.append("product_photo_path = NULL")
+                elif 'delete_product_photo' in request.form and request.form.get('delete_product_photo', 'false').lower() == 'true':
+                    sql_fields.append("product_photo_path = NULL")
+                    sql_fields.append("paperless_photo_id = NULL")  # Also clear Paperless ID
 
-            # Prepare update parameters
-            update_params = {
-                'product_name': product_name,
-                'purchase_date': purchase_date,
-                'is_lifetime': is_lifetime,
-                'warranty_duration_years': warranty_duration_years,
-                'warranty_duration_months': warranty_duration_months,
-                'warranty_duration_days': warranty_duration_days,
-                'expiration_date': expiration_date, # Will be None if lifetime
-                'product_url': product_url,
-                'purchase_price': purchase_price,
-                'vendor': vendor,
-                'warranty_type': warranty_type,
-                'currency': currency,
-                'model_number': model_number
-            }
-            sql_fields = []
-            sql_values = []
-            for key, value in update_params.items():
-                sql_fields.append(f"{key} = %s")
-                sql_values.append(value)
-            if notes is not None:
-                sql_fields.append("notes = %s")
-                sql_values.append(notes)
-            if db_invoice_path is not None:
-                sql_fields.append("invoice_path = %s")
-                sql_values.append(db_invoice_path)
-            elif 'delete_invoice' in request.form and request.form.get('delete_invoice', 'false').lower() == 'true':
-                sql_fields.append("invoice_path = NULL")
-                sql_fields.append("paperless_invoice_id = NULL")  # Also clear Paperless ID
-            if db_manual_path is not None:
-                sql_fields.append("manual_path = %s")
-                sql_values.append(db_manual_path)
-            elif 'delete_manual' in request.form and request.form.get('delete_manual', 'false').lower() == 'true':
-                sql_fields.append("manual_path = NULL")
-                sql_fields.append("paperless_manual_id = NULL")  # Also clear Paperless ID
-            if db_other_document_path is not None:
-                sql_fields.append("other_document_path = %s")
-                sql_values.append(db_other_document_path)
-            elif 'delete_other_document' in request.form and request.form.get('delete_other_document', 'false').lower() == 'true':
-                sql_fields.append("other_document_path = NULL")
-                sql_fields.append("paperless_other_id = NULL")  # Also clear Paperless ID
-            if db_product_photo_path is not None:
-                sql_fields.append("product_photo_path = %s")
-                sql_values.append(db_product_photo_path)
-            elif 'delete_product_photo' in request.form and request.form.get('delete_product_photo', 'false').lower() == 'true':
-                sql_fields.append("product_photo_path = NULL")
-                sql_fields.append("paperless_photo_id = NULL")  # Also clear Paperless ID
+                # Handle Paperless-ngx document IDs
+                if paperless_invoice_id is not None:
+                    sql_fields.append("paperless_invoice_id = %s")
+                    sql_values.append(paperless_invoice_id)
+                if paperless_manual_id is not None:
+                    sql_fields.append("paperless_manual_id = %s")
+                    sql_values.append(paperless_manual_id)
+                if paperless_photo_id is not None:
+                    sql_fields.append("paperless_photo_id = %s")
+                    sql_values.append(paperless_photo_id)
+                if paperless_other_id is not None:
+                    sql_fields.append("paperless_other_id = %s")
+                    sql_values.append(paperless_other_id)
 
-            # Handle Paperless-ngx document IDs
-            if paperless_invoice_id is not None:
-                sql_fields.append("paperless_invoice_id = %s")
-                sql_values.append(paperless_invoice_id)
-            if paperless_manual_id is not None:
-                sql_fields.append("paperless_manual_id = %s")
-                sql_values.append(paperless_manual_id)
-            if paperless_photo_id is not None:
-                sql_fields.append("paperless_photo_id = %s")
-                sql_values.append(paperless_photo_id)
-            if paperless_other_id is not None:
-                sql_fields.append("paperless_other_id = %s")
-                sql_values.append(paperless_other_id)
+                # Handle URL fields for documents
+                if 'invoice_url' in request.form:
+                    sql_fields.append("invoice_url = %s")
+                    sql_values.append(request.form.get('invoice_url'))
+                if 'manual_url' in request.form:
+                    sql_fields.append("manual_url = %s")
+                    sql_values.append(request.form.get('manual_url'))
+                if 'other_document_url' in request.form:
+                    sql_fields.append("other_document_url = %s")
+                    sql_values.append(request.form.get('other_document_url'))
 
-            # Handle URL fields for documents
-            if 'invoice_url' in request.form:
-                sql_fields.append("invoice_url = %s")
-                sql_values.append(request.form.get('invoice_url'))
-            if 'manual_url' in request.form:
-                sql_fields.append("manual_url = %s")
-                sql_values.append(request.form.get('manual_url'))
-            if 'other_document_url' in request.form:
-                sql_fields.append("other_document_url = %s")
-                sql_values.append(request.form.get('other_document_url'))
+                sql_fields.append("updated_at = NOW()") # Use SQL function, no parameter needed
+                sql_values.append(warranty_id)
+                update_sql = f"UPDATE warranties SET {', '.join(sql_fields)} WHERE id = %s"
+                cur.execute(update_sql, sql_values)
+                logger.info(f"Updated warranty with SQL: {update_sql}")
+                logger.info(f"Parameters: {sql_values}")
 
-            sql_fields.append("updated_at = NOW()") # Use SQL function, no parameter needed
-            sql_values.append(warranty_id)
-            update_sql = f"UPDATE warranties SET {', '.join(sql_fields)} WHERE id = %s"
-            cur.execute(update_sql, sql_values)
-            logger.info(f"Updated warranty with SQL: {update_sql}")
-            logger.info(f"Parameters: {sql_values}")
-
-            # Record expiration date or lifetime transitions (issue #209)
-            new_is_lifetime = bool(is_lifetime)
-            expiry_changed = (
-                existing_is_lifetime != new_is_lifetime
-                or (not existing_is_lifetime and not new_is_lifetime and existing_expiration_date != expiration_date)
-            )
-            if expiry_changed:
-                cur.execute('''
-                    INSERT INTO warranty_expiry_history (
+                # Record expiration date or lifetime transitions (issue #209)
+                new_is_lifetime = bool(is_lifetime)
+                expiry_changed = (
+                    existing_is_lifetime != new_is_lifetime
+                    or (not existing_is_lifetime and not new_is_lifetime and existing_expiration_date != expiration_date)
+                )
+                if expiry_changed:
+                    cur.execute('''
+                        INSERT INTO warranty_expiry_history (
+                            warranty_id,
+                            previous_expiration_date,
+                            new_expiration_date,
+                            previous_is_lifetime,
+                            new_is_lifetime,
+                            reason,
+                            changed_by_user_id
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ''', (
                         warranty_id,
-                        previous_expiration_date,
-                        new_expiration_date,
-                        previous_is_lifetime,
+                        existing_expiration_date,
+                        expiration_date,
+                        existing_is_lifetime,
                         new_is_lifetime,
-                        reason,
-                        changed_by_user_id
-                    )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                ''', (
-                    warranty_id,
-                    existing_expiration_date,
-                    expiration_date,
-                    existing_is_lifetime,
-                    new_is_lifetime,
-                    expiry_change_reason,
-                    user_id,
-                ))
-            
-            # Update serial numbers
-            cur.execute('DELETE FROM serial_numbers WHERE warranty_id = %s', (warranty_id,))
-            if serial_numbers:
-                for serial_number in serial_numbers:
-                    if serial_number.strip():  # Only insert non-empty serial numbers
-                        cur.execute('''
-                            INSERT INTO serial_numbers (warranty_id, serial_number)
-                            VALUES (%s, %s)
-                        ''', (warranty_id, serial_number.strip()))
-            
-            # Update tags if provided
-            if tag_ids is not None:
-                # Remove existing tags
-                cur.execute('DELETE FROM warranty_tags WHERE warranty_id = %s', (warranty_id,))
+                        expiry_change_reason,
+                        user_id,
+                    ))
                 
-                # Add new tags
-                for tag_id in tag_ids:
-                    # Verify tag exists and belongs to this user (FILE-03).
-                    cur.execute('SELECT id FROM tags WHERE id = %s AND user_id = %s', (tag_id, user_id))
-                    if cur.fetchone():
-                        cur.execute('''
-                            INSERT INTO warranty_tags (warranty_id, tag_id)
-                            VALUES (%s, %s)
-                        ''', (warranty_id, tag_id))
-                    else:
-                        logger.warning(f"Skipping non-existent or foreign tag ID: {tag_id}")
+                # Update serial numbers
+                cur.execute('DELETE FROM serial_numbers WHERE warranty_id = %s', (warranty_id,))
+                if serial_numbers:
+                    for serial_number in serial_numbers:
+                        if serial_number.strip():  # Only insert non-empty serial numbers
+                            cur.execute('''
+                                INSERT INTO serial_numbers (warranty_id, serial_number)
+                                VALUES (%s, %s)
+                            ''', (warranty_id, serial_number.strip()))
+                
+                # Update tags if provided
+                if tag_ids is not None:
+                    # Remove existing tags
+                    cur.execute('DELETE FROM warranty_tags WHERE warranty_id = %s', (warranty_id,))
+                    
+                    # Add new tags
+                    for tag_id in tag_ids:
+                        # Verify tag exists and belongs to this user (FILE-03).
+                        cur.execute('SELECT id FROM tags WHERE id = %s AND user_id = %s', (tag_id, user_id))
+                        if cur.fetchone():
+                            cur.execute('''
+                                INSERT INTO warranty_tags (warranty_id, tag_id)
+                                VALUES (%s, %s)
+                            ''', (warranty_id, tag_id))
+                        else:
+                            logger.warning(f"Skipping non-existent or foreign tag ID: {tag_id}")
 
-            # Claim ownership of any Paperless documents linked above
-            for _pid in (paperless_invoice_id, paperless_manual_id,
-                         paperless_photo_id, paperless_other_id):
-                if _pid is not None:
-                    record_paperless_document_owner(cur, _pid, user_id)
+                # Claim ownership of any Paperless documents linked above
+                for _pid in (paperless_invoice_id, paperless_manual_id,
+                             paperless_photo_id, paperless_other_id):
+                    if _pid is not None:
+                        record_paperless_document_owner(cur, _pid, user_id)
 
-            conn.commit()
+                conn.commit()
 
-            return jsonify({"message": "Warranty updated successfully"}), 200
+                # Delete replaced/removed old files ONLY after the DB commit
+                # succeeds, so a failed update never causes permanent file loss.
+                if deferred_deletes:
+                    for old_path, _exclude in deferred_deletes:
+                        _delete_stored_file(cur, old_path)
+                    # Close the read-only reference-check transaction before
+                    # returning the connection to the pool.
+                    conn.rollback()
+
+                return jsonify({"message": "Warranty updated successfully"}), 200
+        except Exception:
+            _cleanup_new_files()
+            raise
             
     except RequestEntityTooLarge:
         # Let the app-wide 413 handler produce the JSON response
@@ -1755,8 +1812,14 @@ def import_warranties():
             # unchanged.
             next_suffix = {}
 
+            MAX_CSV_IMPORT_ROWS = 10000
             for row in csv_reader:
                 row_number += 1 # Increment for each data row (header is row 1)
+                if row_number > MAX_CSV_IMPORT_ROWS:
+                    conn.rollback()
+                    return jsonify({
+                        "error": f"CSV import exceeds maximum of {MAX_CSV_IMPORT_ROWS} rows."
+                    }), 400
                 errors = []
                 processed_row = {}
 
@@ -1907,6 +1970,7 @@ def import_warranties():
                             if tags_to_create:
                                 default_color = '#808080' # Default color for new tags
                                 for tag_data in tags_to_create:
+                                    cur.execute('SAVEPOINT csv_tag_insert')
                                     try:
                                         # Insert new tag with default color, preserving original case for name, AND user_id
                                         cur.execute(
@@ -1914,11 +1978,14 @@ def import_warranties():
                                             (tag_data['name'], default_color, user_id) # Add user_id
                                         )
                                         new_tag_id = cur.fetchone()[0]
+                                        cur.execute('RELEASE SAVEPOINT csv_tag_insert')
                                         processed_tag_ids.append(new_tag_id)
                                         logger.info(f"Created new tag '{(tag_data['name'])}' with ID {new_tag_id} for user {user_id} during CSV import.")
                                     except Exception as tag_insert_err:
-                                        # If tag creation fails (e.g., unique constraint conflict due to race condition),
-                                        # ensure the constraint includes user_id
+                                        # Roll back the failed sub-statement so the transaction
+                                        # stays usable before the fallback SELECT.
+                                        cur.execute('ROLLBACK TO SAVEPOINT csv_tag_insert')
+                                        cur.execute('RELEASE SAVEPOINT csv_tag_insert')
                                         logger.error(f"Error creating tag '{(tag_data['name'])}' for user {user_id} during import: {tag_insert_err}")
                                         # Attempt to fetch the ID again in case it was created by another process
                                         cur.execute("SELECT id FROM tags WHERE LOWER(name) = %s AND user_id = %s", (tag_data['name_lower'], user_id))
@@ -1956,8 +2023,10 @@ def import_warranties():
                                     break
                                 suffix_index += 1
                     
-                    # --- If errors, skip row --- 
+                    # --- If errors, roll back any row-scoped work (e.g. tags) and skip row ---
                     if errors:
+                        cur.execute('ROLLBACK TO SAVEPOINT csv_row')
+                        cur.execute('RELEASE SAVEPOINT csv_row')
                         failed_rows.append({"row": row_number, "errors": errors})
                         continue
 
@@ -2068,7 +2137,7 @@ def import_warranties():
 
                 except Exception as e:
                     logger.error(f"Error processing CSV row {row_number}: {e}")
-                    failed_rows.append({"row": row_number, "errors": [f"Internal processing error: {str(e)}"]})
+                    failed_rows.append({"row": row_number, "errors": ["Internal processing error while importing row"]})
                     # Roll the failed row back to its savepoint so the
                     # transaction stays usable for the remaining rows.
                     try:
@@ -2123,7 +2192,7 @@ def import_warranties():
         if conn:
             conn.rollback() # Rollback on general error
         logger.error(f"Error importing CSV: {e}")
-        return jsonify({"error": f"Failed to import CSV: {str(e)}"}), 500
+        return jsonify({"error": "Failed to import CSV"}), 500
     finally:
         if conn:
             release_db_connection(conn)
@@ -2222,6 +2291,7 @@ def get_global_warranties():
     conn = None
     try:
         # Check if global view is enabled for this user
+        user_id = request.user['id']
         user_is_admin = request.user.get('is_admin', False)
         
         conn = get_db_connection()
@@ -2318,6 +2388,14 @@ def get_global_warranties():
                     warranty_dict['user_display_name'] = username
                 else:
                     warranty_dict['user_display_name'] = 'Unknown User'
+
+                # Do not expose another user's email address or private
+                # "other document" references in global view to non-admins.
+                if not user_is_admin and warranty_dict.get('user_id') != user_id:
+                    warranty_dict.pop('email', None)
+                    warranty_dict['other_document_path'] = None
+                    warranty_dict['other_document_url'] = None
+                    warranty_dict['paperless_other_id'] = None
                 
                 warranties_list.append(warranty_dict)
                 
@@ -2337,6 +2415,7 @@ def get_global_warranties_archived():
     conn = None
     try:
         # Check if global view is enabled for this user
+        user_id = request.user['id']
         user_is_admin = request.user.get('is_admin', False)
 
         conn = get_db_connection()
@@ -2433,6 +2512,14 @@ def get_global_warranties_archived():
                     warranty_dict['user_display_name'] = username
                 else:
                     warranty_dict['user_display_name'] = 'Unknown User'
+
+                # Do not expose another user's email address or private
+                # "other document" references in global view to non-admins.
+                if not user_is_admin and warranty_dict.get('user_id') != user_id:
+                    warranty_dict.pop('email', None)
+                    warranty_dict['other_document_path'] = None
+                    warranty_dict['other_document_url'] = None
+                    warranty_dict['paperless_other_id'] = None
 
                 warranties_list.append(warranty_dict)
 
@@ -2648,6 +2735,15 @@ def get_warranty_debug(warranty_id):
                     warranty_dict['user_display_name'] = username
                 else:
                     warranty_dict['user_display_name'] = 'Unknown User'
+
+            # Do not expose another user's email address or private
+            # "other document" references in global view to non-admins.
+            if not is_admin and warranty_dict.get('user_id') != user_id:
+                warranty_dict.pop('email', None)
+                warranty_dict['other_document_path'] = None
+                if 'other_document_url' in warranty_dict:
+                    warranty_dict['other_document_url'] = None
+                warranty_dict['paperless_other_id'] = None
             
             return jsonify(warranty_dict)
             

@@ -143,11 +143,12 @@
         if (!toastContainer) return;
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        toast.innerHTML = `${message} <button class="toast-close">&times;</button>`;
-        const closeButton = toast.querySelector('.toast-close');
-        if (closeButton) {
-            closeButton.addEventListener('click', () => toast.remove());
-        }
+        toast.appendChild(document.createTextNode(`${message == null ? '' : String(message)} `));
+        const closeButton = document.createElement('button');
+        closeButton.className = 'toast-close';
+        closeButton.textContent = '\u00d7';
+        closeButton.addEventListener('click', () => toast.remove());
+        toast.appendChild(closeButton);
         toastContainer.appendChild(toast);
         setTimeout(() => { if (toast.parentElement) toast.remove(); }, 3000);
     }
@@ -984,7 +985,13 @@
 
             let dHtml = '<div class="warranty-details-content" style="display: flex; flex-wrap: wrap; gap: 20px;">';
             dHtml += '<div style="flex: 1 1 300px;"><h4>Core Information</h4>';
-            dHtml += `<p><strong>Product URL:</strong> ${warrantyDetails.product_url ? `<a href="${escapeHTML(String(warrantyDetails.product_url).trim().replace(/^\s*(javascript|data|vbscript)\s*:/i, '#'))}" target="_blank" rel="noopener noreferrer">${escapeHTML(warrantyDetails.product_url)}</a>` : 'N/A'}</p>`;
+            const safeProductUrl = (() => {
+                if (!warrantyDetails.product_url) return '';
+                const rawUrl = String(warrantyDetails.product_url).trim();
+                const normalizedUrl = rawUrl.replace(/[\u0000-\u0020\u007f]+/g, '');
+                return /^(javascript|data|vbscript):/i.test(normalizedUrl) ? '#' : rawUrl;
+            })();
+            dHtml += `<p><strong>Product URL:</strong> ${warrantyDetails.product_url ? `<a href="${escapeHTML(safeProductUrl)}" target="_blank" rel="noopener noreferrer">${escapeHTML(warrantyDetails.product_url)}</a>` : 'N/A'}</p>`;
             dHtml += `<p><strong>Purchase Price:</strong> ${warrantyDetails.purchase_price !== null && warrantyDetails.purchase_price !== undefined ? escapeHTML(userCurrencySymbol) + parseFloat(warrantyDetails.purchase_price).toFixed(2) : 'N/A'}</p>`;
             dHtml += `<p><strong>Vendor:</strong> ${escapeHTML(warrantyDetails.vendor || '') || 'N/A'}</p>`;
             dHtml += `<p><strong>Warranty Type:</strong> ${escapeHTML(warrantyDetails.warranty_type || '') || 'N/A'}</p></div>`;

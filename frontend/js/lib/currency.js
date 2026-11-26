@@ -87,10 +87,13 @@ export function formatCurrencyHTML(amount, symbol, position) {
 		minimumFractionDigits: 2,
 		maximumFractionDigits: 2,
 	});
+	const safeSymbol = String(symbol ?? '').replace(/[&<>"']/g, (ch) => ({
+		'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+	}[ch]));
 	if (position === 'right') {
-		return `<span>${formatted}</span><span class="currency-symbol currency-right">${symbol}</span>`;
+		return `<span>${formatted}</span><span class="currency-symbol currency-right">${safeSymbol}</span>`;
 	}
-	return `<span class="currency-symbol">${symbol}</span><span>${formatted}</span>`;
+	return `<span class="currency-symbol">${safeSymbol}</span><span>${formatted}</span>`;
 }
 
 export function setupDynamicCurrencyPosition(input, currencySymbol) {

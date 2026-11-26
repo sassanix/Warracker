@@ -231,16 +231,31 @@ def oidc_callback_route():
     if not first_name and not last_name:
         first_name = token_id_claims.get('name') or userinfo.get('name', '')
 
-    user_groups = token_id_claims.get('groups') or userinfo.get('groups') or []
+    raw_groups = token_id_claims.get('groups')
+    if raw_groups is None:
+        raw_groups = userinfo.get('groups')
+    # Only treat groups as a collection of discrete group names — never run
+    # `in` against a raw string, where `"admin" in "non-admin"` would be True.
+    if isinstance(raw_groups, (list, tuple, set)):
+        user_groups = [str(g) for g in raw_groups if isinstance(g, str)]
+    else:
+        user_groups = []
 
     conn = None
     try:
         conn = get_db_connection()
         with conn.cursor() as cur:
-            # Check for existing OIDC user
-            cur.execute("SELECT id, username, email, first_name, last_name, is_admin, is_owner FROM users WHERE oidc_sub = %s AND oidc_issuer = %s AND is_active = TRUE",
+            # Check for existing OIDC user (including inactive accounts so a
+            # deactivated user is rejected cleanly instead of hitting the
+            # new-user provisioning path and failing on the unique constraint).
+            cur.execute("SELECT id, username, email, first_name, last_name, is_admin, is_owner, is_active FROM users WHERE oidc_sub = %s AND oidc_issuer = %s",
                         (oidc_subject, oidc_issuer))
             user_db_data = cur.fetchone()
+
+            if user_db_data and not user_db_data[7]:
+                logger.warning(f"[OIDC_HANDLER] Inactive OIDC user ID {user_db_data[0]} attempted login.")
+                frontend_login_url = os.environ.get('FRONTEND_URL', current_app.config.get('APP_BASE_URL', 'http://localhost:8080')).rstrip('/') + "/login.html"
+                return redirect(f"{frontend_login_url}?oidc_error=account_inactive")
 
             user_id = None
             is_new_user = False
@@ -308,7 +323,7 @@ def oidc_callback_route():
                     return redirect(f"{frontend_login_url}?oidc_error=email_missing_for_new_user")
 
                 # Check for email conflict with local account
-                cur.execute("SELECT id FROM users WHERE email = %s AND (oidc_sub IS NULL OR oidc_issuer IS NULL)", (email,))
+                cur.execute("SELECT id FROM users WHERE LOWER(email) = LOWER(%s) AND (oidc_sub IS NULL OR oidc_issuer IS NULL)", (email,))
                 if cur.fetchone():
                     logger.warning(f"[OIDC_HANDLER] Email {email} already exists for a local account. OIDC user cannot be created.")
                     frontend_login_url = os.environ.get('FRONTEND_URL', 'http://localhost:8080').rstrip('/') + "/login.html"
@@ -328,6 +343,19 @@ def oidc_callback_route():
                 acquire_first_user_lock(cur)
                 cur.execute('SELECT COUNT(*) FROM users')
                 user_count = cur.fetchone()[0]
+
+                # Re-check registration gate under the lock so a concurrent
+                # second signup cannot slip past registration_enabled=false.
+                if table_exists:
+                    cur.execute("SELECT value FROM site_settings WHERE key = 'registration_enabled'")
+                    result = cur.fetchone()
+                    if result:
+                        registration_enabled = result[0].lower() == 'true'
+                if not registration_enabled and user_count > 0:
+                    logger.warning(f"[OIDC_HANDLER] New OIDC user registration denied after lock - registrations are disabled. Subject: {oidc_subject}")
+                    conn.rollback()
+                    frontend_login_url = os.environ.get('FRONTEND_URL', current_app.config.get('APP_BASE_URL', 'http://localhost:8080')).rstrip('/') + "/login.html"
+                    return redirect(f"{frontend_login_url}?oidc_error=registration_disabled")
 
                 if admin_oidc_group:
                     is_admin = admin_oidc_group in user_groups

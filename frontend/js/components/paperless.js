@@ -327,6 +327,26 @@ async function getUserPaperlessViewPreference(warrantyContext = null) {
 	}
 }
 
+const SAFE_INLINE_BLOB_MIME_TYPES = new Set([
+	'application/pdf',
+	'image/png',
+	'image/jpeg',
+	'image/webp',
+	'image/gif',
+	'text/plain',
+]);
+
+function extractFilenameFromResponse(response, fallbackName) {
+	const cd = response?.headers?.get?.('Content-Disposition') || '';
+	const utf8Match = cd.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+	if (utf8Match) {
+		try { return decodeURIComponent(utf8Match[1].trim()); } catch (_) {}
+	}
+	const plainMatch = cd.match(/filename\s*=\s*"?([^";]+)"?/i);
+	if (plainMatch && plainMatch[1]) return plainMatch[1].trim();
+	return fallbackName;
+}
+
 export async function openPaperlessDocument(paperlessId, warrantyContext = null) {
 	try {
 		const debugInfo = await debugPaperlessConfiguration();
@@ -349,10 +369,28 @@ export async function openPaperlessDocument(paperlessId, warrantyContext = null)
 			});
 			if (!fileResponse.ok) throw new Error('Failed to open document');
 			const blob = await fileResponse.blob();
-			const blobUrl = window.URL.createObjectURL(blob);
-			const win = window.open(blobUrl, '_blank');
-			setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
-			if (!win) showToast(window.t ? window.t('paperless.popup_blocked') : 'Please allow popups to view documents', 'warning');
+			const mimeType = (blob.type || '').split(';')[0].trim().toLowerCase();
+			if (SAFE_INLINE_BLOB_MIME_TYPES.has(mimeType)) {
+				const blobUrl = window.URL.createObjectURL(blob);
+				const win = window.open(blobUrl, '_blank');
+				if (win) {
+					try { win.opener = null; } catch (_) {}
+				}
+				setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+				if (!win) showToast(window.t ? window.t('paperless.popup_blocked') : 'Please allow popups to view documents', 'warning');
+			} else {
+				// Never render active or unrecognized content types in a same-origin blob tab.
+				const downloadBlob = new Blob([blob], { type: 'application/octet-stream' });
+				const blobUrl = window.URL.createObjectURL(downloadBlob);
+				const link = document.createElement('a');
+				link.style.display = 'none';
+				link.href = blobUrl;
+				link.download = extractFilenameFromResponse(fileResponse, `document-${paperlessId}`);
+				document.body.appendChild(link);
+				link.click();
+				document.body.removeChild(link);
+				setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+			}
 			return;
 		}
 		const response = await fetch('/api/paperless/url', {
@@ -364,7 +402,11 @@ export async function openPaperlessDocument(paperlessId, warrantyContext = null)
 		const baseUrl = result.url.replace(/\/$/, '');
 		const docUrl = `${baseUrl}/documents/${paperlessId}/details`;
 		const win = window.open(docUrl, '_blank');
-		if (!win) showToast(window.t ? window.t('paperless.popup_blocked') : 'Please allow popups to view documents in Paperless-ngx', 'warning');
+		if (win) {
+			try { win.opener = null; } catch (_) {}
+		} else {
+			showToast(window.t ? window.t('paperless.popup_blocked') : 'Please allow popups to view documents in Paperless-ngx', 'warning');
+		}
 	} catch (error) {
 		console.error('[paperless] openPaperlessDocument failed', error);
 		showToast(error.message || 'Error opening document', 'error');
@@ -671,8 +713,8 @@ function showPaperlessError(message) {
 	if (!container) return;
 	container.innerHTML = `<div class="no-documents-message">
 		<i class="fas fa-exclamation-triangle"></i>
-		<h4>${window.t ? window.t('errors.error') : 'Error'}</h4>
-		<p>${message}</p>
+		<h4>${escapeHtml(window.t ? window.t('errors.error') : 'Error')}</h4>
+		<p>${escapeHtml(message == null ? '' : message)}</p>
 	</div>`;
 }
 

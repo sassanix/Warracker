@@ -402,7 +402,7 @@ def get_global_statistics():
             days_later_for_recent = expiring_soon_date
             cur.execute("""
                 SELECT
-                    w.id, w.product_name, w.purchase_date, 
+                    w.id, w.user_id, w.product_name, w.purchase_date, 
                     w.warranty_duration_years, w.warranty_duration_months, w.warranty_duration_days,
                     w.expiration_date, w.invoice_path, w.manual_path, w.other_document_path, 
                     w.product_url, w.purchase_price, w.is_lifetime,
@@ -416,6 +416,7 @@ def get_global_statistics():
             
             columns = [desc[0] for desc in cur.description]
             recent_warranties = []
+            is_admin_viewer = request.user.get('is_admin', False)
             
             for row in cur.fetchall():
                 warranty = dict(zip(columns, row))
@@ -445,6 +446,10 @@ def get_global_statistics():
                     display_name = 'Unknown User'
                 
                 warranty['user_display_name'] = display_name
+
+                if not is_admin_viewer and warranty.get('user_id') != user_id:
+                    warranty.pop('email', None)
+                    warranty['other_document_path'] = None
                     
                 recent_warranties.append(warranty)
             
@@ -509,6 +514,10 @@ def get_global_statistics():
                     display_name = 'Unknown User'
                 
                 warranty['user_display_name'] = display_name
+
+                if not is_admin_viewer and warranty.get('user_id') != user_id:
+                    warranty.pop('email', None)
+                    warranty['other_document_path'] = None
                     
                 all_warranties_list.append(warranty)
 

@@ -152,11 +152,12 @@ class AppriseNotificationHandler:
             
             for url in self.notification_urls:
                 if url:
+                    scheme = self._safe_url_scheme(url)
                     result = self.apprise_obj.add(url)
                     if result:
-                        logger.info(f"Successfully added Apprise URL: {url[:20]}...")
+                        logger.info(f"Successfully added Apprise URL (scheme: {scheme})")
                     else:
-                        logger.error(f"Failed to add Apprise URL: {url[:20]}...")
+                        logger.error(f"Failed to add Apprise URL (scheme: {scheme})")
 
             if len(self.apprise_obj) == 0:
                 logger.warning("No valid Apprise URLs configured")
@@ -165,6 +166,15 @@ class AppriseNotificationHandler:
         except Exception as e:
             logger.error(f"Error initializing Apprise: {e}")
             self.enabled = False
+
+    @staticmethod
+    def _safe_url_scheme(url: str) -> str:
+        """Extract only the scheme from an Apprise URL so credentials are never logged."""
+        try:
+            from urllib.parse import urlparse
+            return urlparse(str(url)).scheme or 'unknown'
+        except Exception:
+            return 'unknown'
 
     def is_available(self):
         """Check if Apprise is available and properly configured"""
@@ -207,7 +217,7 @@ class AppriseNotificationHandler:
                 # Use specific test URL
                 test_apprise = apprise.Apprise()
                 if not test_apprise.add(test_url):
-                    logger.error(f"Failed to add test URL: {test_url}")
+                    logger.error(f"Failed to add test Apprise URL (scheme: {self._safe_url_scheme(test_url)})")
                     return False
                 
                 title = f"{self.title_prefix} Test Notification"

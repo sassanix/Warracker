@@ -270,11 +270,16 @@
                                 break;
                         }
                         
-                        // Update button styling and content (preserve alignment and baseline styles)
+                        // Update button styling and content safely via DOM APIs
+                        // (oidc_provider_display_name is server/admin-provided text).
                         const classList = ['btn', 'btn-secondary', 'btn-block', 'btn-sso'];
                         if (buttonClass && buttonClass !== 'btn-sso') classList.push(buttonClass);
                         oidcButton.className = classList.join(' ');
-                        oidcButton.innerHTML = `<i class="${iconClass}"></i> ${buttonText}`;
+                        oidcButton.textContent = '';
+                        const iconEl = document.createElement('i');
+                        iconEl.className = iconClass;
+                        oidcButton.appendChild(iconEl);
+                        oidcButton.appendChild(document.createTextNode(' ' + buttonText));
                     }
                 })
                 .catch(error => {

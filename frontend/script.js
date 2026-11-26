@@ -4035,22 +4035,50 @@ function openSecureFile(filePath) {
     })
     .then(blob => {
         console.log(`[openSecureFile] Successfully received blob of size: ${blob.size}`);
-        
-        // Create a URL for the blob
-        const blobUrl = window.URL.createObjectURL(blob);
-        
-        // Open in new tab
-        const newWindow = window.open(blobUrl, '_blank');
-        
-        // Clean up the blob URL after a delay to prevent memory leaks
-        setTimeout(() => {
-            window.URL.revokeObjectURL(blobUrl);
-        }, 10000); // Clean up after 10 seconds
-        
-        // Check if window was blocked by popup blocker
-        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-            showToast(window.t('messages.popup_blocked'), 'warning');
-            window.URL.revokeObjectURL(blobUrl); // Clean up immediately if blocked
+
+        const safeInlineTypes = new Set([
+            'application/pdf',
+            'image/png',
+            'image/jpeg',
+            'image/webp',
+            'image/gif',
+            'text/plain'
+        ]);
+        const mimeType = (blob.type || '').split(';')[0].trim().toLowerCase();
+
+        if (safeInlineTypes.has(mimeType)) {
+            // Create a URL for the blob
+            const blobUrl = window.URL.createObjectURL(blob);
+
+            // Open in new tab
+            const newWindow = window.open(blobUrl, '_blank');
+            if (newWindow) {
+                try { newWindow.opener = null; } catch (_) {}
+            }
+
+            // Clean up the blob URL after a delay to prevent memory leaks
+            setTimeout(() => {
+                window.URL.revokeObjectURL(blobUrl);
+            }, 10000); // Clean up after 10 seconds
+
+            // Check if window was blocked by popup blocker
+            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                showToast(window.t('messages.popup_blocked'), 'warning');
+                window.URL.revokeObjectURL(blobUrl); // Clean up immediately if blocked
+            }
+        } else {
+            const downloadBlob = new Blob([blob], { type: 'application/octet-stream' });
+            const blobUrl = window.URL.createObjectURL(downloadBlob);
+            const link = document.createElement('a');
+            link.style.display = 'none';
+            link.href = blobUrl;
+            link.download = fileName.split('/').pop() || 'document';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => {
+                window.URL.revokeObjectURL(blobUrl);
+            }, 10000);
         }
     })
     .catch(error => {
@@ -4334,7 +4362,7 @@ function renderTagsList(searchTerm = '') {
     if (searchTerm && !filteredTags.some(tag => tag.name.toLowerCase() === searchTerm.toLowerCase())) {
         const createOption = document.createElement('div');
         createOption.className = 'tag-option create-tag';
-        createOption.innerHTML = `<i class="fas fa-plus"></i> Create "${searchTerm}"`;
+        createOption.innerHTML = `<i class="fas fa-plus"></i> Create "${escapeHtml(searchTerm)}"`;
         createOption.addEventListener('click', () => {
             createTag(searchTerm).then(newTag => {
                 // Add the new tag to selectedTags
@@ -4401,7 +4429,7 @@ function renderEditTagsList(searchTerm = '') {
     if (searchTerm && !filteredTags.some(tag => tag.name.toLowerCase() === searchTerm.toLowerCase())) {
         const createOption = document.createElement('div');
         createOption.className = 'tag-option create-tag';
-        createOption.innerHTML = `<i class="fas fa-plus"></i> Create "${searchTerm}"`;
+        createOption.innerHTML = `<i class="fas fa-plus"></i> Create "${escapeHtml(searchTerm)}"`;
         createOption.addEventListener('click', () => {
             createTag(searchTerm).then(newTag => {
                 // Add the new tag to editSelectedTags
@@ -6767,11 +6795,12 @@ function formatCurrencyHTML(amount, symbol, position) {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     });
+    const safeSymbol = escapeHtml(symbol == null ? '' : String(symbol));
 
     if (position === 'right') {
-        return `<span>${formattedAmount}</span><span class="currency-symbol currency-right">${symbol}</span>`;
+        return `<span>${formattedAmount}</span><span class="currency-symbol currency-right">${safeSymbol}</span>`;
     } else {
-        return `<span class="currency-symbol">${symbol}</span><span>${formattedAmount}</span>`;
+        return `<span class="currency-symbol">${safeSymbol}</span><span>${formattedAmount}</span>`;
     }
 }
 
@@ -7679,13 +7708,40 @@ async function openPaperlessDocument(paperlessId, warrantyContext = null) {
                 throw new Error(`Failed to open document: ${fileResponse.status}`);
             }
             const blob = await fileResponse.blob();
-            const blobUrl = window.URL.createObjectURL(blob);
-            const newTab = window.open(blobUrl, '_blank');
-            setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
-            if (!newTab) {
-                showToast('Please allow popups to view documents', 'warning');
+            const safeInlineTypes = new Set([
+                'application/pdf',
+                'image/png',
+                'image/jpeg',
+                'image/webp',
+                'image/gif',
+                'text/plain'
+            ]);
+            const mimeType = (blob.type || '').split(';')[0].trim().toLowerCase();
+            if (safeInlineTypes.has(mimeType)) {
+                const blobUrl = window.URL.createObjectURL(blob);
+                const newTab = window.open(blobUrl, '_blank');
+                if (newTab) {
+                    try { newTab.opener = null; } catch (_) {}
+                }
+                setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+                if (!newTab) {
+                    showToast('Please allow popups to view documents', 'warning');
+                } else {
+                    showToast('Opening document in Warracker...', 'info');
+                }
             } else {
-                showToast('Opening document in Warracker...', 'info');
+                const downloadBlob = new Blob([blob], { type: 'application/octet-stream' });
+                const blobUrl = window.URL.createObjectURL(downloadBlob);
+                const cd = fileResponse.headers?.get?.('Content-Disposition') || '';
+                const match = cd.match(/filename\s*=\s*"?([^";]+)"?/i);
+                const link = document.createElement('a');
+                link.style.display = 'none';
+                link.href = blobUrl;
+                link.download = (match && match[1]) ? match[1].trim() : `document-${paperlessId}`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
             }
         } catch (fileError) {
             console.error('[openPaperlessDocument] Failed to open document:', fileError);
@@ -7724,10 +7780,11 @@ async function openPaperlessDocument(paperlessId, warrantyContext = null) {
         
         // Open the document directly in Paperless-ngx interface
         const newTab = window.open(documentUrl, '_blank');
-        if (!newTab) {
-            showToast('Please allow popups to view documents in Paperless-ngx', 'warning');
-        } else {
+        if (newTab) {
+            try { newTab.opener = null; } catch (_) {}
             showToast('Opening document in Paperless-ngx...', 'info');
+        } else {
+            showToast('Please allow popups to view documents in Paperless-ngx', 'warning');
         }
         
     } catch (error) {
@@ -7741,6 +7798,7 @@ async function openPaperlessDocument(paperlessId, warrantyContext = null) {
             
             const fallbackTab = window.open(fallbackUrl, '_blank');
             if (fallbackTab) {
+                try { fallbackTab.opener = null; } catch (_) {}
                 showToast('Opened with fallback URL - please check if Paperless-ngx is accessible', 'warning');
             }
         } else {
@@ -7750,6 +7808,7 @@ async function openPaperlessDocument(paperlessId, warrantyContext = null) {
             
             const genericTab = window.open(genericFallbackUrl, '_blank');
             if (genericTab) {
+                try { genericTab.opener = null; } catch (_) {}
                 showToast('Opened with generic fallback URL', 'warning');
             }
         }
@@ -8638,7 +8697,7 @@ function renderPaperlessDocuments() {
                 <div class="document-title">${escapeHtml(doc.title)}</div>
                 <div class="document-meta">
                     <span><i class="fas fa-calendar"></i> ${createdDate}</span>
-                    <span><i class="fas fa-file"></i> ${fileType}</span>
+                    <span><i class="fas fa-file"></i> ${escapeHtml(fileType)}</span>
                     ${doc.correspondent ? `<span><i class="fas fa-user"></i> ${escapeHtml(doc.correspondent)}</span>` : ''}
                 </div>
                 ${tags.length > 0 ? `
