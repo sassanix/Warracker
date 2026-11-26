@@ -64,9 +64,35 @@ function openSecureFile(path) {
             return response.blob();
         })
         .then(blob => {
-            // Create a URL for the blob and open it in a new window
-            const url = URL.createObjectURL(blob);
-            window.open(url, '_blank');
+            const safeInlineTypes = new Set([
+                'application/pdf',
+                'image/png',
+                'image/jpeg',
+                'image/webp',
+                'image/gif',
+                'text/plain'
+            ]);
+            const mimeType = (blob.type || '').split(';')[0].trim().toLowerCase();
+            if (safeInlineTypes.has(mimeType)) {
+                // Create a URL for the blob and open it in a new window
+                const url = URL.createObjectURL(blob);
+                const win = window.open(url, '_blank');
+                if (win) {
+                    try { win.opener = null; } catch (_) {}
+                }
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
+            } else {
+                const downloadBlob = new Blob([blob], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(downloadBlob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = path.split('/').pop() || 'document';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
+            }
         })
         .catch(error => {
             console.error('Error opening file:', error);

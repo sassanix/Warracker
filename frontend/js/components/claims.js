@@ -432,6 +432,15 @@ function getClaimDocFileInput() {
 	return claimDocFileInput;
 }
 
+const SAFE_INLINE_CLAIM_BLOB_TYPES = new Set([
+	'application/pdf',
+	'image/png',
+	'image/jpeg',
+	'image/webp',
+	'image/gif',
+	'text/plain',
+]);
+
 async function openClaimDocument(doc) {
 	if (doc.paperless_document_id) {
 		const token = getToken();
@@ -445,9 +454,26 @@ async function openClaimDocument(doc) {
 			});
 			if (!response.ok) throw new Error('download failed');
 			const blob = await response.blob();
-			const blobUrl = window.URL.createObjectURL(blob);
-			window.open(blobUrl, '_blank');
-			setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+			const mimeType = (blob.type || '').split(';')[0].trim().toLowerCase();
+			if (SAFE_INLINE_CLAIM_BLOB_TYPES.has(mimeType)) {
+				const blobUrl = window.URL.createObjectURL(blob);
+				const win = window.open(blobUrl, '_blank');
+				if (win) {
+					try { win.opener = null; } catch (_) {}
+				}
+				setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+			} else {
+				const downloadBlob = new Blob([blob], { type: 'application/octet-stream' });
+				const blobUrl = window.URL.createObjectURL(downloadBlob);
+				const link = document.createElement('a');
+				link.style.display = 'none';
+				link.href = blobUrl;
+				link.download = doc.file_name || `claim-document-${doc.paperless_document_id}`;
+				document.body.appendChild(link);
+				link.click();
+				document.body.removeChild(link);
+				setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+			}
 		} catch (error) {
 			console.error('[claims] paperless document open failed', error);
 			showToast(t('claims.document_open_failed', 'Failed to open document'), 'error');

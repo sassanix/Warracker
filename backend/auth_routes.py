@@ -7,7 +7,9 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import hashlib
+import json
 import os
+import re
 import pytz
 import psycopg2
 from psycopg2.extras import Json
@@ -149,8 +151,8 @@ def register():
             # already ran, so the lock is never held during hashing.
             acquire_first_user_lock(cur)
 
-            # Check if username or email already exists
-            cur.execute('SELECT id FROM users WHERE username = %s OR email = %s', (username, email))
+            # Check if username or email already exists (case-insensitive email)
+            cur.execute('SELECT id FROM users WHERE username = %s OR LOWER(email) = LOWER(%s)', (username, email))
             existing_user = cur.fetchone()
             
             if existing_user:
@@ -159,6 +161,19 @@ def register():
             # Check if this is the first user (who will be an admin and owner)
             cur.execute('SELECT COUNT(*) FROM users')
             user_count = cur.fetchone()[0]
+
+            # Re-check OIDC-only and registration gates under the lock so a
+            # concurrent second signup cannot bypass registration_enabled=false.
+            if _oidc_only_mode_enabled(cur):
+                return jsonify({'message': 'Local registration is disabled. Please use single sign-on!'}), 403
+            if table_exists:
+                cur.execute("SELECT value FROM site_settings WHERE key = 'registration_enabled'")
+                reg_row = cur.fetchone()
+                if reg_row:
+                    registration_enabled = reg_row[0].lower() == 'true'
+            if not registration_enabled and user_count > 0:
+                return jsonify({'message': 'Registration is currently disabled!'}), 403
+
             is_admin = user_count == 0
             is_owner = user_count == 0  # First user is also the owner
             
@@ -379,21 +394,19 @@ def oidc_exchange():
             cur.execute(
                 "DELETE FROM oidc_login_codes "
                 "WHERE expires_at <= (NOW() AT TIME ZONE 'UTC')")
+            # Single use: atomically claim and remove the code in one statement
+            # so concurrent POSTs under READ COMMITTED cannot mint two sessions.
             cur.execute(
-                "SELECT user_id, is_new_user FROM oidc_login_codes "
+                "DELETE FROM oidc_login_codes "
                 "WHERE code_hash = %s "
-                "AND expires_at > (NOW() AT TIME ZONE 'UTC')",
+                "AND expires_at > (NOW() AT TIME ZONE 'UTC') "
+                "RETURNING user_id, is_new_user",
                 (code_hash,))
             row = cur.fetchone()
             if not row:
                 conn.rollback()
                 return jsonify({"error": "Invalid or expired login code!"}), 400
             user_id, is_new_user = row
-            # Single use: delete before minting so a concurrent replay
-            # finds nothing.
-            cur.execute(
-                "DELETE FROM oidc_login_codes WHERE code_hash = %s",
-                (code_hash,))
             token, session_jti = generate_token(user_id)
             expires_at = datetime.now(UTC) + current_app.config['JWT_EXPIRATION_DELTA']
             cur.execute(
@@ -788,6 +801,8 @@ def has_currency_symbol_column(cursor):
 
 def is_valid_timezone(tz):
     """Validate if a timezone string is valid"""
+    if not isinstance(tz, str) or not tz.strip():
+        return False
     try:
         pytz.timezone(tz)
         return True
@@ -852,25 +867,28 @@ def reset_password():
         if is_password_too_long(password):
             return jsonify({'message': 'Password must not exceed 72 characters!'}), 400
 
+        # Hash the new password BEFORE borrowing a pooled DB connection so
+        # slow bcrypt work never holds a connection or widens the race window.
+        password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+
         conn = db_handler.get_db_connection()
         with conn.cursor() as cur:
-            # Check if token exists and is valid (stored as a hash, AUTH-08)
-            cur.execute('SELECT user_id, expires_at FROM password_reset_tokens WHERE token = %s', (_hash_reset_token(token),))
+            # Atomically consume a valid, unexpired reset token in one SQL
+            # statement (AUTH-08 / TOCTOU fix) so concurrent requests cannot
+            # redeem the same token twice.
+            cur.execute(
+                "DELETE FROM password_reset_tokens "
+                "WHERE token = %s "
+                "AND expires_at > (NOW() AT TIME ZONE 'UTC') "
+                "RETURNING user_id",
+                (_hash_reset_token(token),),
+            )
             token_info = cur.fetchone()
-            
+
             if not token_info:
+                conn.rollback()
                 return jsonify({'message': 'Invalid or expired token!'}), 400
 
-            expires_at = token_info[1]
-            if expires_at is not None and expires_at.tzinfo is None:
-                # expires_at is TIMESTAMP WITHOUT TIME ZONE, so psycopg2
-                # returns it offset-naive. Tokens are created with
-                # datetime.now(UTC), so interpret the stored value as UTC
-                # before comparing with the offset-aware current time.
-                expires_at = expires_at.replace(tzinfo=UTC)
-            if expires_at is None or expires_at < datetime.now(UTC):
-                return jsonify({'message': 'Invalid or expired token!'}), 400
-            
             user_id = token_info[0]
 
             # AUTH-12: a reset token minted before OIDC-only mode was
@@ -879,16 +897,11 @@ def reset_password():
             cur.execute('SELECT oidc_sub FROM users WHERE id = %s', (user_id,))
             owner = cur.fetchone()
             if owner and owner[0] is not None and _oidc_only_mode_enabled(cur):
+                conn.rollback()
                 return jsonify({'message': 'Invalid or expired token!'}), 400
-            
-            # Hash the new password
-            password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
-            
+
             # Update user's password
             cur.execute('UPDATE users SET password_hash = %s WHERE id = %s', (password_hash, user_id))
-            
-            # Delete the used token
-            cur.execute('DELETE FROM password_reset_tokens WHERE token = %s', (_hash_reset_token(token),))
 
             # AUTH-01: a completed reset revokes every session for this
             # user, so a token captured before the reset stops working.
@@ -939,6 +952,8 @@ def change_password():
                 return jsonify({'message': 'User not found!'}), 404
             
             current_password_hash = user_data[0]
+            if not current_password_hash:
+                return jsonify({'message': 'Password changes are not available for SSO-managed accounts!'}), 400
             
             # Verify the current password
             if not bcrypt.check_password_hash(current_password_hash, current_password):
@@ -1279,9 +1294,9 @@ def update_preferences():
                 expiring_soon_days = int(expiring_soon_days)
                 if expiring_soon_days < 1 or expiring_soon_days > 365:
                     return jsonify({'message': 'Expiring soon days must be between 1 and 365'}), 400
-            except ValueError:
+            except (TypeError, ValueError):
                 return jsonify({'message': 'Expiring soon days must be a valid number'}), 400
-        if currency_symbol and len(currency_symbol) > 8:
+        if currency_symbol is not None and (not isinstance(currency_symbol, str) or len(currency_symbol) > 8):
             return jsonify({'message': 'Currency symbol must be 8 characters or less'}), 400
         if currency_position and currency_position not in ['left', 'right']:
             return jsonify({'message': 'Invalid currency position'}), 400
@@ -1289,10 +1304,37 @@ def update_preferences():
             return jsonify({'message': 'Invalid date format'}), 400
         if notification_channel and notification_channel not in ['none', 'email', 'apprise', 'both']:
             return jsonify({'message': 'Invalid notification channel'}), 400
+        valid_frequencies = ('daily', 'weekly', 'monthly')
+        if notification_frequency is not None and notification_frequency != '':
+            if not isinstance(notification_frequency, str) or notification_frequency not in valid_frequencies:
+                return jsonify({'message': 'Invalid notification frequency'}), 400
+        if apprise_notification_frequency is not None and apprise_notification_frequency != '':
+            if not isinstance(apprise_notification_frequency, str) or apprise_notification_frequency not in valid_frequencies:
+                return jsonify({'message': 'Invalid Apprise notification frequency'}), 400
+        time_pattern = r'^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$'
+        if notification_time is not None and notification_time != '':
+            if not isinstance(notification_time, str) or not re.match(time_pattern, notification_time):
+                return jsonify({'message': 'Invalid notification time format'}), 400
+        if apprise_notification_time is not None and apprise_notification_time != '':
+            if not isinstance(apprise_notification_time, str) or not re.match(time_pattern, apprise_notification_time):
+                return jsonify({'message': 'Invalid Apprise notification time format'}), 400
+        if timezone is not None and timezone != '':
+            if not is_valid_timezone(timezone):
+                return jsonify({'message': 'Invalid timezone'}), 400
+        if apprise_timezone is not None and apprise_timezone != '':
+            if not is_valid_timezone(apprise_timezone):
+                return jsonify({'message': 'Invalid Apprise timezone'}), 400
         if paperless_view_in_app is not None and not isinstance(paperless_view_in_app, bool):
             return jsonify({'message': 'paperless_view_in_app must be a boolean'}), 400
         if preferred_language and preferred_language not in SUPPORTED_LANGUAGES:
             return jsonify({'message': 'Invalid language preference'}), 400
+        if saved_filters is not None:
+            try:
+                serialized_filters = json.dumps(saved_filters)
+            except (TypeError, ValueError):
+                return jsonify({'message': 'Invalid saved filters payload'}), 400
+            if len(serialized_filters.encode('utf-8')) > 65536:
+                return jsonify({'message': 'Saved filters payload exceeds maximum allowed size'}), 400
         
         conn = db_handler.get_db_connection()
         cursor = conn.cursor()
@@ -1328,22 +1370,22 @@ def update_preferences():
                 if notification_channel is not None:
                     update_fields.append("notification_channel = %s")
                     update_values.append(notification_channel)
-                if notification_frequency is not None:
+                if notification_frequency:
                     update_fields.append("notification_frequency = %s")
                     update_values.append(notification_frequency)
-                if notification_time is not None:
+                if notification_time:
                     update_fields.append("notification_time = %s")
                     update_values.append(notification_time)
-                if apprise_notification_time is not None:
+                if apprise_notification_time:
                     update_fields.append("apprise_notification_time = %s")
                     update_values.append(apprise_notification_time)
-                if apprise_notification_frequency is not None:
+                if apprise_notification_frequency:
                     update_fields.append("apprise_notification_frequency = %s")
                     update_values.append(apprise_notification_frequency)
-                if timezone is not None:
+                if timezone:
                     update_fields.append("timezone = %s")
                     update_values.append(timezone)
-                if apprise_timezone is not None:
+                if apprise_timezone:
                     update_fields.append("apprise_timezone = %s")
                     update_values.append(apprise_timezone)
                 if paperless_view_in_app is not None:
@@ -1449,7 +1491,7 @@ def generate_secure_token(length=40):
 def request_email_change():
     """Request email change with verification"""
     current_user_id = request.user['id']
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     new_email = data.get('new_email')
     password = data.get('password')
 
@@ -1473,14 +1515,17 @@ def request_email_change():
 
         current_password_hash, current_email = user_data
 
+        if not current_password_hash:
+            return jsonify({'message': 'Password authentication is not configured for this account.'}), 400
+
         if not bcrypt.check_password_hash(current_password_hash, password):
             return jsonify({'message': 'Incorrect password'}), 401
             
         if new_email.lower() == current_email.lower():
             return jsonify({'message': 'New email cannot be the same as the current email'}), 400
 
-        # Check if the new email is already in use by another user
-        cur.execute("SELECT id FROM users WHERE email = %s AND id != %s", (new_email.lower(), current_user_id))
+        # Check if the new email is already in use by another user (case-insensitive)
+        cur.execute("SELECT id FROM users WHERE LOWER(email) = LOWER(%s) AND id != %s", (new_email, current_user_id))
         if cur.fetchone():
             return jsonify({'message': 'This email address is already in use by another account.'}), 409
 

@@ -126,13 +126,19 @@ def fix_upload_folder_permissions():
 
         logger.info(f"Fixing upload folder ownership from {current_owner} to warracker:warracker ({warracker_uid}:{warracker_gid})...")
 
-        # Fix ownership recursively
-        for root, dirs, files in os.walk(upload_folder):
-            os.chown(root, warracker_uid, warracker_gid)
+        # Fix ownership recursively without following symlinks so a symlink
+        # inside the writable uploads volume cannot redirect root chown outside it.
+        for root, dirs, files in os.walk(upload_folder, followlinks=False):
+            if not os.path.islink(root):
+                os.lchown(root, warracker_uid, warracker_gid)
             for directory in dirs:
-                os.chown(os.path.join(root, directory), warracker_uid, warracker_gid)
+                dir_path = os.path.join(root, directory)
+                if not os.path.islink(dir_path):
+                    os.lchown(dir_path, warracker_uid, warracker_gid)
             for file in files:
-                os.chown(os.path.join(root, file), warracker_uid, warracker_gid)
+                file_path = os.path.join(root, file)
+                if not os.path.islink(file_path):
+                    os.lchown(file_path, warracker_uid, warracker_gid)
 
         logger.info("Upload folder permissions fixed successfully!")
 

@@ -47,10 +47,13 @@ const escapeHtml = (text) => {
 	}[s]));
 };
 
-// Block javascript:/data:/vbscript: URLs in href attributes.
+// Block javascript:/data:/vbscript: URLs in href attributes, including
+// obfuscations using ASCII control characters (tabs/newlines) stripped by
+// the WHATWG URL parser.
 const sanitizeUrl = (url) => {
 	const s = String(url || '').trim();
-	if (/^\s*(javascript|data|vbscript)\s*:/i.test(s)) return '#';
+	const normalized = s.replace(/[\u0000-\u0020\u007f]+/g, '');
+	if (/^(javascript|data|vbscript):/i.test(normalized)) return '#';
 	return s;
 };
 

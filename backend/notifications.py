@@ -921,7 +921,14 @@ def _master_scheduler_status_path(master_pid=None):
     """Path to the live scheduler status snapshot written by the gunicorn master."""
     import tempfile
     pid = master_pid or os.environ.get('WARRACKER_GUNICORN_MASTER_PID') or os.getpid()
-    return os.path.join(tempfile.gettempdir(), f'warracker_scheduler_status_{pid}.json')
+    uid = os.getuid() if hasattr(os, 'getuid') else 0
+    runtime_dir = os.path.join(tempfile.gettempdir(), f'warracker-runtime-{uid}')
+    try:
+        os.makedirs(runtime_dir, mode=0o700, exist_ok=True)
+        os.chmod(runtime_dir, 0o700)
+    except OSError:
+        runtime_dir = tempfile.gettempdir()
+    return os.path.join(runtime_dir, f'scheduler_status_{pid}.json')
 
 
 def _collect_local_scheduler_jobs():

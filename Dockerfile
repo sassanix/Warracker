@@ -68,37 +68,40 @@ COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Configure directories with proper permissions
-RUN mkdir -p /app /var/www/html /var/log/supervisor /run/nginx && \
-    chown -R warracker:warracker /app /var/www/html /var/log/supervisor /run/nginx /home/warracker && \
-    chown -R warracker:warracker /var/log/nginx
+RUN mkdir -p /app /var/www/html /var/log/supervisor /run/nginx /run/nginx-init && \
+    chown -R root:root /app /var/www/html /run/nginx-init && \
+    chmod 700 /run/nginx-init && \
+    chown -R warracker:warracker /var/log/supervisor /run/nginx /home/warracker /var/log/nginx
 
 # Set working directory
 WORKDIR /app
 
 # 1. Configuration and static files first (rarely change)
-COPY --chown=warracker:warracker nginx.conf /etc/nginx/conf.d/default.conf.template
-COPY --chown=warracker:warracker babel.cfg ./
+# Owned by root:root so the unprivileged gunicorn worker (warracker) cannot
+# tamper with root-executed scripts, nginx templates, or application code.
+COPY --chown=root:root nginx.conf /etc/nginx/conf.d/default.conf.template
+COPY --chown=root:root babel.cfg ./
 
 # 2. Migration scripts and utilities
-COPY --chown=warracker:warracker backend/fix_permissions.py backend/fix_permissions.sql ./
-COPY --chown=warracker:warracker backend/migrations/ ./migrations/
+COPY --chown=root:root backend/fix_permissions.py backend/fix_permissions.sql ./
+COPY --chown=root:root backend/migrations/ ./migrations/
 
 # 3. Localization files
-COPY --chown=warracker:warracker locales/ ./locales/
-COPY --chown=warracker:warracker locales/ /var/www/html/locales/
+COPY --chown=root:root locales/ ./locales/
+COPY --chown=root:root locales/ /var/www/html/locales/
 
 # 4. Frontend (static files, no build step)
-COPY --chown=warracker:warracker frontend/ /var/www/html/
+COPY --chown=root:root frontend/ /var/www/html/
 
 # 5. Backend (bundled in one instruction)
-COPY --chown=warracker:warracker backend/ ./backend/
-COPY --chown=warracker:warracker backend/app.py backend/gunicorn_config.py ./
+COPY --chown=root:root backend/ ./backend/
+COPY --chown=root:root backend/app.py backend/gunicorn_config.py ./
 
 
 # Copy configuration files and scripts from Docker directory
 COPY --chown=root:root Docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY --chown=root:root Docker/logrotate-nginx /etc/logrotate.d/nginx-warracker
-COPY --chown=warracker:warracker Docker/entrypoint.sh /app/entrypoint.sh
+COPY --chown=root:root Docker/entrypoint.sh /app/entrypoint.sh
 COPY --chown=root:root Docker/nginx-wrapper.sh /app/nginx-wrapper.sh
 
 # Make scripts executable

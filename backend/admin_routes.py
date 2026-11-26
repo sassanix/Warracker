@@ -123,13 +123,24 @@ def update_user(user_id):
             if not user:
                 return jsonify({"message": "User not found"}), 404
             
+            # Validate boolean fields up front so non-boolean falsy values
+            # (0, "", null) cannot bypass the owner guard while bool() turns
+            # them into FALSE in SQL.
+            if 'is_admin' in data and not isinstance(data['is_admin'], bool):
+                return jsonify({"message": "is_admin must be a boolean"}), 400
+            if 'is_active' in data and not isinstance(data['is_active'], bool):
+                return jsonify({"message": "is_active must be a boolean"}), 400
+
             # Check if the user being updated is the owner
             if is_owner:
-                # If the user is the owner, prevent demotion or deactivation
-                if 'is_admin' in data and data['is_admin'] is False:
+                # If the user is the owner, prevent demotion, deactivation,
+                # or modification (e.g. email takeover) by another admin.
+                if 'is_admin' in data and not data['is_admin']:
                     return jsonify({"message": "The application owner cannot be demoted from admin status."}), 403
-                if 'is_active' in data and data['is_active'] is False:
+                if 'is_active' in data and not data['is_active']:
                     return jsonify({"message": "The application owner's account cannot be deactivated."}), 403
+                if not request.user.get('is_owner'):
+                    return jsonify({"message": "The application owner's account cannot be modified by another administrator."}), 403
             
             # Validate an email change up front: format plus
             # uniqueness across the other accounts.
@@ -142,7 +153,7 @@ def update_user(user_id):
                                         raw_email.strip())):
                     return jsonify({"message": "Invalid email address"}), 400
                 new_email = raw_email.strip()
-                cur.execute('SELECT id FROM users WHERE email = %s AND id != %s',
+                cur.execute('SELECT id FROM users WHERE LOWER(email) = LOWER(%s) AND id != %s',
                             (new_email, user_id))
                 if cur.fetchone():
                     return jsonify({"message": "Email address is already in use by another account"}), 400
@@ -193,7 +204,7 @@ def update_user(user_id):
         logger.error(f"Error updating user: {e}")
         if conn:
             conn.rollback()
-        return jsonify({"message": f"Failed to update user: {str(e)}"}), 500
+        return jsonify({"message": "Failed to update user"}), 500
     finally:
         if conn:
             release_db_connection(conn)
@@ -277,7 +288,7 @@ def delete_user(user_id):
         logger.error(f"Error deleting user: {e}")
         if conn:
             conn.rollback()
-        return jsonify({"message": f"Failed to delete user: {str(e)}"}), 500
+        return jsonify({"message": "Failed to delete user"}), 500
     finally:
         if conn:
             release_db_connection(conn)
@@ -656,6 +667,9 @@ def update_site_settings():
 def get_audit_trail():
     """Fetch audit trail records for administrators."""
     limit = request.args.get('limit', 100, type=int)
+    if limit is None or limit < 1:
+        limit = 100
+    limit = min(limit, 1000)
     conn = None
     try:
         conn = get_db_connection()
@@ -693,9 +707,8 @@ def trigger_notifications():
         result, status_code = notifications.trigger_notifications_manually(get_db_connection, release_db_connection)
         return jsonify(result), status_code
     except Exception as e:
-        error_msg = f"Error triggering notifications: {str(e)}"
-        logger.error(error_msg)
-        return jsonify({'message': 'Failed to trigger notifications', 'error': error_msg}), 500
+        logger.error(f"Error triggering notifications: {e}")
+        return jsonify({'message': 'Failed to trigger notifications', 'error': 'Internal server error'}), 500
 
 @admin_bp.route('/scheduler-status', methods=['GET'])
 @admin_required
@@ -708,7 +721,7 @@ def get_scheduler_status():
         return jsonify(status), 200
     except Exception as e:
         logger.error(f"Error getting scheduler status: {e}")
-        return jsonify({'error': f'Failed to get scheduler status: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to get scheduler status'}), 500
 
 # ============================
 # Apprise Admin Routes
@@ -760,7 +773,7 @@ def test_apprise_notification():
         logger.error(f"Error sending test Apprise notification: {e}")
         create_audit_log('APPRISE_TEST', target_type='Apprise', target_id='test-notification',
                          details='Test notification attempt errored')
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': 'Failed to send test notification'}), 500
 
 @admin_bp.route('/apprise/validate-url', methods=['POST'])
 @admin_required
@@ -785,7 +798,7 @@ def validate_apprise_url():
         
     except Exception as e:
         logger.error(f"Error validating Apprise URL: {e}")
-        return jsonify({'valid': False, 'message': f'Error: {str(e)}'}), 500
+        return jsonify({'valid': False, 'message': 'Failed to validate URL'}), 500
 
 @admin_bp.route('/apprise/supported-services', methods=['GET'])
 @admin_required
@@ -800,7 +813,7 @@ def get_supported_apprise_services():
         
     except Exception as e:
         logger.error(f"Error getting supported Apprise services: {e}")
-        return jsonify({'services': [], 'message': f'Error: {str(e)}'}), 500
+        return jsonify({'services': [], 'message': 'Failed to retrieve supported services'}), 500
 
 @admin_bp.route('/apprise/send-expiration', methods=['POST'])
 @admin_required
@@ -872,7 +885,7 @@ def trigger_apprise_expiration_notifications():
         
     except Exception as e:
         logger.error(f"Error triggering Apprise expiration notifications: {e}")
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': 'Failed to trigger Apprise expiration notifications'}), 500
 
 @admin_bp.route('/apprise/reload-config', methods=['POST'])
 @admin_required
@@ -893,7 +906,7 @@ def reload_apprise_configuration():
         
     except Exception as e:
         logger.error(f"Error reloading Apprise configuration: {e}")
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': 'Failed to reload Apprise configuration'}), 500
 
 @admin_bp.route('/apprise/send-custom', methods=['POST'])
 @admin_required
@@ -924,7 +937,7 @@ def send_custom_apprise_notification():
         logger.error(f"Error sending custom Apprise notification: {e}")
         create_audit_log('APPRISE_SEND_CUSTOM', target_type='Apprise', target_id='custom-notification',
                          details='Custom notification attempt errored')
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': 'Failed to send custom notification'}), 500
 
 @admin_bp.route('/apprise/status', methods=['GET'])
 @admin_required
@@ -956,5 +969,5 @@ def get_apprise_status():
         return jsonify({
             'available': False,
             'enabled': False,
-            'message': f'Error: {str(e)}'
+            'message': 'Failed to retrieve Apprise status'
         }), 500 
