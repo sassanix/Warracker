@@ -1,4 +1,4 @@
-const CACHE_NAME = 'warracker-cache-v20261126001';
+const CACHE_NAME = 'warracker-cache-v20261127001';
 const urlsToCache = [
   // HTML pages
   './',
@@ -13,28 +13,28 @@ const urlsToCache = [
   './auth-redirect.html',
 
   // Stylesheets (versioned)
-  './style.css?v=20250119004',
-  './settings-styles.css?v=20250119001',
+  './style.css?v=20261127001',
+  './settings-styles.css?v=20261127001',
   './header-fix.css?v=20250119001',
-  './mobile-header.css?v=20250119002',
+  './mobile-header.css?v=20261127001',
 
   // JavaScript (versioned)
-  './script.js?v=20260719002',
+  './script.js?v=20261127001',
   './auth.js?v=20250119001',
-  './settings-new.js?v=20250119001',
-  './status.js?v=20250119001',
+  './settings-new.js?v=20261127001',
+  './status.js?v=20261127001',
   './theme-loader.js?v=20250119001',
   './footer-fix.js?v=20251024001',
   './footer-content.js?v=20250119001',
   './include-auth-new.js?v=20250119001',
-  './file-utils.js?v=20250119001',
+  './file-utils.js?v=20261127001',
   './fix-auth-buttons-loader.js?v=20250119001',
   './auth-redirect.js?v=20260518001',
-  './mobile-menu.js?v=20250119002',
-  './version-checker.js?v=20250119001',
+  './mobile-menu.js?v=20261127001',
+  './version-checker.js?v=20261127001',
 
   // i18n libraries and config (versioned)
-  './js/i18n.js?v=20250119001',
+  './js/i18n.js?v=20261127001',
   './js/lib/i18next.min.js?v=20250119001',
   './js/lib/i18nextHttpBackend.min.js?v=20250119001',
   './js/lib/i18nextBrowserLanguageDetector.min.js?v=20250119001',
