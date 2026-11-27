@@ -2,6 +2,7 @@ import authService from '../services/authService.js';
 import { getWarranties, getIsGlobalView } from '../store.js';
 import { showToast, apiErrorMessage } from './ui.js';
 import { formatDate } from '../lib/dates.js';
+import { isPaperlessEnabled } from './paperless.js';
 
 const state = {
 	currentWarrantyId: null,
@@ -192,12 +193,15 @@ function documentsSectionHtml(claim, canEdit) {
 			</div>`;
 		})
 		.join('');
-	const addRow = canEdit
-		? `<div class="claim-documents-add">
-				<select class="claim-doc-storage">
+	const storageSelectHtml = isPaperlessEnabled()
+		? `<select class="claim-doc-storage">
 					<option value="local">${t('claims.storage_local', 'Upload file')}</option>
 					<option value="paperless">${t('claims.storage_paperless', 'Upload to Paperless')}</option>
-				</select>
+				</select>`
+		: '';
+	const addRow = canEdit
+		? `<div class="claim-documents-add">
+				${storageSelectHtml}
 				<button type="button" class="btn btn-sm btn-secondary claim-doc-attach" data-claim-id="${claim.id}"><i class="fas fa-paperclip"></i> ${t('claims.attach_document', 'Attach document')}</button>
 			</div>`
 		: '';
@@ -598,19 +602,21 @@ function createDocumentsSection(claim, canEdit) {
 
 	if (canEdit) {
 		const addRow = el('div', 'claim-documents-add');
-		const storageSelect = el('select', 'claim-doc-storage');
-		const optLocal = el('option', null, t('claims.storage_local', 'Upload file'));
-		optLocal.value = 'local';
-		const optPaperless = el('option', null, t('claims.storage_paperless', 'Upload to Paperless'));
-		optPaperless.value = 'paperless';
-		storageSelect.appendChild(optLocal);
-		storageSelect.appendChild(optPaperless);
+		if (isPaperlessEnabled()) {
+			const storageSelect = el('select', 'claim-doc-storage');
+			const optLocal = el('option', null, t('claims.storage_local', 'Upload file'));
+			optLocal.value = 'local';
+			const optPaperless = el('option', null, t('claims.storage_paperless', 'Upload to Paperless'));
+			optPaperless.value = 'paperless';
+			storageSelect.appendChild(optLocal);
+			storageSelect.appendChild(optPaperless);
+			addRow.appendChild(storageSelect);
+		}
 		const attachBtn = el('button', 'btn btn-sm btn-secondary claim-doc-attach');
 		attachBtn.type = 'button';
 		attachBtn.dataset.claimId = String(claim.id);
 		attachBtn.appendChild(el('i', 'fas fa-paperclip'));
 		attachBtn.appendChild(document.createTextNode(' ' + t('claims.attach_document', 'Attach document')));
-		addRow.appendChild(storageSelect);
 		addRow.appendChild(attachBtn);
 		section.appendChild(addRow);
 	}

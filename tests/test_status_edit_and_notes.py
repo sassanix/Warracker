@@ -37,16 +37,17 @@ def test_legacy_edit_modal_infers_exact_date_method():
 def test_notes_modal_disables_edit_notes_for_non_owners():
     notes = (REPO / "frontend" / "js" / "components" / "notes.js").read_text()
     assert "refs.editBtn.disabled = !canEdit" in notes
-    assert "refs.editBtn.title = 'View only - not your warranty'" in notes
+    assert "refs.editBtn.title = tNotes('warranties.view_only_not_your_warranty', 'View only - not your warranty')" in notes
     assert "refs.editWarrantyBtn.disabled = !canEdit" in notes
-    assert "refs.editWarrantyBtn.title = 'View only - not your warranty'" in notes
+    assert "refs.editWarrantyBtn.title = tNotes('warranties.view_only_not_your_warranty', 'View only - not your warranty')" in notes
 
 
 def test_status_page_disables_edit_button_for_non_owners():
     status_js = (REPO / "frontend" / "status.js").read_text()
     assert "function canEditWarranty(warrantyUserId)" in status_js
     assert "user_id: warranty.user_id" in status_js
-    assert 'disabled title="View only - not your warranty"' in status_js
+    assert "tStatus('warranties.view_only_not_your_warranty', 'View only - not your warranty')" in status_js
+    assert 'disabled title="${viewOnlyTitle}"' in status_js
 
 
 def test_total_value_card_has_z_index_above_charts():

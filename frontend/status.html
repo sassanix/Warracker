@@ -334,10 +334,10 @@
                 <button class="mobile-menu-toggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
                 <div id="authContainer" class="auth-buttons">
                     <a href="login.html" class="auth-btn login-btn">
-                        <i class="fas fa-sign-in-alt"></i> Login
+                        <i class="fas fa-sign-in-alt"></i> <span data-i18n="auth.login">Login</span>
                     </a>
                     <a href="register.html" class="auth-btn register-btn">
-                        <i class="fas fa-user-plus"></i> Register
+                        <i class="fas fa-user-plus"></i> <span data-i18n="auth.register">Register</span>
                     </a>
                 </div>
                 <div id="userMenu" class="user-menu" style="display: none;">
@@ -388,7 +388,7 @@
                             </button>
                         </div>
                     </div>
-                    <button id="refreshDashboardBtn" class="refresh-btn" title="Refresh dashboard">
+                    <button id="refreshDashboardBtn" class="refresh-btn" title="Refresh dashboard" data-i18n-title="status.refresh_dashboard">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                 </div>
@@ -402,8 +402,8 @@
             <!-- Error Message Container -->
             <div id="errorContainer" style="display: none;" class="error-message">
                 <i class="fas fa-exclamation-circle"></i>
-                <h3>Error Loading Dashboard</h3>
-                <p id="errorMessage">There was a problem loading the warranty statistics. Please try refreshing the page.</p>
+                <h3 data-i18n="status.error_loading_dashboard">Error Loading Dashboard</h3>
+                <p id="errorMessage" data-i18n="status.error_loading_stats">There was a problem loading the warranty statistics. Please try refreshing the page.</p>
                 <p id="errorDetails" class="error-details"></p>
             </div>
             
@@ -520,7 +520,7 @@
                                     <option value="archived" data-i18n="warranties.archived">Archived</option>
                                 </select>
                             </div>
-                            <button id="exportBtn" class="export-btn" title="Export data">
+                            <button id="exportBtn" class="export-btn" title="Export data" data-i18n-title="status.export_data">
                                 <i class="fas fa-download"></i> <span class="export-text" data-i18n="actions.export">Export</span>
                             </button>
                         </div>

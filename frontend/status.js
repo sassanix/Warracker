@@ -34,6 +34,20 @@
     let isDOMHandlerAttached = false; // Prevent multiple DOM handlers
     let initDashboardPromise = null; // Track ongoing initialization
 
+    function tStatus(key, fallback, opts) {
+        try {
+            if (window.i18next && typeof window.i18next.t === 'function' && window.i18next.isInitialized) {
+                const translated = opts ? window.i18next.t(key, opts) : window.i18next.t(key);
+                if (translated && translated !== key) return translated;
+            }
+            if (window.i18n && typeof window.i18n.t === 'function') {
+                const translated = opts ? window.i18n.t(key, opts) : window.i18n.t(key);
+                if (translated && translated !== key) return translated;
+            }
+        } catch (_) {}
+        return fallback;
+    }
+
     function setTheme(isDark) {
         const theme = isDark ? 'dark' : 'light';
         console.log('Setting theme from status.js IIFE to:', theme);
@@ -378,7 +392,7 @@
                     isDashboardInitialized = false; // Reset to allow refresh with new view
                     await initDashboard();
                 } else {
-                    showToast('Global view is not available', 'error');
+                    showToast(tStatus('messages.global_view_not_available', 'Global view is not available'), 'error');
                     // Switch back to personal view if global is disabled
                     await switchToPersonalView();
                 }
@@ -387,7 +401,7 @@
             }
         } catch (error) {
             console.error('Error switching to global view:', error);
-            showToast('Unable to switch to global view', 'error');
+            showToast(tStatus('messages.unable_switch_global_view', 'Unable to switch to global view'), 'error');
             // Switch back to personal view on error
             await switchToPersonalView();
         }
@@ -491,6 +505,8 @@
             const activeLabel = i18next.t('warranties.active');
             const expiringSoonLabel = i18next.t('warranties.expiring_soon');
             const expiredLabel = i18next.t('warranties.expired');
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const legendColor = isDark ? '#e0e0e0' : '#333333';
             
             statusChart = new Chart(ctx, {
                 type: 'doughnut',
@@ -498,7 +514,16 @@
                     labels: [activeLabel, expiringSoonLabel, expiredLabel],
                     datasets: [{ data: [trulyActive, expiringSoon, expired], backgroundColor: ['#4CAF50', '#FF9800', '#F44336'], borderWidth: 1 }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: legendColor }
+                        }
+                    }
+                }
             });
             console.log('Created new status chart');
         } catch (e) {
@@ -564,6 +589,9 @@
         try {
             // Get translated label for timeline chart
             const timelineLabel = i18next.t('status.expiration_timeline');
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const textColor = isDark ? '#e0e0e0' : '#333333';
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.1)';
             
             timelineChart = new Chart(ctx, {
                 type: 'bar',
@@ -571,7 +599,26 @@
                     labels: labels, 
                     datasets: [{ label: timelineLabel, data: counts, backgroundColor: '#3498db', borderWidth: 1 }] 
                 },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: textColor }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: textColor },
+                            grid: { color: gridColor }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0, color: textColor },
+                            grid: { color: gridColor }
+                        }
+                    }
+                }
             });
             console.log('Created new timeline chart');
         } catch (e) {
@@ -983,46 +1030,55 @@
             detailsCell.style.padding = '15px';
             detailsCell.style.backgroundColor = 'var(--details-bg, #f9f9f9)';
 
+            const naText = escapeHTML(tStatus('warranties.na', 'N/A'));
+            const storedInPaperless = escapeHTML(tStatus('warranties.stored_in_paperless', 'Stored in Paperless-ngx'));
+            const invoiceLabel = escapeHTML(tStatus('warranties.invoice_receipt_short', 'Invoice'));
+            const manualLabel = escapeHTML(tStatus('warranties.product_manual_short', 'Manual'));
+            const filesLabel = escapeHTML(tStatus('warranties.files_short', 'Other Files'));
+            const viewInvoiceLabel = escapeHTML(tStatus('warranties.view_invoice', 'View Invoice'));
+            const viewManualLabel = escapeHTML(tStatus('warranties.view_manual', 'View Manual'));
+            const viewFilesLabel = escapeHTML(tStatus('warranties.view_files', 'View Files'));
+
             let dHtml = '<div class="warranty-details-content" style="display: flex; flex-wrap: wrap; gap: 20px;">';
-            dHtml += '<div style="flex: 1 1 300px;"><h4>Core Information</h4>';
+            dHtml += `<div style="flex: 1 1 300px;"><h4>${escapeHTML(tStatus('warranties.core_information', 'Core Information'))}</h4>`;
             const safeProductUrl = (() => {
                 if (!warrantyDetails.product_url) return '';
                 const rawUrl = String(warrantyDetails.product_url).trim();
                 const normalizedUrl = rawUrl.replace(/[\u0000-\u0020\u007f]+/g, '');
                 return /^(javascript|data|vbscript):/i.test(normalizedUrl) ? '#' : rawUrl;
             })();
-            dHtml += `<p><strong>Product URL:</strong> ${warrantyDetails.product_url ? `<a href="${escapeHTML(safeProductUrl)}" target="_blank" rel="noopener noreferrer">${escapeHTML(warrantyDetails.product_url)}</a>` : 'N/A'}</p>`;
-            dHtml += `<p><strong>Purchase Price:</strong> ${warrantyDetails.purchase_price !== null && warrantyDetails.purchase_price !== undefined ? escapeHTML(userCurrencySymbol) + parseFloat(warrantyDetails.purchase_price).toFixed(2) : 'N/A'}</p>`;
-            dHtml += `<p><strong>Vendor:</strong> ${escapeHTML(warrantyDetails.vendor || '') || 'N/A'}</p>`;
-            dHtml += `<p><strong>Warranty Type:</strong> ${escapeHTML(warrantyDetails.warranty_type || '') || 'N/A'}</p></div>`;
+            dHtml += `<p><strong>${escapeHTML(tStatus('warranties.product_url', 'Product URL'))}:</strong> ${warrantyDetails.product_url ? `<a href="${escapeHTML(safeProductUrl)}" target="_blank" rel="noopener noreferrer">${escapeHTML(warrantyDetails.product_url)}</a>` : naText}</p>`;
+            dHtml += `<p><strong>${escapeHTML(tStatus('warranties.purchase_price', 'Purchase Price'))}:</strong> ${warrantyDetails.purchase_price !== null && warrantyDetails.purchase_price !== undefined ? escapeHTML(userCurrencySymbol) + parseFloat(warrantyDetails.purchase_price).toFixed(2) : naText}</p>`;
+            dHtml += `<p><strong>${escapeHTML(tStatus('warranties.vendor', 'Vendor'))}:</strong> ${escapeHTML(warrantyDetails.vendor || '') || naText}</p>`;
+            dHtml += `<p><strong>${escapeHTML(tStatus('warranties.warranty_type', 'Warranty Type'))}:</strong> ${escapeHTML(warrantyDetails.warranty_type || '') || naText}</p></div>`;
             
-            dHtml += '<div style="flex: 1 1 300px;"><h4>Documents & Files</h4>';
+            dHtml += `<div style="flex: 1 1 300px;"><h4>${escapeHTML(tStatus('warranties.documents_and_files', 'Documents & Files'))}</h4>`;
             
             // Invoice - check both local and Paperless-ngx
             if(warrantyDetails.invoice_path) {
-                dHtml += `<p><strong data-i18n="warranties.invoice_receipt_short">Invoice:</strong> <a href="#" onclick="window.openSecureFile('${escapeHTML(warrantyDetails.invoice_path)}'); return false;">View Invoice</a></p>`;
+                dHtml += `<p><strong>${invoiceLabel}:</strong> <a href="#" onclick="window.openSecureFile('${escapeHTML(warrantyDetails.invoice_path)}'); return false;">${viewInvoiceLabel}</a></p>`;
             } else if(warrantyDetails.paperless_invoice_id) {
-                dHtml += `<p><strong data-i18n="warranties.invoice_receipt_short">Invoice:</strong> <a href="#" onclick="window.openPaperlessDocument(${warrantyDetails.paperless_invoice_id}); return false;">View Invoice</a> <i class="fas fa-cloud" style="color: #4dabf7; margin-left: 4px; font-size: 0.8em;" title="Stored in Paperless-ngx"></i></p>`;
+                dHtml += `<p><strong>${invoiceLabel}:</strong> <a href="#" onclick="window.openPaperlessDocument(${warrantyDetails.paperless_invoice_id}); return false;">${viewInvoiceLabel}</a> <i class="fas fa-cloud" style="color: #4dabf7; margin-left: 4px; font-size: 0.8em;" title="${storedInPaperless}"></i></p>`;
             } else {
-                dHtml += `<p><strong data-i18n="warranties.invoice_receipt_short">Invoice:</strong> N/A</p>`;
+                dHtml += `<p><strong>${invoiceLabel}:</strong> ${naText}</p>`;
             }
             
             // Manual - check both local and Paperless-ngx
             if(warrantyDetails.manual_path) {
-                dHtml += `<p><strong data-i18n="warranties.product_manual_short">Manual:</strong> <a href="#" onclick="window.openSecureFile('${escapeHTML(warrantyDetails.manual_path)}'); return false;">View Manual</a></p>`;
+                dHtml += `<p><strong>${manualLabel}:</strong> <a href="#" onclick="window.openSecureFile('${escapeHTML(warrantyDetails.manual_path)}'); return false;">${viewManualLabel}</a></p>`;
             } else if(warrantyDetails.paperless_manual_id) {
-                dHtml += `<p><strong data-i18n="warranties.product_manual_short">Manual:</strong> <a href="#" onclick="window.openPaperlessDocument(${warrantyDetails.paperless_manual_id}); return false;">View Manual</a> <i class="fas fa-cloud" style="color: #4dabf7; margin-left: 4px; font-size: 0.8em;" title="Stored in Paperless-ngx"></i></p>`;
+                dHtml += `<p><strong>${manualLabel}:</strong> <a href="#" onclick="window.openPaperlessDocument(${warrantyDetails.paperless_manual_id}); return false;">${viewManualLabel}</a> <i class="fas fa-cloud" style="color: #4dabf7; margin-left: 4px; font-size: 0.8em;" title="${storedInPaperless}"></i></p>`;
             } else {
-                dHtml += `<p><strong data-i18n="warranties.product_manual_short">Manual:</strong> N/A</p>`;
+                dHtml += `<p><strong>${manualLabel}:</strong> ${naText}</p>`;
             }
             
             // Other Files - check both local and Paperless-ngx
             if(warrantyDetails.other_document_path) {
-                dHtml += `<p><strong data-i18n="warranties.files_short">Other Files:</strong> <a href="#" onclick="window.openSecureFile('${escapeHTML(warrantyDetails.other_document_path)}'); return false;">View Files</a></p>`;
+                dHtml += `<p><strong>${filesLabel}:</strong> <a href="#" onclick="window.openSecureFile('${escapeHTML(warrantyDetails.other_document_path)}'); return false;">${viewFilesLabel}</a></p>`;
             } else if(warrantyDetails.paperless_other_id) {
-                dHtml += `<p><strong data-i18n="warranties.files_short">Other Files:</strong> <a href="#" onclick="window.openPaperlessDocument(${warrantyDetails.paperless_other_id}); return false;">View Files</a> <i class="fas fa-cloud" style="color: #4dabf7; margin-left: 4px; font-size: 0.8em;" title="Stored in Paperless-ngx"></i></p>`;
+                dHtml += `<p><strong>${filesLabel}:</strong> <a href="#" onclick="window.openPaperlessDocument(${warrantyDetails.paperless_other_id}); return false;">${viewFilesLabel}</a> <i class="fas fa-cloud" style="color: #4dabf7; margin-left: 4px; font-size: 0.8em;" title="${storedInPaperless}"></i></p>`;
             } else {
-                dHtml += `<p><strong data-i18n="warranties.files_short">Other Files:</strong> N/A</p>`;
+                dHtml += `<p><strong>${filesLabel}:</strong> ${naText}</p>`;
             }
             
             dHtml += '</div>';
@@ -1031,14 +1087,14 @@
             console.log('[toggleWarrantyDetails] Serial numbers in warrantyDetails before rendering HTML:', JSON.parse(JSON.stringify(warrantyDetails.serial_numbers || [])));
 
             if (warrantyDetails.serial_numbers && warrantyDetails.serial_numbers.length > 0) {
-                dHtml += '<div style="flex: 1 1 300px;"><h4>Serial Numbers</h4><ul>';
+                dHtml += `<div style="flex: 1 1 300px;"><h4>${escapeHTML(tStatus('warranties.serial_numbers', 'Serial Numbers'))}</h4><ul>`;
                 warrantyDetails.serial_numbers.forEach(sn => { // Assuming sn is an object {serial_number: "value"}
                     dHtml += `<li>${escapeHTML(sn.serial_number || sn)}</li>`; // Handle if sn is string or object
                 });
                 dHtml += '</ul></div>';
             }
             if (warrantyDetails.notes && String(warrantyDetails.notes).trim() !== '') {
-                dHtml += '<div style="flex: 1 1 100%; margin-top: 10px;"><h4>Notes</h4>';
+                dHtml += `<div style="flex: 1 1 100%; margin-top: 10px;"><h4>${escapeHTML(tStatus('warranties.notes', 'Notes'))}</h4>`;
                 dHtml += `<pre style="white-space: pre-wrap; word-wrap: break-word; background-color: var(--notes-bg, #efefef); padding: 10px; border-radius: 4px;">${escapeHTML(warrantyDetails.notes)}</pre></div>`;
             }
             const detailExpiryCount = Number(warrantyDetails.expiry_change_count) || 0;
@@ -1053,9 +1109,11 @@
             dHtml += '</div>'; // end warranty-details-content
             dHtml += '<div class="warranty-details-actions" style="margin-top: 15px; text-align: right;">';
             const canEdit = canEditWarranty(warrantyDetails.user_id);
+            const editWarrantyLabel = escapeHTML(tStatus('warranties.edit_warranty', 'Edit Warranty'));
+            const viewOnlyTitle = escapeHTML(tStatus('warranties.view_only_not_your_warranty', 'View only - not your warranty'));
             dHtml += canEdit
-                ? `<button class="btn btn-primary edit-warranty-status-btn" data-warranty-id="${warrantyDetails.id}">Edit Warranty</button></div>`
-                : `<button class="btn btn-primary edit-warranty-status-btn" data-warranty-id="${warrantyDetails.id}" disabled title="View only - not your warranty">Edit Warranty</button></div>`;
+                ? `<button class="btn btn-primary edit-warranty-status-btn" data-warranty-id="${warrantyDetails.id}">${editWarrantyLabel}</button></div>`
+                : `<button class="btn btn-primary edit-warranty-status-btn" data-warranty-id="${warrantyDetails.id}" disabled title="${viewOnlyTitle}">${editWarrantyLabel}</button></div>`;
             
             detailsCell.innerHTML = dHtml;
             detailsRow.appendChild(detailsCell);
@@ -1162,7 +1220,7 @@
                     // Map: { 'YYYY-MM': count }
                     const timelineMap = {};
                     warranties.forEach(w => {
-                        if (w.is_lifetime) return; // Skip lifetime warranties
+                        if (w.is_lifetime || w.is_archived || w.is_voided) return; // Skip lifetime, archived, and voided warranties
                         if (!w.expiration_date) return;
                         let expDate = w.expiration_date;
                         if (typeof expDate === 'string') {
@@ -1270,7 +1328,7 @@
     document.addEventListener('click', async function(event) {
         if (event.target && event.target.classList.contains('edit-warranty-status-btn')) {
             const warrantyId = event.target.dataset.warrantyId;
-            if (!warrantyId) { showToast('Cannot edit warranty: ID is missing.', 'error'); return; }
+            if (!warrantyId) { showToast(tStatus('messages.cannot_edit_missing_id', 'Cannot edit warranty: ID is missing.'), 'error'); return; }
             console.log(`Edit button clicked for warranty ID (status.js IIFE): ${warrantyId}`);
             showLoading();
             let finalWarrantyForModal = null;
@@ -1401,13 +1459,13 @@
                     window.currentEditingWarrantyIdStatusPage = warrantyId; // For observer
                     await window.openEditModal(finalWarrantyForModal); 
                 } else {
-                    showToast('Edit modal functionality is not available.', 'error');
+                    showToast(tStatus('messages.edit_modal_not_available', 'Edit modal functionality is not available.'), 'error');
                     console.error("window.openEditModal is not a function. Ensure script.js is loaded and exposes it.");
                 }
 
             } catch (error) {
                 console.error('Error preparing for editing (status.js IIFE):', error);
-                showToast(`Error: ${error.message || 'Could not load warranty details for editing.'}`, 'error');
+                showToast(tStatus('messages.error_colon', `Error: ${error.message || 'Could not load warranty details for editing.'}`, { error: error.message || 'Could not load warranty details for editing.' }), 'error');
             } finally {
                 hideLoading(); // Hide main page loading, spinner for fetch is handled separately
             }
@@ -1438,7 +1496,7 @@
                 if (warrantyIdToReopen) {
                     console.log(`[Observer status.js] Condition PASSED. Warranty ID ${warrantyIdToReopen} found. Refreshing dashboard and scheduling details re-open.`);
                     console.log(`[Observer status.js] Warranty update detected for ID: ${warrantyIdToReopen}. Refreshing dashboard.`);
-                    showToast('Warranty updated. Refreshing list...', 'success');
+                    showToast(tStatus('messages.warranty_updated_refreshing', 'Warranty updated. Refreshing list...'), 'success');
                     
                     // Refresh the dashboard (which re-fetches and re-renders the table)
                     await initDashboard(); 

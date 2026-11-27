@@ -399,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Ensure globalManageTagsBtn triggers modal and tag form is always initialized ---
     // (Redundant with setupUIEventListeners, but ensures modal is always ready)
     const globalManageTagsBtn = document.getElementById('globalManageTagsBtn');
-    if (globalManageTagsBtn) {
+    if (globalManageTagsBtn && !(window.components && window.components.tagManager)) {
         globalManageTagsBtn.addEventListener('click', async () => {
             if (!allTags || allTags.length === 0) {
                 showLoadingSpinner();
@@ -427,9 +427,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 1. ALWAYS Initialize listeners for the global Tag Management Modal IF IT EXISTS
     if (globalTagManagementModal) {
-        if (globalNewTagForm) {
-            // Ensure the event listener is attached only once, or manage it if DOMContentLoaded could fire multiple times (not typical)
-            // For simplicity, assuming DOMContentLoaded runs once per page load.
+        const hasModularTagManager = !!(window.components && window.components.tagManager);
+        if (globalNewTagForm && !hasModularTagManager && globalNewTagForm.dataset.tagFormBound !== 'true') {
+            globalNewTagForm.dataset.tagFormBound = 'true';
             globalNewTagForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 // Inline implementation for creating a new tag from the modal
@@ -461,7 +461,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const closeButtons = globalTagManagementModal.querySelectorAll('[data-dismiss="modal"]');
         closeButtons.forEach(button => {
             button.addEventListener('click', (event) => {
-                globalTagManagementModal.style.display = 'none';
+                globalTagManagementModal.classList.remove('active');
+                globalTagManagementModal.style.display = '';
                 event.stopPropagation(); // This was the fix from before, ensuring it's applied
             });
         });
@@ -988,6 +989,20 @@ function hideLoading() {
     } else {
         console.error('WarrackerDebug: loadingContainer element not found by hideLoading().');
     }
+}
+
+function tScript(key, fallback, opts) {
+    try {
+        if (window.i18next && typeof window.i18next.t === 'function' && window.i18next.isInitialized) {
+            const translated = opts ? window.i18next.t(key, opts) : window.i18next.t(key);
+            if (translated && translated !== key) return translated;
+        }
+        if (window.i18n && typeof window.i18n.t === 'function') {
+            const translated = opts ? window.i18n.t(key, opts) : window.i18n.t(key);
+            if (translated && translated !== key) return translated;
+        }
+    } catch (_) {}
+    return fallback;
 }
 
 function showToast(message, type = 'info', duration = 5000) {
@@ -3013,7 +3028,7 @@ function openArchiveModal(warrantyId, productName) {
 // Confirm archive handler
 async function confirmArchive() {
     if (!currentWarrantyId) {
-        showToast('No warranty selected', 'error');
+        showToast(tScript('messages.no_warranty_selected', 'No warranty selected'), 'error');
         return;
     }
     try {
@@ -3573,7 +3588,7 @@ async function openClaimsModal(warrantyId) {
         
     } catch (error) {
         console.error('Error opening claims modal:', error);
-        showToast('Failed to open claims modal', 'error');
+        showToast(tScript('messages.failed_to_open_claims_modal', 'Failed to open claims modal'), 'error');
     }
 }
 
@@ -3804,7 +3819,7 @@ async function handleClaimFormSubmit(event) {
         
     } catch (error) {
         console.error('Error saving claim:', error);
-        showToast(error.message || 'Failed to save claim', 'error');
+        showToast(error.message || tScript('messages.failed_to_save_claim', 'Failed to save claim'), 'error');
     }
 }
 
@@ -3836,7 +3851,7 @@ async function deleteClaim(claimId) {
         
     } catch (error) {
         console.error('Error deleting claim:', error);
-        showToast(error.message || 'Failed to delete claim', 'error');
+        showToast(error.message || tScript('messages.failed_to_delete_claim', 'Failed to delete claim'), 'error');
     }
 }
 
@@ -4685,6 +4700,10 @@ function getContrastColor(hexColor) {
 
 // Open tag management modal
 function openTagManagementModal() {
+    if (window.components && window.components.tagManager && typeof window.components.tagManager.openTagManagementModal === 'function') {
+        window.components.tagManager.openTagManagementModal();
+        return;
+    }
     if (!tagManagementModal) return;
     
     // Populate existing tags
@@ -4692,6 +4711,7 @@ function openTagManagementModal() {
     addTagManagementEventListeners();
     
     // Show modal
+    tagManagementModal.style.display = '';
     tagManagementModal.classList.add('active');
 }
 
@@ -4859,6 +4879,7 @@ function updateTag(id, name, color) {
 
 // Centralized event delegation for tag management table
 function addTagManagementEventListeners() {
+    if (window.components && window.components.tagManager) return;
     if (!tagManagementModal) return;
     const container = existingTagsContainer;
     if (!container) return;
@@ -4942,7 +4963,7 @@ function addTagManagementEventListeners() {
 
 // Delete a tag
 function deleteTag(id) {
-    if (!confirm('Are you sure you want to delete this tag? It will be removed from all warranties.')) {
+    if (!confirm(tScript('messages.confirm_delete_tag', 'Are you sure you want to delete this tag? It will be removed from all warranties.'))) {
         return;
     }
     
@@ -5016,7 +5037,7 @@ function setupUIEventListeners() {
     }
     // --- Global Manage Tags Button ---
     const globalManageTagsBtn = document.getElementById('globalManageTagsBtn');
-    if (globalManageTagsBtn) {
+    if (globalManageTagsBtn && !(window.components && window.components.tagManager)) {
         globalManageTagsBtn.addEventListener('click', async () => {
             // Ensure allTags are loaded before opening the modal
             if (!allTags || allTags.length === 0) {
@@ -5464,7 +5485,7 @@ function deleteWarranty() {
     
     const token = localStorage.getItem('auth_token');
     if (!token) {
-        showToast('Authentication required', 'error');
+        showToast(tScript('messages.authentication_required', 'Authentication required'), 'error');
         return;
     }
     
@@ -5484,7 +5505,7 @@ function deleteWarranty() {
     })
     .then(data => {
         hideLoadingSpinner();
-        showToast('Warranty deleted successfully', 'success');
+        showToast(tScript('messages.warranty_deleted_successfully', 'Warranty deleted successfully'), 'success');
         closeModals();
 
         // --- BEGIN FIX: Update UI immediately ---
@@ -5500,7 +5521,7 @@ function deleteWarranty() {
     .catch(error => {
         hideLoadingSpinner();
         console.error('Error deleting warranty:', error);
-        showToast('Failed to delete warranty', 'error');
+        showToast(tScript('messages.failed_to_delete_warranty', 'Failed to delete warranty'), 'error');
     });
 }
 
@@ -5761,7 +5782,7 @@ function saveWarranty() {
     // Get auth token
     const token = localStorage.getItem('auth_token');
     if (!token) {
-        showToast('Authentication required', 'error');
+        showToast(tScript('messages.authentication_required', 'Authentication required'), 'error');
         return;
     }
     
@@ -5794,7 +5815,7 @@ function saveWarranty() {
         })
         .then(data => {
             hideLoadingSpinner();
-            showToast('Warranty updated successfully', 'success');
+            showToast(tScript('messages.warranty_updated_successfully', 'Warranty updated successfully'), 'success');
             closeModals();
         
         // Always reload from server to ensure we get the latest data including product photo paths
@@ -5837,7 +5858,7 @@ function saveWarranty() {
     .catch(error => {
         hideLoadingSpinner();
         console.error('Error updating warranty:', error);
-        showToast(error.message || 'Failed to update warranty', 'error');
+        showToast(error.message || tScript('messages.failed_to_update_warranty', 'Failed to update warranty'), 'error');
     });
 }
 
@@ -6208,12 +6229,12 @@ function setupModalTriggers() {
 
 async function handleImport(file) {
     if (!file) {
-        showToast('No file selected.', 'warning');
+        showToast(tScript('messages.no_file_selected', 'No file selected.'), 'warning');
         return;
     }
 
     if (!file.name.toLowerCase().endsWith('.csv')) {
-        showToast('Invalid file type. Please select a .csv file.', 'error');
+        showToast(tScript('messages.invalid_csv_file_type', 'Invalid file type. Please select a .csv file.'), 'error');
         return;
     }
 
@@ -6227,7 +6248,7 @@ async function handleImport(file) {
         // const token = localStorage.getItem('token'); // Incorrect key
         const token = localStorage.getItem('auth_token'); // Correct key used elsewhere
         if (!token) {
-            showToast('Authentication error. Please log in again.', 'error');
+            showToast(tScript('messages.auth_error_login_again', 'Authentication error. Please log in again.'), 'error');
             hideLoadingSpinner();
             // Maybe redirect to login: window.location.href = '/login.html';
             return;
@@ -6270,7 +6291,7 @@ async function handleImport(file) {
             // Force a UI refresh by reapplying filters
             applyFilters();
         } else {
-            showToast(`Import failed: ${result.error || 'Unknown error'}`, 'error');
+            showToast(tScript('messages.import_failed', `Import failed: ${result.error || 'Unknown error'}`, { error: result.error || 'Unknown error' }), 'error');
             if (result.errors) {
                  console.error('Detailed import errors:', result.errors);
             }
@@ -6279,7 +6300,7 @@ async function handleImport(file) {
     } catch (error) {
         hideLoadingSpinner();
         console.error('Error during file import:', error);
-        showToast('An error occurred during import. Check console for details.', 'error');
+        showToast(tScript('messages.import_error_details', 'An error occurred during import. Check console for details.'), 'error');
     } finally {
         // Reset the file input so the user can select the same file again if needed
         if (csvFileInput) {
@@ -6321,7 +6342,7 @@ window.addEventListener('storage', (event) => {
         // Re-apply filters to re-render warranties with the new date format
         if (warrantiesList) { // Only apply if the warranty list exists on the page
              applyFilters();
-             showToast('Date format updated.', 'info'); // Optional: Notify user
+             showToast(tScript('messages.date_format_updated', 'Date format updated.'), 'info'); // Optional: Notify user
         }
     }
     // --- End Added Check ---
@@ -6332,7 +6353,7 @@ window.addEventListener('storage', (event) => {
         if (warrantiesList) { // Only apply if on the main page
             updateCurrencySymbols(); // Update symbols outside cards (e.g., in forms if they exist)
             applyFilters(); // Re-render cards to update symbols inside them
-            showToast('Currency symbol updated.', 'info'); // Optional: Notify user
+            showToast(tScript('messages.currency_symbol_updated', 'Currency symbol updated.'), 'info'); // Optional: Notify user
         }
     }
     // --- End Added Check ---
@@ -6355,8 +6376,8 @@ if (!document.getElementById('notesModal')) {
                 <textarea id="notesModalTextarea" style="display:none;width:100%;min-height:100px;"></textarea>
                 <div id="notesThread" style="margin-top: 12px;"></div>
                 <div id="notesAddBox" style="margin-top: 12px;">
-                    <textarea id="notesAddTextarea" placeholder="Add a note for the team..." style="width:100%;min-height:60px;"></textarea>
-                    <button class="btn btn-primary" id="addNoteEntryBtn" style="margin-top: 6px;">Add Note</button>
+                    <textarea id="notesAddTextarea" data-i18n-placeholder="warranties.team_note_placeholder" placeholder="${tScript('warranties.team_note_placeholder', 'Add a note for the team...')}" style="width:100%;min-height:60px;"></textarea>
+                    <button class="btn btn-primary" id="addNoteEntryBtn" data-i18n="actions.add_note" style="margin-top: 6px;">${tScript('actions.add_note', 'Add Note')}</button>
                 </div>
             </div>
             <div class="modal-footer" id="notesModalFooter">
@@ -6439,7 +6460,7 @@ function showNotesModal(notes, warrantyOrId = null) {
     saveBtn.onclick = async function() {
         const newNote = notesModalTextarea.value.trim(); // Trim the note
         if (!notesModalWarrantyId || !notesModalWarrantyObj) {
-            showToast('No warranty selected for note update', 'error');
+            showToast(tScript('messages.no_warranty_for_note_update', 'No warranty selected for note update'), 'error');
             return;
         }
 
@@ -6449,7 +6470,7 @@ function showNotesModal(notes, warrantyOrId = null) {
             (parseInt(notesModalWarrantyObj.warranty_duration_months) || 0) === 0 &&
             (parseInt(notesModalWarrantyObj.warranty_duration_days) || 0) === 0 &&
             !notesModalWarrantyObj.expiration_date) {
-            showToast('Cannot save notes: The warranty has an invalid duration. Please edit the full warranty details to set a valid duration first.', 'error', 7000); // Longer toast duration
+            showToast(tScript('messages.cannot_save_notes_invalid_duration', 'Cannot save notes: The warranty has an invalid duration. Please edit the full warranty details to set a valid duration first.'), 'error', 7000); // Longer toast duration
             return; // Prevent API call
         }
 
@@ -6528,7 +6549,7 @@ function showNotesModal(notes, warrantyOrId = null) {
 
 
             hideLoadingSpinner();
-            showToast('Note updated', 'success');
+            showToast(tScript('messages.note_updated', 'Note updated'), 'success');
 
             // Update the warranty in the global warranties array immediately
             const warrantyIndex = warranties.findIndex(w => w.id === notesModalWarrantyId);
@@ -6562,7 +6583,7 @@ function showNotesModal(notes, warrantyOrId = null) {
         } catch (e) {
             hideLoadingSpinner();
             console.error("Error updating note:", e); // Log the error
-            showToast(e.message || 'Failed to update note', 'error'); // Show specific error if available
+            showToast(e.message || tScript('messages.failed_to_update_note', 'Failed to update note'), 'error'); // Show specific error if available
         }
     };
     // Cancel button handler
@@ -7511,7 +7532,7 @@ async function processPaperlessNgxUploads(formData) {
                         // Hide loading screen immediately for direct uploads
                         hidePaperlessUploadLoading();
                         if (uploadResult.error && uploadResult.error.includes("duplicate")) {
-                            showToast("Duplicate document detected in Paperless-ngx. Linked to existing document.", 'info');
+                            showToast(tScript('messages.paperless_duplicate_linked', 'Duplicate document detected in Paperless-ngx. Linked to existing document.'), 'info');
                         }
                     } else if (dbField && !uploadResult.document_id) {
                         console.log(`[Paperless-ngx] ${docType} uploaded successfully but no document ID received (async processing). Not storing reference.`);
@@ -7581,7 +7602,7 @@ async function processEditPaperlessNgxUploads(formData) {
                         // Hide loading screen immediately for direct uploads
                         hidePaperlessUploadLoading();
                         if (uploadResult.error && uploadResult.error.includes("duplicate")) {
-                            showToast("Duplicate document detected in Paperless-ngx. Linked to existing document.", 'info');
+                            showToast(tScript('messages.paperless_duplicate_linked', 'Duplicate document detected in Paperless-ngx. Linked to existing document.'), 'info');
                         }
                     } else if (dbField && !uploadResult.document_id) {
                         console.log(`[Paperless-ngx] ${docType} uploaded successfully (edit) but no document ID received (async processing). Not storing reference.`);
@@ -7664,12 +7685,12 @@ async function openPaperlessDocument(paperlessId, warrantyContext = null) {
         console.log('[openPaperlessDocument] Debug info:', debugInfo);
         
         if (!debugInfo.paperless_enabled || debugInfo.paperless_enabled === 'false') {
-            showToast('Paperless-ngx integration is not enabled', 'error');
+            showToast(tScript('messages.paperless_not_enabled', 'Paperless-ngx integration is not enabled'), 'error');
             return;
         }
         
         if (!debugInfo.paperless_handler_available) {
-            showToast('Paperless-ngx is not properly configured. Please check the settings.', 'error');
+            showToast(tScript('messages.paperless_not_configured', 'Paperless-ngx is not properly configured. Please check the settings.'), 'error');
             console.error('[openPaperlessDocument] Paperless handler not available');
             if (debugInfo.paperless_handler_error) {
                 console.error('[openPaperlessDocument] Handler error:', debugInfo.paperless_handler_error);
@@ -7678,7 +7699,7 @@ async function openPaperlessDocument(paperlessId, warrantyContext = null) {
         }
         
         if (debugInfo.test_connection_result && !debugInfo.test_connection_result.success) {
-            showToast(`Paperless-ngx connection failed: ${debugInfo.test_connection_result.message || debugInfo.test_connection_result.error}`, 'error');
+            showToast(tScript('messages.paperless_connection_failed', `Paperless-ngx connection failed: ${debugInfo.test_connection_result.message || debugInfo.test_connection_result.error}`, { error: debugInfo.test_connection_result.message || debugInfo.test_connection_result.error }), 'error');
             return;
         }
     }
@@ -7686,7 +7707,7 @@ async function openPaperlessDocument(paperlessId, warrantyContext = null) {
     const token = localStorage.getItem('auth_token');
     if (!token) {
         console.error('[openPaperlessDocument] No auth token available');
-        showToast('Authentication required', 'error');
+        showToast(tScript('messages.authentication_required', 'Authentication required'), 'error');
         return;
     }
     
@@ -7725,9 +7746,9 @@ async function openPaperlessDocument(paperlessId, warrantyContext = null) {
                 }
                 setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
                 if (!newTab) {
-                    showToast('Please allow popups to view documents', 'warning');
+                    showToast(tScript('messages.allow_popups', 'Please allow popups to view documents'), 'warning');
                 } else {
-                    showToast('Opening document in Warracker...', 'info');
+                    showToast(tScript('messages.opening_document_in_warracker', 'Opening document in Warracker...'), 'info');
                 }
             } else {
                 const downloadBlob = new Blob([blob], { type: 'application/octet-stream' });
@@ -7745,7 +7766,7 @@ async function openPaperlessDocument(paperlessId, warrantyContext = null) {
             }
         } catch (fileError) {
             console.error('[openPaperlessDocument] Failed to open document:', fileError);
-            showToast(`Error opening document: ${fileError.message}`, 'error');
+            showToast(tScript('messages.error_opening_document', `Error opening document: ${fileError.message}`, { error: fileError.message }), 'error');
         }
         return;
     }
@@ -7782,14 +7803,14 @@ async function openPaperlessDocument(paperlessId, warrantyContext = null) {
         const newTab = window.open(documentUrl, '_blank');
         if (newTab) {
             try { newTab.opener = null; } catch (_) {}
-            showToast('Opening document in Paperless-ngx...', 'info');
+            showToast(tScript('messages.opening_document_in_paperless', 'Opening document in Paperless-ngx...'), 'info');
         } else {
-            showToast('Please allow popups to view documents in Paperless-ngx', 'warning');
+            showToast(tScript('messages.allow_popups_paperless', 'Please allow popups to view documents in Paperless-ngx'), 'warning');
         }
         
     } catch (error) {
         console.error('Error opening Paperless document:', error);
-        showToast(`Error opening document: ${error.message}`, 'error');
+        showToast(tScript('messages.error_opening_document', `Error opening document: ${error.message}`, { error: error.message }), 'error');
         
         // Try to determine the base URL from debug info for fallback
         if (debugInfo && debugInfo.paperless_url) {
@@ -7799,7 +7820,7 @@ async function openPaperlessDocument(paperlessId, warrantyContext = null) {
             const fallbackTab = window.open(fallbackUrl, '_blank');
             if (fallbackTab) {
                 try { fallbackTab.opener = null; } catch (_) {}
-                showToast('Opened with fallback URL - please check if Paperless-ngx is accessible', 'warning');
+                showToast(tScript('messages.opened_with_fallback_url', 'Opened with fallback URL - please check if Paperless-ngx is accessible'), 'warning');
             }
         } else {
             // Last resort fallback
@@ -7809,7 +7830,7 @@ async function openPaperlessDocument(paperlessId, warrantyContext = null) {
             const genericTab = window.open(genericFallbackUrl, '_blank');
             if (genericTab) {
                 try { genericTab.opener = null; } catch (_) {}
-                showToast('Opened with generic fallback URL', 'warning');
+                showToast(tScript('messages.opened_with_generic_fallback_url', 'Opened with generic fallback URL'), 'warning');
             }
         }
     }
@@ -8001,7 +8022,7 @@ async function searchAndLinkPaperlessDocument(warrantyId, documentType, searchTi
         
         if (result.success) {
             console.log(`[Paperless-ngx] Document linked successfully: ID ${result.document_id}`);
-            showToast('Document linked successfully! Refreshing...', 'success');
+            showToast(tScript('messages.document_linked_refreshing', 'Document linked successfully! Refreshing...'), 'success');
             
             // Reload warranties to show the updated document links
             setTimeout(async () => {
@@ -8020,12 +8041,12 @@ async function searchAndLinkPaperlessDocument(warrantyId, documentType, searchTi
             return { success: true, document_id: result.document_id };
         } else {
             console.error(`[Paperless-ngx] Failed to link document: ${result.message}`);
-            showToast(`Failed to link document: ${result.message}`, 'error');
+            showToast(tScript('messages.failed_to_link_document', `Failed to link document: ${result.message}`, { message: result.message }), 'error');
             return { success: false, message: result.message };
         }
     } catch (error) {
         console.error(`[Paperless-ngx] Error searching for document:`, error);
-        showToast('Error searching for document', 'error');
+        showToast(tScript('messages.error_searching_document', 'Error searching for document'), 'error');
         return { success: false, message: error.message };
     }
 }
@@ -8254,7 +8275,7 @@ async function autoLinkRecentDocuments(warrantyId, documentTypes = ['invoice', '
                 
                 // Show success message with filenames
                 const docInfo = linkedDocuments.map(d => `${d.type} (${d.filename || d.title})`).join(', ');
-                showToast(`Automatically linked ${linkedDocuments.length} document(s): ${docInfo}`, 'success');
+                showToast(tScript('messages.autolinked_documents', `Automatically linked ${linkedDocuments.length} document(s): ${docInfo}`, { count: linkedDocuments.length, docInfo }), 'success');
                 
                 // Reload warranties to show the updated document links
                 setTimeout(async () => {
@@ -8284,7 +8305,7 @@ async function autoLinkRecentDocuments(warrantyId, documentTypes = ['invoice', '
             } else {
                 console.log(`[Auto-Link] No documents found after ${maxRetries} attempts`);
                 updatePaperlessUploadStatus('Document uploaded but could not auto-link');
-                showToast('Document uploaded to Paperless-ngx but could not be automatically linked. You can manually link it later.', 'warning');
+                showToast(tScript('messages.paperless_upload_autolink_failed', 'Document uploaded to Paperless-ngx but could not be automatically linked. You can manually link it later.'), 'warning');
                 // Hide loading screen after failed auto-link
                 setTimeout(() => {
                     hidePaperlessUploadLoading();
@@ -8300,7 +8321,7 @@ async function autoLinkRecentDocuments(warrantyId, documentTypes = ['invoice', '
                 setTimeout(tryLinking, retryDelay);
             } else {
                 updatePaperlessUploadStatus('Upload completed with errors');
-                showToast('Document uploaded but auto-linking failed due to errors. You can manually link it later.', 'warning');
+                showToast(tScript('messages.paperless_upload_autolink_failed_errors', 'Document uploaded but auto-linking failed due to errors. You can manually link it later.'), 'warning');
                 // Hide loading screen after final error
                 setTimeout(() => {
                     hidePaperlessUploadLoading();
@@ -8382,7 +8403,7 @@ window.manualLinkDocument = async function(warrantyId, documentType, titleSearch
         
         if (linkResult.success) {
             console.log(`✅ Successfully linked ${documentType}: ${docToLink.title}`);
-            showToast(`Document linked successfully: ${documentType}`, 'success');
+            showToast(tScript('messages.document_linked_successfully', `Document linked successfully: ${documentType}`, { documentType }), 'success');
             
             // Reload warranties to show the updated document links
             setTimeout(async () => {

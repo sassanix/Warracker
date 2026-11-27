@@ -1,4 +1,4 @@
-import { getWarranties, getFilters } from '../store.js';
+import { getWarranties, getFilters, wasLastLoadedArchived } from '../store.js';
 import { showToast, showLoadingSpinner, hideLoadingSpinner } from './ui.js';
 import { loadWarranties, applyFilters } from '../controllers/warrantyListController.js';
 import { loadTags } from './tagManager.js';
@@ -21,6 +21,56 @@ export function neutralizeCsvFormula(value) {
   return text;
 }
 
+export function filterWarrantiesForExport(warranties, filters = {}, options = {}) {
+  const statusFilter = filters.status || 'all';
+  const tagFilter = filters.tag || 'all';
+  const vendorFilter = filters.vendor || 'all';
+  const warrantyTypeFilter = filters.warranty_type || 'all';
+  const searchTerm = (filters.search || '').toLowerCase();
+  const isArchivedView = Boolean(options.isArchivedView);
+
+  return (Array.isArray(warranties) ? warranties : []).filter((warranty) => {
+    const isArchived = Boolean(warranty.is_archived || warranty.__isArchived || isArchivedView);
+    if (statusFilter === 'archived') {
+      if (!isArchived) return false;
+    } else if (statusFilter !== 'all') {
+      if (isArchived) return false;
+      if (warranty.status !== statusFilter) return false;
+    }
+
+    if (tagFilter !== 'all') {
+      const tagId = Number.parseInt(tagFilter, 10);
+      const hasTag = Array.isArray(warranty.tags)
+        && warranty.tags.some((tag) => tag.id === tagId);
+      if (!hasTag) return false;
+    }
+
+    if (vendorFilter !== 'all') {
+      if ((warranty.vendor || '').toLowerCase() !== String(vendorFilter).toLowerCase()) return false;
+    }
+
+    if (warrantyTypeFilter !== 'all') {
+      if ((warranty.warranty_type || '').toLowerCase() !== String(warrantyTypeFilter).toLowerCase()) return false;
+    }
+
+    if (searchTerm) {
+      const nameMatch = (warranty.product_name || '').toLowerCase().includes(searchTerm);
+      const vendorMatch = (warranty.vendor || '').toLowerCase().includes(searchTerm);
+      const tagMatch = Array.isArray(warranty.tags)
+        && warranty.tags.some((tag) => (tag.name || '').toLowerCase().includes(searchTerm));
+      const notesMatch = (warranty.notes || '').toLowerCase().includes(searchTerm);
+      const modelNumberMatch = (warranty.model_number || '').toLowerCase().includes(searchTerm);
+      const serialNumberMatch = Array.isArray(warranty.serial_numbers)
+        && warranty.serial_numbers.some((sn) => sn && String(sn).toLowerCase().includes(searchTerm));
+      if (!nameMatch && !vendorMatch && !tagMatch && !notesMatch && !modelNumberMatch && !serialNumberMatch) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
 export async function exportWarranties() {
   const warranties = getWarranties();
   if (!warranties.length) {
@@ -28,31 +78,9 @@ export async function exportWarranties() {
     return;
   }
   const filters = getFilters();
-  let filtered = [...warranties];
-  if (filters.search) {
-    const term = filters.search.toLowerCase();
-    filtered = filtered.filter((warranty) => {
-      const nameMatch = (warranty.product_name || '').toLowerCase().includes(term);
-      const vendorMatch = (warranty.vendor || '').toLowerCase().includes(term);
-      const tagMatch = Array.isArray(warranty.tags)
-        && warranty.tags.some((tag) => (tag.name || '').toLowerCase().includes(term));
-      return nameMatch || vendorMatch || tagMatch;
-    });
-  }
-  if (filters.status !== 'all') {
-    filtered = filtered.filter((warranty) => warranty.status === filters.status);
-  }
-  if (filters.tag !== 'all') {
-    const tagId = Number.parseInt(filters.tag, 10);
-    filtered = filtered.filter((warranty) => Array.isArray(warranty.tags)
-      && warranty.tags.some((tag) => tag.id === tagId));
-  }
-  if (filters.vendor !== 'all') {
-    filtered = filtered.filter((warranty) => (warranty.vendor || '').toLowerCase() === (filters.vendor || '').toLowerCase());
-  }
-  if (filters.warranty_type !== 'all') {
-    filtered = filtered.filter((warranty) => (warranty.warranty_type || '').toLowerCase() === (filters.warranty_type || '').toLowerCase());
-  }
+  const filtered = filterWarrantiesForExport(warranties, filters, {
+    isArchivedView: wasLastLoadedArchived(),
+  });
 
   if (!filtered.length) {
     showToast((window.i18next && window.i18next.t('messages.no_warranties_to_export') || 'No warranties to export'), 'info');

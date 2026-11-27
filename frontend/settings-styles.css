@@ -993,8 +993,23 @@ input:checked + .toggle-slider:before {
     border: 1px solid transparent;
     border-radius: 6px;
     display: flex;
-    align-items: center;
-    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.45;
+}
+
+.alert-info {
+    color: #0c5460;
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+}
+
+:root[data-theme="dark"] .alert-info,
+.dark-mode .alert-info {
+    color: #9eeaf9;
+    background-color: rgba(13, 202, 240, 0.12);
+    border-color: rgba(13, 202, 240, 0.3);
 }
 
 .alert-warning {
@@ -1007,6 +1022,26 @@ input:checked + .toggle-slider:before {
     color: #ffc107;
     background-color: rgba(255, 193, 7, 0.1);
     border-color: rgba(255, 193, 7, 0.3);
+}
+
+@media (max-width: 600px) {
+    .preference-item:has(.form-control) {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .preference-item:has(.form-control) .form-control {
+        width: 100%;
+    }
+
+    .alert {
+        display: block;
+    }
+
+    .alert i {
+        margin-inline-end: 6px;
+    }
 }
 
 .apprise-actions {

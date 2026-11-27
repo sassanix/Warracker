@@ -1,3 +1,17 @@
+function tSettings(key, fallback, opts) {
+    try {
+        if (window.i18next && typeof window.i18next.t === 'function' && window.i18next.isInitialized) {
+            const translated = opts ? window.i18next.t(key, opts) : window.i18next.t(key);
+            if (translated && translated !== key) return translated;
+        }
+        if (window.i18n && typeof window.i18n.t === 'function') {
+            const translated = opts ? window.i18n.t(key, opts) : window.i18n.t(key);
+            if (translated && translated !== key) return translated;
+        }
+    } catch (_) {}
+    return fallback;
+}
+
 // DOM Elements
 const darkModeToggle = document.getElementById('darkModeToggle');
 const darkModeToggleSetting = document.getElementById('darkModeToggleSetting');
@@ -214,7 +228,7 @@ function initLanguageSelector() {
         
         if (window.i18n?.changeLanguage) {
             try {
-                showToast('Changing language...', 'info');
+                showToast(tSettings('messages.changing_language', 'Changing language...'), 'info');
                 await window.i18n.changeLanguage(selectedLanguage);
                 showToast(window.t('messages.saved') || 'Language changed successfully', 'success');
                 
@@ -228,7 +242,7 @@ function initLanguageSelector() {
             }
         } else {
             console.warn('i18n changeLanguage function not available');
-            showToast('Language system not ready. Please try again.', 'error');
+            showToast(tSettings('messages.language_system_not_ready', 'Language system not ready. Please try again.'), 'error');
         }
     });
     
@@ -799,18 +813,18 @@ async function loadUserData() {
                 const errorData = await response.json().catch(() => ({ message: 'Failed to parse error response' }));
                 console.warn('API error fetching user data:', errorData.message);
                  if (!currentUser) {
-                    showToast(errorData.message || 'Failed to load fresh user data', 'warning');
+                    showToast(errorData.message || tSettings('messages.failed_to_load_fresh_user_data', 'Failed to load fresh user data'), 'warning');
                  }
             }
         } catch (apiError) {
             console.warn('API error, using localStorage data:', apiError);
              if (!currentUser) {
-                 showToast('Could not connect to fetch user data. Displaying cached info.', 'warning');
+                 showToast(tSettings('messages.could_not_connect_fetch_user_data', 'Could not connect to fetch user data. Displaying cached info.'), 'warning');
              }
         }
     } catch (error) {
         console.error('Error loading user data:', error);
-        showToast('Failed to load user data. Please try again.', 'error');
+        showToast(tSettings('messages.failed_load_user_data', 'Failed to load user data. Please try again.'), 'error');
         if (userNameDisplay) userNameDisplay.textContent = 'Error';
         if (userEmailDisplay) userEmailDisplay.textContent = 'Error';
     } finally {
@@ -929,6 +943,27 @@ async function loadPreferences() {
         console.log(`${prefix}defaultView not found, defaulting view to grid`);
     }
 
+    // Helper to resolve either a currency code (e.g. 'USD') or a currency symbol (e.g. '$')
+    // to a valid standard <option> value in currencySymbolSelect.
+    const resolveCurrencyOptionValue = (codeOrSymbol) => {
+        if (!codeOrSymbol || !currencySymbolSelect) return null;
+        const raw = String(codeOrSymbol).trim();
+        if (!raw) return null;
+        const options = Array.from(currencySymbolSelect.options);
+        const byCode = options.find(opt => opt.value !== 'other' && opt.value === raw);
+        if (byCode) return byCode.value;
+        const sharedDefaults = { '$': 'USD', '£': 'GBP', '¥': 'JPY', '₩': 'KRW', 'kr': 'SEK' };
+        const sharedCode = sharedDefaults[raw];
+        if (sharedCode && options.some(opt => opt.value === sharedCode)) {
+            return sharedCode;
+        }
+        const bySymbol = globalCurrenciesData.find(c => c.symbol === raw);
+        if (bySymbol && options.some(opt => opt.value === bySymbol.code)) {
+            return bySymbol.code;
+        }
+        return null;
+    };
+
     // Currency - Load stored preference first (code preferred; symbol is legacy)
     const storedCurrencyCode = localStorage.getItem(`${prefix}currencyCode`);
     const storedCurrency = storedCurrencyCode || localStorage.getItem(`${prefix}currencySymbol`);
@@ -938,15 +973,11 @@ async function loadPreferences() {
     
     if (storedCurrency) {
         if (currencySymbolSelect) {
-            // Check if the stored code/symbol matches a standard option
-            // (option values are currency codes; legacy stored values may be symbols)
-            const standardOption = Array.from(currencySymbolSelect.options).find(opt =>
-                opt.value === storedCurrency ||
-                (globalCurrenciesData.find(c => c.code === opt.value)?.symbol === storedCurrency));
-            if (standardOption) {
-                currencySymbolSelect.value = storedCurrency;
+            const resolvedCode = resolveCurrencyOptionValue(storedCurrency);
+            if (resolvedCode) {
+                currencySymbolSelect.value = resolvedCode;
                 if (currencySymbolCustom) currencySymbolCustom.style.display = 'none';
-                console.log(`Set currency dropdown to stored value: ${storedCurrency}`);
+                console.log(`Set currency dropdown to resolved code: ${resolvedCode} (from ${storedCurrency})`);
             } else {
                 // It's a custom symbol
                 currencySymbolSelect.value = 'other';
@@ -1009,16 +1040,15 @@ async function loadPreferences() {
                     }
                 }
                 // --- MODIFIED CURRENCY SYMBOL HANDLING ---
-                const storedCurrency = localStorage.getItem(`${prefix}currencySymbol`); // Get localStorage value again for comparison
+                const storedCurrencySymbol = localStorage.getItem(`${prefix}currencySymbol`);
                 if (apiPrefs.currency_symbol && currencySymbolSelect) {
                     // Only update UI from API if the API value is different from what was in localStorage
                     // Or if localStorage didn't have a value initially
-                    if (!storedCurrency || apiPrefs.currency_symbol !== storedCurrency) {
-                        console.log(`API currency_symbol (${apiPrefs.currency_symbol}) differs from localStorage (${storedCurrency}). Updating UI.`);
-                        // Logic to handle standard vs custom symbol from API
-                        const standardOption = Array.from(currencySymbolSelect.options).find(opt => opt.value === apiPrefs.currency_symbol);
-                        if (standardOption) {
-                            currencySymbolSelect.value = apiPrefs.currency_symbol;
+                    if (!storedCurrencySymbol || apiPrefs.currency_symbol !== storedCurrencySymbol) {
+                        console.log(`API currency_symbol (${apiPrefs.currency_symbol}) differs from localStorage (${storedCurrencySymbol}). Updating UI.`);
+                        const resolvedApiCode = resolveCurrencyOptionValue(apiPrefs.currency_symbol);
+                        if (resolvedApiCode) {
+                            currencySymbolSelect.value = resolvedApiCode;
                             if (currencySymbolCustom) currencySymbolCustom.style.display = 'none';
                         } else {
                             currencySymbolSelect.value = 'other';
@@ -1028,7 +1058,7 @@ async function loadPreferences() {
                             }
                         }
                     } else {
-                         console.log(`API currency_symbol (${apiPrefs.currency_symbol}) matches localStorage (${storedCurrency}). Skipping UI update.`);
+                         console.log(`API currency_symbol (${apiPrefs.currency_symbol}) matches localStorage (${storedCurrencySymbol}). Skipping UI update.`);
                     }
                 }
                 // --- END MODIFIED CURRENCY SYMBOL HANDLING ---
@@ -1643,20 +1673,20 @@ function resetPasswordForm() {
 async function saveProfile() {
     // Validate form
     if (!firstNameInput || !lastNameInput || !firstNameInput.value.trim() || !lastNameInput.value.trim()) {
-        showToast('Please fill in First Name and Last Name', 'error');
+        showToast(tSettings('messages.fill_first_last_name', 'Please fill in First Name and Last Name'), 'error');
         return;
     }
 
     // Get the new email value
     const newEmail = emailInput.value.trim();
     if (!newEmail) {
-        showToast('Email address cannot be empty.', 'error');
+        showToast(tSettings('messages.email_address_cannot_be_empty', 'Email address cannot be empty.'), 'error');
         return;
     }
     // Basic email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newEmail)) {
-        showToast('Please enter a valid email address.', 'error');
+        showToast(tSettings('messages.enter_valid_email_address', 'Please enter a valid email address.'), 'error');
         return;
     }
 
@@ -1671,7 +1701,7 @@ async function saveProfile() {
             ? profileCurrentPasswordInput.value : '';
         if (!currentPassword) {
             if (profilePasswordGroup) profilePasswordGroup.style.display = 'block';
-            showToast('Enter your current password to change your email address.', 'error');
+            showToast(tSettings('messages.enter_current_password_for_email', 'Enter your current password to change your email address.'), 'error');
             return;
         }
     }
@@ -1731,7 +1761,7 @@ async function saveProfile() {
                 console.warn("Auth module or checkAuthState not found, header might not update immediately.");
             }
 
-            showToast('Profile updated successfully', 'success');
+            showToast(tSettings('messages.profile_updated_successfully', 'Profile updated successfully'), 'success');
 
             // Clear the password field now that the change is saved.
             if (profileCurrentPasswordInput) profileCurrentPasswordInput.value = '';
@@ -1742,7 +1772,7 @@ async function saveProfile() {
         }
     } catch (error) {
         console.error('Error updating profile:', error);
-        showToast(`Failed to update profile: ${error.message}`, 'error');
+        showToast(tSettings('messages.failed_to_update_profile', `Failed to update profile: ${error.message}`, { error: error.message }), 'error');
     } finally {
         hideLoading();
     }
@@ -1842,7 +1872,7 @@ async function savePreferences() {
 
             hideLoading();
             if (response.ok) {
-                showToast('Preferences saved successfully.', 'success');
+                showToast(tSettings('messages.preferences_saved_successfully', 'Preferences saved successfully.'), 'success');
                 console.log('Preferences successfully saved to API.');
                 
                 // If language was changed, trigger the actual language change
@@ -1858,12 +1888,12 @@ async function savePreferences() {
                             }, 1000);
                         } catch (error) {
                             console.error('Failed to change language after saving preferences:', error);
-                            showToast('Failed to change language. Please try again.', 'error');
+                            showToast(tSettings('messages.failed_to_change_language', 'Failed to change language. Please try again.'), 'error');
                         }
                     }
                 } else if (preferencesToSave.preferred_language) {
                     console.warn('i18n changeLanguage function not available when saving preferences');
-                    showToast('Language system not ready. Settings saved but language not changed. Please refresh and try again.', 'warning');
+                    showToast(tSettings('messages.language_not_changed_refresh', 'Language system not ready. Settings saved but language not changed. Please refresh and try again.'), 'warning');
                 }
             } else {
                 console.error('Preferences save failed. Response status:', response.status);
@@ -1878,11 +1908,11 @@ async function savePreferences() {
         } catch (error) {
             hideLoading();
             console.error('Error saving preferences to API:', error);
-            showToast(`Preferences saved locally, but failed to sync with server: ${error.message}`, 'warning');
+            showToast(tSettings('messages.preferences_saved_locally_failed_to_sync', `Preferences saved locally, but failed to sync with server: ${error.message}`, { error: error.message }), 'warning');
         }
     } else {
         // No auth, just show local save success
-        showToast('Preferences saved locally.', 'success');
+        showToast(tSettings('messages.preferences_saved_locally', 'Preferences saved locally.'), 'success');
     }
 }
 
@@ -1892,18 +1922,18 @@ async function savePreferences() {
 async function changePassword() {
     // Validate form
     if (!currentPasswordInput.value || !newPasswordInput.value || !confirmPasswordInput.value) {
-        showToast('Please fill in all password fields', 'error');
+        showToast(tSettings('messages.fill_in_all_password_fields', 'Please fill in all password fields'), 'error');
         return;
     }
     
     if (newPasswordInput.value !== confirmPasswordInput.value) {
-        showToast('New passwords do not match', 'error');
+        showToast(tSettings('messages.new_passwords_do_not_match', 'New passwords do not match'), 'error');
         return;
     }
     
     // Validate password strength
     if (newPasswordInput.value.length < 8) {
-        showToast('Password must be at least 8 characters long', 'error');
+        showToast(tSettings('messages.password_at_least_8_characters', 'Password must be at least 8 characters long'), 'error');
         return;
     }
     
@@ -1937,7 +1967,7 @@ async function changePassword() {
         }
     } catch (error) {
         console.error('Error changing password:', error);
-        showToast(`Failed to change password: ${error.message}`, 'error');
+        showToast(tSettings('messages.failed_to_change_password', `Failed to change password: ${error.message}`, { error: error.message }), 'error');
     } finally {
         hideLoading();
     }
@@ -1948,14 +1978,14 @@ async function changePassword() {
  */
 async function deleteAccount() {
     if (deleteConfirmInput.value !== 'DELETE') {
-        showToast('Please type DELETE to confirm', 'error');
+        showToast(tSettings('messages.type_delete_to_confirm', 'Please type DELETE to confirm'), 'error');
         return;
     }
 
     const passwordVisible = deleteAccountPasswordGroup && deleteAccountPasswordGroup.style.display !== 'none';
     const password = deleteAccountPasswordInput ? deleteAccountPasswordInput.value : '';
     if (passwordVisible && !password) {
-        showToast('Please enter your current password to confirm', 'error');
+        showToast(tSettings('messages.enter_current_password_to_confirm', 'Please enter your current password to confirm'), 'error');
         return;
     }
     
@@ -1985,7 +2015,7 @@ async function deleteAccount() {
             }
             
             // Show success message
-            showToast('Account deleted successfully', 'success');
+            showToast(tSettings('messages.account_deleted_successfully', 'Account deleted successfully'), 'success');
             
             // Redirect to home page after a short delay
             setTimeout(() => {
@@ -2008,9 +2038,9 @@ async function deleteAccount() {
         console.error('Network error deleting account:', error);
         // Only show offline message for actual network errors
         if (error.name === 'TypeError' && error.message.includes('fetch')) {
-            showToast('Account cannot be deleted in offline mode', 'warning');
+            showToast(tSettings('messages.account_cannot_delete_offline', 'Account cannot be deleted in offline mode'), 'warning');
         } else {
-            showToast('Failed to delete account. Please try again.', 'error');
+            showToast(tSettings('messages.failed_delete_account', 'Failed to delete account. Please try again.'), 'error');
         }
     } finally {
         hideLoading();
@@ -2359,11 +2389,11 @@ async function loadUsers() {
             setupOwnershipManagement(users);
         } else {
             console.error('Failed to load users:', response.status);
-            showToast('Failed to load users', 'error');
+            showToast(tSettings('messages.failed_load_users', 'Failed to load users'), 'error');
         }
     } catch (error) {
         console.error('Error loading users:', error);
-        showToast('Error loading users', 'error');
+        showToast(tSettings('messages.error_loading_users', 'Error loading users'), 'error');
     } finally {
         hideLoading();
     }
@@ -2390,7 +2420,7 @@ async function saveUserChanges() {
     const userId = editUserId.value;
     
     if (!userId) {
-        showToast('User ID is missing', 'error');
+        showToast(tSettings('messages.user_id_missing', 'User ID is missing'), 'error');
         return;
     }
     
@@ -2411,16 +2441,16 @@ async function saveUserChanges() {
         });
         
         if (response.ok) {
-            showToast('User updated successfully', 'success');
+            showToast(tSettings('messages.user_updated_successfully', 'User updated successfully'), 'success');
             closeAllModals();
             loadUsers();
         } else {
             const errorData = await response.json();
-            showToast(errorData.message || 'Failed to update user', 'error');
+            showToast(errorData.message || tSettings('messages.failed_to_update_user', 'Failed to update user'), 'error');
         }
     } catch (error) {
         console.error('Error updating user:', error);
-        showToast('Failed to update user. Please try again.', 'error');
+        showToast(tSettings('messages.failed_to_update_user_try_again', 'Failed to update user. Please try again.'), 'error');
     } finally {
         hideLoading();
     }
@@ -2581,7 +2611,7 @@ function deleteUser() {
         console.log('Final User ID to delete:', userId);
         
         if (!userId) {
-            showToast('User ID is missing', 'error');
+            showToast(tSettings('messages.user_id_missing', 'User ID is missing'), 'error');
             console.error('Delete user failed: User ID is missing');
             return;
         }
@@ -2594,7 +2624,7 @@ function deleteUser() {
             .then(success => {
                 if (success) {
                     console.log('User deletion successful');
-                    showToast('User deleted successfully', 'success');
+                    showToast(tSettings('messages.user_deleted_successfully', 'User deleted successfully'), 'success');
                     closeAllModals();
                     loadUsers(); // Refresh the user list
                     
@@ -2606,7 +2636,7 @@ function deleteUser() {
                     }
                 } else {
                     console.error('User deletion failed');
-                    showToast('Failed to delete user. Check console for details.', 'error');
+                    showToast(tSettings('messages.failed_to_delete_user_check_console', 'Failed to delete user. Check console for details.'), 'error');
                 }
                 hideLoading();
             })
@@ -2616,15 +2646,15 @@ function deleteUser() {
                 hideLoading();
                 
                 // Try the direct API call as a fallback
-                if (confirm('Would you like to try a direct API call to delete the user?')) {
-                    const directToast = showToast(`Trying direct API call for user ID ${userId}...`, 'info', 0);
+                if (confirm(tSettings('messages.try_direct_api_delete_confirm', 'Would you like to try a direct API call to delete the user?'))) {
+                    const directToast = showToast(tSettings('messages.trying_direct_api_call_for_user_id', `Trying direct API call for user ID ${userId}...`, { userId }), 'info', 0);
                     
                     directDeleteUserAPI(userId)
                         .then(directSuccess => {
                             directToast.remove();
                             
                             if (directSuccess) {
-                                showToast(`User ID ${userId} deleted successfully with direct API call!`, 'success');
+                                showToast(tSettings('messages.user_id_deleted_successfully_with_direct_api_call', `User ID ${userId} deleted successfully with direct API call!`, { userId }), 'success');
                                 
                                 // Refresh the users list if it's currently displayed
                                 const usersModal = document.querySelector('div[style*="z-index: 10000"]');
@@ -2641,18 +2671,18 @@ function deleteUser() {
                         .catch(error => {
                             directToast.remove();
                             console.error('Error with direct API call:', error);
-                            showToast('Error with direct API call: ' + error.message, 'error');
+                            showToast(tSettings('messages.error_direct_api_call', 'Error with direct API call: ' + error.message, { error: error.message }), 'error');
                         });
                 }
             })
             .catch(error => {
                 console.error('Error checking if user exists:', error);
-                showToast('Error checking if user exists: ' + error.message, 'error');
+                showToast(tSettings('messages.error_checking_user_exists', 'Error checking if user exists: ' + error.message, { error: error.message }), 'error');
             });
     } catch (error) {
         console.error('Error in deleteUser function:', error);
         console.error('Error details:', error.message, error.stack);
-        showToast('Failed to delete user. Please try again.', 'error');
+        showToast(tSettings('messages.failed_delete_user_try_again', 'Failed to delete user. Please try again.'), 'error');
         hideLoading();
     }
     
@@ -2717,7 +2747,7 @@ function setupOwnershipManagement(users) {
         transferOwnershipBtn.addEventListener('click', function() {
             const selectedUserId = newOwnerSelect.value;
             if (!selectedUserId) {
-                showToast('Please select a user to transfer ownership to', 'error');
+                showToast(tSettings('messages.select_user_to_transfer_ownership', 'Please select a user to transfer ownership to'), 'error');
                 return;
             }
             
@@ -2740,7 +2770,7 @@ function openTransferOwnershipModal(targetUser) {
     const confirmBtn = document.getElementById('confirmTransferOwnershipBtn');
     
     if (!modal || !targetUsernameSpan || !confirmInput || !confirmBtn) {
-        showToast('Error: Transfer ownership modal elements not found', 'error');
+        showToast(tSettings('messages.transfer_ownership_modal_elements_not_found', 'Error: Transfer ownership modal elements not found'), 'error');
         return;
     }
     
@@ -2787,7 +2817,7 @@ async function performOwnershipTransfer(newOwnerId) {
         });
         
         if (response.ok) {
-            showToast('Ownership transferred successfully! Refreshing page...', 'success');
+            showToast(tSettings('messages.ownership_transferred_successfully', 'Ownership transferred successfully! Refreshing page...'), 'success');
             
             // Close modal
             if (modal) {
@@ -2800,11 +2830,11 @@ async function performOwnershipTransfer(newOwnerId) {
             }, 2000);
         } else {
             const errorData = await response.json();
-            showToast(errorData.message || 'Failed to transfer ownership', 'error');
+            showToast(errorData.message || tSettings('messages.failed_to_transfer_ownership', 'Failed to transfer ownership'), 'error');
         }
     } catch (error) {
         console.error('Error transferring ownership:', error);
-        showToast('Failed to transfer ownership. Please try again.', 'error');
+        showToast(tSettings('messages.failed_to_transfer_ownership_try_again', 'Failed to transfer ownership. Please try again.'), 'error');
     } finally {
         hideLoading();
     }
@@ -2972,7 +3002,7 @@ function checkAdminPermissions() {
     // Get the token
     const token = localStorage.getItem('auth_token');
     if (!token) {
-        alert('Error: Authentication token is missing');
+        alert(tSettings('messages.auth_token_missing', 'Error: Authentication token is missing'));
         return;
     }
     
@@ -2983,10 +3013,10 @@ function checkAdminPermissions() {
     // Check if the user is an admin
     if (userInfo.is_admin) {
         console.log('User is an admin');
-        alert('You are an admin user');
+        alert(tSettings('messages.you_are_admin', 'You are an admin user'));
     } else {
         console.log('User is not an admin');
-        alert('You are not an admin user');
+        alert(tSettings('messages.you_are_not_admin', 'You are not an admin user'));
     }
     
     // Make a request to the admin endpoint to verify permissions
@@ -3002,10 +3032,10 @@ function checkAdminPermissions() {
         
         if (response.ok) {
             console.log('Admin endpoint access successful');
-            alert('You have access to the admin endpoint');
+            alert(tSettings('messages.admin_endpoint_accessible', 'You have access to the admin endpoint'));
         } else {
             console.error('Admin endpoint access failed');
-            alert('You do not have access to the admin endpoint');
+            alert(tSettings('messages.admin_endpoint_denied', 'You do not have access to the admin endpoint'));
         }
         
         return response.text().catch(() => '');
@@ -3015,7 +3045,7 @@ function checkAdminPermissions() {
     })
     .catch(error => {
         console.error('Admin check error:', error);
-        alert('Error checking admin permissions: ' + error.message);
+        alert(tSettings('messages.error_checking_admin_permissions', 'Error checking admin permissions: ' + error.message, { error: error.message }));
     });
     
     console.log('=== CHECK ADMIN PERMISSIONS COMPLETED ===');
@@ -3030,7 +3060,7 @@ function showUsersList() {
     // Get the token
     const token = localStorage.getItem('auth_token');
     if (!token) {
-        alert('Error: Authentication token is missing');
+        alert(tSettings('messages.auth_token_missing', 'Error: Authentication token is missing'));
         return;
     }
     
@@ -3045,7 +3075,7 @@ function showUsersList() {
     .then(response => {
         if (!response.ok) {
             console.error('Failed to fetch users list:', response.status);
-            alert('Failed to fetch users list. Status: ' + response.status);
+            alert(tSettings('messages.failed_fetch_users_status', 'Failed to fetch users list. Status: ' + response.status, { status: response.status }));
             return null;
         }
         return response.json();
@@ -3205,18 +3235,18 @@ function showUsersList() {
                 deleteButton.title = 'Cannot delete yourself';
             } else {
                 deleteButton.addEventListener('click', function() {
-                    if (confirm(`Are you sure you want to delete user ${user.username} (ID: ${user.id})?`)) {
+                    if (confirm(`${tSettings('settings.delete_user_confirm_prefix', 'Are you sure you want to delete user')} ${user.username} (ID: ${user.id})?`)) {
                         document.body.removeChild(modal);
                         
                         // First check if the user still exists
-                        const checkingToast = showToast(`Checking if user ${user.username} still exists...`, 'info', 0);
+                        const checkingToast = showToast(tSettings('messages.checking_user', `Checking if user ${user.username} still exists...`), 'info', 0);
                         
                         checkUserExists(user.id)
                             .then(existingUser => {
                                 checkingToast.remove();
                                 
                                 if (!existingUser) {
-                                    showToast(`User ${user.username} no longer exists`, 'warning');
+                                    showToast(tSettings('messages.user_with_id_username_not_found', `User ${user.username} no longer exists`, { userId: user.username }), 'warning');
                                     showUsersList(); // Refresh the list
                                     return;
                                 }
@@ -3271,7 +3301,7 @@ function showUsersList() {
     })
     .catch(error => {
         console.error('Error fetching users:', error);
-        alert('Error fetching users: ' + error.message);
+        alert(tSettings('messages.error_fetching_users', 'Error fetching users: ' + error.message, { error: error.message }));
     });
     
     console.log('=== SHOW USERS LIST COMPLETED ===');
@@ -3378,25 +3408,25 @@ function testUserDeletion(userId) {
     // Check if we have a valid user ID
     if (!userId) {
         console.error('No user ID provided');
-        alert('Error: No user ID provided');
+        alert(tSettings('messages.error_no_user_id', 'Error: No user ID provided'));
         return;
     }
     
     // Show a loading indicator
-    const loadingToast = showToast('Checking user...', 'info', 0); // 0 means no auto-hide
+    const loadingToast = showToast(tSettings('messages.checking_user', 'Checking user...'), 'info', 0); // 0 means no auto-hide
     
     // First check if the user exists
     checkUserExists(userId)
         .then(user => {
             if (!user) {
                 loadingToast.remove();
-                showToast(`User with ID/username "${userId}" not found`, 'error');
+                showToast(tSettings('messages.user_with_id_username_not_found', `User with ID/username "${userId}" not found`, { userId }), 'error');
                 return;
             }
             
             // Update the loading toast
             loadingToast.remove();
-            const deletingToast = showToast(`Deleting user ${user.username} (ID: ${user.id})...`, 'info', 0);
+            const deletingToast = showToast(tSettings('messages.deleting_user', `Deleting user ${user.username} (ID: ${user.id})...`, { username: user.username, id: user.id }), 'info', 0);
             
             // Use our improved deletion function with the numeric ID
             return superEmergencyDelete(user.id)
@@ -3408,7 +3438,7 @@ function testUserDeletion(userId) {
                     
                     if (success) {
                         console.log('User deletion successful');
-                        showToast(`User ${user.username} deleted successfully!`, 'success');
+                        showToast(tSettings('messages.user_deleted_successfully_username', `User ${user.username} deleted successfully!`, { username: user.username }), 'success');
                         
                         // Refresh the users list if it's currently displayed
                         const usersModal = document.querySelector('div[style*="z-index: 10000"]');
@@ -3420,18 +3450,18 @@ function testUserDeletion(userId) {
                         }
                     } else {
                         console.error('User deletion failed');
-                        showToast(`Failed to delete user ${user.username}. Check console for details.`, 'error');
+                        showToast(tSettings('messages.failed_to_delete_user_check_console_username', `Failed to delete user ${user.username}. Check console for details.`, { username: user.username }), 'error');
                         
                         // Offer to try direct API call
-                        if (confirm(`Would you like to try a direct API call to delete user ${user.username}?`)) {
-                            const directToast = showToast(`Trying direct API call for user ${user.username}...`, 'info', 0);
+                        if (confirm(tSettings('messages.try_direct_api_delete_confirm', `Would you like to try a direct API call to delete user ${user.username}?`))) {
+                            const directToast = showToast(tSettings('messages.trying_direct_api_call_for_user_username', `Trying direct API call for user ${user.username}...`, { username: user.username }), 'info', 0);
                             
                             directDeleteUserAPI(user.id)
                                 .then(directSuccess => {
                                     directToast.remove();
                                     
                                     if (directSuccess) {
-                                        showToast(`User ${user.username} deleted successfully with direct API call!`, 'success');
+                                        showToast(tSettings('messages.user_deleted_successfully_with_direct_api_call_username', `User ${user.username} deleted successfully with direct API call!`, { username: user.username }), 'success');
                                         
                                         // Refresh the users list if it's currently displayed
                                         const usersModal = document.querySelector('div[style*="z-index: 10000"]');
@@ -3448,7 +3478,7 @@ function testUserDeletion(userId) {
                                 .catch(error => {
                                     directToast.remove();
                                     console.error('Error with direct API call:', error);
-                                    showToast('Error with direct API call: ' + error.message, 'error');
+                                    showToast(tSettings('messages.error_direct_api_call', 'Error with direct API call: ' + error.message, { error: error.message }), 'error');
                                 });
                         }
                     }
@@ -3460,13 +3490,13 @@ function testUserDeletion(userId) {
                     }
                     
                     console.error('Error during user deletion:', error);
-                    showToast('Error during user deletion: ' + error.message, 'error');
+                    showToast(tSettings('messages.error_during_user_deletion', 'Error during user deletion: ' + error.message, { error: error.message }), 'error');
                 });
         })
         .catch(error => {
             loadingToast.remove();
             console.error('Error checking if user exists:', error);
-            showToast('Error checking if user exists: ' + error.message, 'error');
+            showToast(tSettings('messages.error_checking_user_exists', 'Error checking if user exists: ' + error.message, { error: error.message }), 'error');
         });
     
     console.log('=== TEST USER DELETION COMPLETED ===');
@@ -3649,7 +3679,7 @@ async function loadSiteSettings() {
         
     } catch (error) { 
         console.error('Error loading or populating site settings:', error);
-        showToast('Failed to load site settings. Please try again.', 'error');
+        showToast(tSettings('messages.failed_load_site_settings', 'Failed to load site settings. Please try again.'), 'error');
     } finally { 
         hideLoading();
     }
@@ -3687,7 +3717,7 @@ async function saveSiteSettings() {
             }
             settingsToSave.email_base_url = baseUrl;
         } else if (baseUrl) {
-            showToast('Invalid Email Base URL format. It should start with http:// or https://', 'error');
+            showToast(tSettings('messages.invalid_email_base_url', 'Invalid Email Base URL format. It should start with http:// or https://'), 'error');
             return; 
         } else {
              settingsToSave.email_base_url = 'http://localhost:8080'; 
@@ -3696,7 +3726,7 @@ async function saveSiteSettings() {
     }
     
     if (Object.keys(settingsToSave).length === 0) {
-        showToast('No site settings to save.', 'info');
+        showToast(tSettings('messages.no_site_settings_to_save', 'No site settings to save.'), 'info');
         return;
     }
     
@@ -3716,13 +3746,13 @@ async function saveSiteSettings() {
         
         const result = await response.json();
         if (response.ok) {
-            showToast(result.message || 'Site settings saved successfully', 'success');
+            showToast(result.message || tSettings('messages.site_settings_saved_successfully', 'Site settings saved successfully'), 'success');
         } else {
             showToast(result.message || window.t('messages.failed_to_save_site_settings'), 'error');
         }
     } catch (error) {
         console.error('Error saving site settings:', error);
-        showToast('Failed to save site settings. Please try again.', 'error');
+        showToast(tSettings('messages.failed_to_save_site_settings_try_again', 'Failed to save site settings. Please try again.'), 'error');
     } finally {
         hideLoading();
     }
@@ -3766,7 +3796,7 @@ async function saveOidcSettings() {
 
         const result = await response.json();
         if (response.ok) {
-            showToast(result.message || 'OIDC settings saved successfully.', 'success');
+            showToast(result.message || tSettings('messages.oidc_settings_saved_successfully', 'OIDC settings saved successfully.'), 'success');
             if (result.message && result.message.includes("restart is required")) {
                 if(oidcRestartMessage) oidcRestartMessage.style.display = 'block';
             } else {
@@ -3777,11 +3807,11 @@ async function saveOidcSettings() {
             // Reload settings to get the oidc_client_secret_set flag updated
             loadSiteSettings(); 
         } else {
-            showToast(result.message || 'Failed to save OIDC settings.', 'error');
+            showToast(result.message || tSettings('messages.failed_save_oidc_settings', 'Failed to save OIDC settings.'), 'error');
         }
     } catch (error) {
         console.error('Error saving OIDC settings:', error);
-        showToast('Failed to save OIDC settings. Please try again.', 'error');
+        showToast(tSettings('messages.failed_to_save_oidc_settings_try_again', 'Failed to save OIDC settings. Please try again.'), 'error');
     } finally {
         hideLoading();
     }
@@ -4003,10 +4033,10 @@ function checkApiEndpoint() {
         console.log('API endpoint check response status:', response.status);
         if (response.ok) {
             console.log('API endpoint is accessible');
-            showToast('API endpoint is accessible', 'success');
+            showToast(tSettings('messages.api_endpoint_accessible', 'API endpoint is accessible'), 'success');
         } else {
             console.error('API endpoint is not accessible');
-            showToast('API endpoint is not accessible. Status: ' + response.status, 'error');
+            showToast(tSettings('messages.api_endpoint_not_accessible', 'API endpoint is not accessible. Status: ') + response.status, 'error');
         }
         return response.json().catch(() => ({}));
     })
@@ -4015,7 +4045,7 @@ function checkApiEndpoint() {
     })
     .catch(error => {
         console.error('Error checking API endpoint:', error);
-        showToast('Error checking API endpoint: ' + error.message, 'error');
+        showToast(tSettings('messages.error_checking_api_endpoint', 'Error checking API endpoint: ' + error.message, { error: error.message }), 'error');
     });
 }
 
@@ -4042,12 +4072,12 @@ async function triggerWarrantyNotifications() {
         const userData = await response.json();
         
         if (!userData.is_admin) {
-            showToast('Only administrators can send warranty notifications', 'error');
+            showToast(tSettings('messages.only_admins_send_notifications', 'Only administrators can send warranty notifications'), 'error');
             return;
         }
         
         // Show confirmation dialog
-        if (!confirm('Are you sure you want to send warranty expiration notifications to all eligible users? This will immediately email users with warranties expiring soon.')) {
+        if (!confirm(tSettings('messages.confirm_send_notifications_all', 'Are you sure you want to send warranty expiration notifications to all eligible users? This will immediately email users with warranties expiring soon.'))) {
             return;
         }
         
@@ -4068,11 +4098,11 @@ async function triggerWarrantyNotifications() {
         }
         
         const result = await notificationResponse.json();
-        showToast(result.message || 'Notifications triggered successfully', 'success');
+        showToast(result.message || tSettings('messages.notifications_triggered_successfully', 'Notifications triggered successfully'), 'success');
         
     } catch (error) {
         console.error('Error triggering notifications:', error);
-        showToast('Error: ' + error.message, 'error');
+        showToast(tSettings('messages.error_colon', 'Error: ' + error.message, { error: error.message }), 'error');
     } finally {
         hideLoading();
     }
@@ -4144,7 +4174,7 @@ async function checkSchedulerStatus() {
         
     } catch (error) {
         console.error('Error checking scheduler status:', error);
-        showToast(`Error checking scheduler status: ${error.message}`, 'error');
+        showToast(tSettings('messages.error_checking_scheduler_status', `Error checking scheduler status: ${error.message}`, { error: error.message }), 'error');
     } finally {
         hideLoading();
     }
@@ -4155,7 +4185,17 @@ async function checkSchedulerStatus() {
  * @returns {Promise} A promise that resolves when timezones are loaded
  */
 function loadTimezones() {
-    return loadTimezonesIntoSelect(timezoneSelect);
+    const tasks = [];
+    if (timezoneSelect) {
+        tasks.push(loadTimezonesIntoSelect(timezoneSelect));
+    }
+    if (userAppriseTimezoneSelect) {
+        tasks.push(loadTimezonesIntoSelect(userAppriseTimezoneSelect));
+    }
+    if (tasks.length === 0) {
+        return Promise.resolve();
+    }
+    return Promise.allSettled(tasks);
 }
 
 function loadTimezonesIntoSelect(selectElement) {
@@ -4195,21 +4235,34 @@ function loadTimezonesIntoSelect(selectElement) {
                 
                 selectElement.appendChild(optgroup);
             });
+
+            const applyTimezoneValue = (tz) => {
+                const hasOption = (val) => Array.from(selectElement.options).some(opt => opt.value === val);
+                if (tz && hasOption(tz)) {
+                    selectElement.value = tz;
+                } else if (hasOption('UTC')) {
+                    selectElement.value = 'UTC';
+                }
+            };
             
             // Set the current timezone from preferences
             // Get the appropriate key prefix based on user type
             const prefix = getPreferenceKeyPrefix();
             const savedPreferences = JSON.parse(localStorage.getItem(`${prefix}preferences`) || '{}');
+            const isAppriseSelect = selectElement === userAppriseTimezoneSelect;
+            const localTz = isAppriseSelect
+                ? (savedPreferences.apprise_timezone || savedPreferences.timezone)
+                : savedPreferences.timezone;
             
             console.log('Loading timezone preference from localStorage', {
                 prefix: prefix,
                 preferenceKey: `${prefix}preferences`,
-                savedTimezone: savedPreferences.timezone
+                savedTimezone: localTz
             });
             
-            if (savedPreferences.timezone) {
-                selectElement.value = savedPreferences.timezone;
-                console.log(`Set ${selectElement.id} to:`, savedPreferences.timezone, 'Current value:', selectElement.value);
+            if (localTz) {
+                applyTimezoneValue(localTz);
+                console.log(`Set ${selectElement.id} to:`, localTz, 'Current value:', selectElement.value);
                 resolve();
             } else {
                 // If no timezone preference found in localStorage, load from API as backup
@@ -4224,15 +4277,19 @@ function loadTimezonesIntoSelect(selectElement) {
                 .then(response => response.json())
                 .then(data => {
                     // API returns preferences directly, not nested
-                    if (data && data.timezone) {
-                        console.log('Received timezone from API:', data.timezone);
-                        selectElement.value = data.timezone;
-                        console.log(`Set ${selectElement.id} to:`, data.timezone, 'Current value:', selectElement.value);
+                    const apiTz = data ? (isAppriseSelect ? (data.apprise_timezone || data.timezone) : data.timezone) : null;
+                    if (apiTz) {
+                        console.log('Received timezone from API:', apiTz);
+                        applyTimezoneValue(apiTz);
+                        console.log(`Set ${selectElement.id} to:`, apiTz, 'Current value:', selectElement.value);
+                    } else {
+                        applyTimezoneValue('UTC');
                     }
                     resolve();
                 })
                 .catch(error => {
                     console.error('Error loading preferences from API:', error);
+                    applyTimezoneValue('UTC');
                     resolve(); // Still resolve to continue the chain
                 });
             }
@@ -4288,10 +4345,10 @@ async function saveNotificationSettings() {
             throw new Error(errorData.message || 'Failed to save notification settings');
         }
 
-        showToast('Notification settings saved successfully', 'success');
+        showToast(tSettings('messages.notification_settings_saved_successfully', 'Notification settings saved successfully'), 'success');
     } catch (error) {
         console.error('Error saving notification settings:', error);
-        showToast(`Error saving notification settings: ${error.message}`, 'error');
+        showToast(tSettings('messages.error_saving_notification_settings', `Error saving notification settings: ${error.message}`, { error: error.message }), 'error');
     } finally {
         hideLoading();
     }
@@ -4344,13 +4401,22 @@ window.addEventListener('storage', (event) => {
         }
     }
 
-    if (event.key === `${prefix}currencySymbol`) { // Simplified log for other keys
-         console.log(`[Settings Storage Listener] ${prefix}currencySymbol changed to ${event.newValue}`);
-         if (event.newValue && currencySymbolSelect && currencySymbolSelect.value !== event.newValue) {
-            // Handle standard vs custom symbol update
-             const standardOption = Array.from(currencySymbolSelect.options).find(opt => opt.value === event.newValue);
-             if (standardOption) {
-                 currencySymbolSelect.value = event.newValue;
+    if (event.key === `${prefix}currencySymbol` || event.key === `${prefix}currencyCode`) {
+         console.log(`[Settings Storage Listener] ${event.key} changed to ${event.newValue}`);
+         if (event.newValue && currencySymbolSelect) {
+             const sharedDefaults = { '$': 'USD', '£': 'GBP', '¥': 'JPY', '₩': 'KRW', 'kr': 'SEK' };
+             const options = Array.from(currencySymbolSelect.options);
+             const raw = String(event.newValue).trim();
+             const byCode = options.find(opt => opt.value !== 'other' && opt.value === raw);
+             const sharedCode = sharedDefaults[raw];
+             const bySymbol = globalCurrenciesData.find(c => c.symbol === raw);
+             const resolvedCode = (byCode && byCode.value)
+                 || (sharedCode && options.some(opt => opt.value === sharedCode) ? sharedCode : null)
+                 || (bySymbol && options.some(opt => opt.value === bySymbol.code) ? bySymbol.code : null);
+             if (resolvedCode) {
+                 if (currencySymbolSelect.value !== resolvedCode) {
+                     currencySymbolSelect.value = resolvedCode;
+                 }
                  if (currencySymbolCustom) currencySymbolCustom.style.display = 'none';
                  console.log('[Settings Storage Listener] Updated settings currency dropdown via storage event.');
              } else if (currencySymbolSelect.value !== 'other' || (currencySymbolCustom && currencySymbolCustom.value !== event.newValue)) {
@@ -4622,7 +4688,7 @@ async function saveAppriseSettings() {
 
         console.log('🔄 Reload response status:', reloadResponse.status);
 
-        showToast('Apprise settings saved successfully', 'success');
+        showToast(tSettings('messages.apprise_settings_saved_successfully', 'Apprise settings saved successfully'), 'success');
         
         // Reload status
         console.log('📱 Reloading Apprise settings...');
@@ -4630,7 +4696,7 @@ async function saveAppriseSettings() {
 
     } catch (error) {
         console.error('❌ Error saving Apprise settings:', error);
-        showToast(`Error saving Apprise settings: ${error.message}`, 'error');
+        showToast(tSettings('messages.error_saving_apprise_settings', `Error saving Apprise settings: ${error.message}`, { error: error.message }), 'error');
     } finally {
         hideLoading();
     }
@@ -4659,14 +4725,14 @@ async function sendTestAppriseNotification() {
         const data = await response.json();
 
         if (data.success) {
-            showToast('Test notification sent successfully', 'success');
+            showToast(tSettings('messages.test_notification_sent_successfully', 'Test notification sent successfully'), 'success');
         } else {
-            showToast(`Failed to send test notification: ${data.message}`, 'error');
+            showToast(tSettings('messages.failed_to_send_test_notification', `Failed to send test notification: ${data.message}`, { message: data.message }), 'error');
         }
 
     } catch (error) {
         console.error('Error sending test notification:', error);
-        showToast(`Error sending test notification: ${error.message}`, 'error');
+        showToast(tSettings('messages.error_sending_test_notification', `Error sending test notification: ${error.message}`, { error: error.message }), 'error');
     } finally {
         hideLoading();
     }
@@ -4685,7 +4751,7 @@ async function validateAppriseUrls() {
             .filter(url => url.length > 0);
 
         if (urls.length === 0) {
-            showToast('No URLs to validate', 'warning');
+            showToast(tSettings('messages.no_urls_to_validate', 'No URLs to validate'), 'warning');
             hideLoading();
             return;
         }
@@ -4726,7 +4792,7 @@ async function validateAppriseUrls() {
 
     } catch (error) {
         console.error('Error validating URLs:', error);
-        showToast(`Error validating URLs: ${error.message}`, 'error');
+        showToast(tSettings('messages.error_validating_urls', `Error validating URLs: ${error.message}`, { error: error.message }), 'error');
     } finally {
         hideLoading();
     }
@@ -4752,12 +4818,12 @@ async function triggerAppriseExpirationNotifications() {
         if (data.success) {
             showToast(data.message, 'success');
         } else {
-            showToast(`Failed to trigger notifications: ${data.message}`, 'error');
+            showToast(tSettings('messages.failed_to_trigger_notifications', `Failed to trigger notifications: ${data.message}`, { message: data.message }), 'error');
         }
 
     } catch (error) {
         console.error('Error triggering Apprise notifications:', error);
-        showToast(`Error triggering notifications: ${error.message}`, 'error');
+        showToast(tSettings('messages.error_triggering_notifications', `Error triggering notifications: ${error.message}`, { error: error.message }), 'error');
     } finally {
         hideLoading();
     }
@@ -4809,7 +4875,7 @@ async function saveAppriseEnabledState(enabled) {
 
     } catch (error) {
         console.error('❌ Error saving Apprise enabled state:', error);
-        showToast(`Error updating Apprise setting: ${error.message}`, 'error');
+        showToast(tSettings('messages.error_updating_apprise_setting', `Error updating Apprise setting: ${error.message}`, { error: error.message }), 'error');
         
         // Revert the toggle if save failed
         if (appriseEnabledToggle) {
@@ -4981,7 +5047,7 @@ async function loadPaperlessSettings() {
         
     } catch (error) {
         console.error('❌ Error loading Paperless-ngx settings:', error);
-        showToast(`Error loading Paperless-ngx settings: ${error.message}`, 'error');
+        showToast(tSettings('messages.error_loading_paperless_settings', `Error loading Paperless-ngx settings: ${error.message}`, { error: error.message }), 'error');
     }
 }
 
@@ -4997,7 +5063,7 @@ async function savePaperlessSettings() {
         // Validate URL format
         const url = paperlessUrlInput.value.trim();
         if (url && !isValidUrl(url)) {
-            showToast('Please enter a valid URL (e.g., https://paperless.yourdomain.com)', 'error');
+            showToast(tSettings('messages.enter_valid_paperless_url', 'Please enter a valid URL (e.g., https://paperless.yourdomain.com)'), 'error');
             return;
         }
         
@@ -5052,7 +5118,7 @@ async function savePaperlessSettings() {
         const prefix = getPreferenceKeyPrefix();
         localStorage.setItem(`${prefix}paperlessViewInApp`, paperlessViewInApp);
         
-        showToast('Paperless-ngx settings saved successfully!', 'success');
+        showToast(tSettings('messages.paperless_settings_saved_successfully', 'Paperless-ngx settings saved successfully!'), 'success');
         
         // Clear the API token input for security
         if (paperlessApiTokenInput) {
@@ -5064,7 +5130,7 @@ async function savePaperlessSettings() {
         
     } catch (error) {
         console.error('❌ Error saving Paperless-ngx settings:', error);
-        showToast(`Error saving Paperless-ngx settings: ${error.message}`, 'error');
+        showToast(tSettings('messages.error_saving_paperless_settings', `Error saving Paperless-ngx settings: ${error.message}`, { error: error.message }), 'error');
     } finally {
         hideLoading();
     }
@@ -5090,7 +5156,7 @@ async function testPaperlessConnection() {
         const apiToken = paperlessApiTokenInput.value.trim();
         
         if (!url) {
-            showToast('Please enter a Paperless-ngx URL first', 'warning');
+            showToast(tSettings('messages.enter_paperless_url_first', 'Please enter a Paperless-ngx URL first'), 'warning');
             return;
         }
         
@@ -5116,14 +5182,14 @@ async function testPaperlessConnection() {
                         ${escapeHtmlSafe(result.message)}
                         ${result.server_info ? `<br><small>Server: ${escapeHtmlSafe(result.server_info)}</small>` : ''}
                     `;
-                    showToast('Paperless-ngx connection test successful!', 'success');
+                    showToast(tSettings('messages.paperless_connection_test_successful', 'Paperless-ngx connection test successful!'), 'success');
                 } else {
                     paperlessConnectionStatus.className = 'paperless-status-message show error';
                     paperlessConnectionStatus.innerHTML = `
                         <strong>❌ Connection Failed!</strong><br>
                         ${escapeHtmlSafe(result.message)}
                     `;
-                    showToast('Paperless-ngx connection test failed', 'error');
+                    showToast(tSettings('messages.paperless_connection_test_failed', 'Paperless-ngx connection test failed'), 'error');
                 }
             }
             
@@ -5131,7 +5197,7 @@ async function testPaperlessConnection() {
         }
         
         if (!apiToken) {
-            showToast('Please enter an API token to test the connection', 'warning');
+            showToast(tSettings('messages.enter_api_token_test_connection', 'Please enter an API token to test the connection'), 'warning');
             return;
         }
         
@@ -5158,7 +5224,7 @@ async function testPaperlessConnection() {
                     ${escapeHtmlSafe(result.message)}
                     ${result.server_info ? `<br><small>Server: ${escapeHtmlSafe(result.server_info)}</small>` : ''}
                 `;
-                showToast('Paperless-ngx connection test successful!', 'success');
+                showToast(tSettings('messages.paperless_connection_test_successful', 'Paperless-ngx connection test successful!'), 'success');
             } else {
                 paperlessConnectionStatus.classList.add('show');
                 paperlessConnectionStatus.className = 'paperless-status-message show error';
@@ -5166,7 +5232,7 @@ async function testPaperlessConnection() {
                     <strong>❌ Connection Failed!</strong><br>
                     ${escapeHtmlSafe(result.message)}
                 `;
-                showToast('Paperless-ngx connection test failed', 'error');
+                showToast(tSettings('messages.paperless_connection_test_failed', 'Paperless-ngx connection test failed'), 'error');
             }
         }
         
@@ -5182,7 +5248,7 @@ async function testPaperlessConnection() {
             `;
         }
         
-        showToast(`Error testing connection: ${error.message}`, 'error');
+        showToast(tSettings('messages.error_testing_connection', `Error testing connection: ${error.message}`, { error: error.message }), 'error');
     } finally {
         hideLoading();
     }
@@ -5238,11 +5304,11 @@ async function debugPaperlessConfiguration() {
             setTimeout(() => debugArea.remove(), 10000); // Remove after 10 seconds
         }
         
-        showToast('Debug information logged to console', 'info');
+        showToast(tSettings('messages.debug_information_logged_to_console', 'Debug information logged to console'), 'info');
         
     } catch (error) {
         console.error('❌ Error running Paperless debug:', error);
-        showToast(`Debug error: ${error.message}`, 'error');
+        showToast(tSettings('messages.debug_error', `Debug error: ${error.message}`, { error: error.message }), 'error');
     } finally {
         hideLoading();
     }
@@ -5278,7 +5344,7 @@ async function testFileUpload() {
         console.log('🧪 File Upload Test Result:', result);
         
         if (result.success) {
-            showToast('File upload test successful!', 'success');
+            showToast(tSettings('messages.file_upload_test_successful', 'File upload test successful!'), 'success');
             if (paperlessConnectionStatus) {
                 paperlessConnectionStatus.classList.add('show');
                 paperlessConnectionStatus.className = 'paperless-status-message show success';
@@ -5289,7 +5355,7 @@ async function testFileUpload() {
                 `;
             }
         } else {
-            showToast('File upload test failed', 'error');
+            showToast(tSettings('messages.file_upload_test_failed', 'File upload test failed'), 'error');
             if (paperlessConnectionStatus) {
                 paperlessConnectionStatus.classList.add('show');
                 paperlessConnectionStatus.className = 'paperless-status-message show error';

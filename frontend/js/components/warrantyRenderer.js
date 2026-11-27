@@ -277,7 +277,7 @@ function generateDocumentLink(warranty, docType) {
 		const context = JSON.stringify({ user_id: warranty.user_id, id: warranty.id }).replace(/"/g, '&quot;');
 		linksHtml += `<a href="#" onclick="openPaperlessDocument(${config.paperlessId}, JSON.parse('${context}')); return false;" class="${config.className}">
 			<i class="${config.icon}"></i> ${config.label}
-			<i class="fas fa-cloud" style="color: #4dabf7; margin-left: 4px; font-size: 0.8em;" title="Stored in Paperless-ngx"></i>
+			<i class="fas fa-cloud" style="color: #4dabf7; margin-left: 4px; font-size: 0.8em;" title="${escapeHtml(t('warranties.stored_in_paperless', 'Stored in Paperless-ngx'))}"></i>
 		</a>`;
 	}
 
@@ -337,13 +337,14 @@ function resolveCanEdit(warranty, isGlobalView) {
 }
 
 function buildClaimsMeta(warranty) {
+	const claimsLabel = t('claims.claims', 'Claims');
 	if (warranty.claim_status_summary === 'OPEN') {
-		return { className: 'action-btn claims-link claims-open', title: 'Claims (Open)' };
+		return { className: 'action-btn claims-link claims-open', title: `${claimsLabel} (${t('claims.status_in_progress', 'In Progress')})` };
 	}
 	if (warranty.claim_status_summary === 'FINISHED') {
-		return { className: 'action-btn claims-link claims-finished', title: 'Claims (Finished)' };
+		return { className: 'action-btn claims-link claims-finished', title: `${claimsLabel} (${t('claims.status_resolved', 'Resolved')})` };
 	}
-	return { className: 'action-btn claims-link', title: 'Claims' };
+	return { className: 'action-btn claims-link', title: claimsLabel };
 }
 
 function buildGridOverflowMenu(warranty, { isArchivedView }) {
@@ -392,10 +393,10 @@ function buildGridOverflowMenu(warranty, { isArchivedView }) {
 function buildActionButtons(warranty, { canEdit, isArchivedView, claimsMeta, view }) {
 	if (!canEdit) {
 		return `
-			<button class="${claimsMeta.className}" title="${claimsMeta.title}" data-id="${warranty.id}">
+			<button class="${claimsMeta.className}" title="${escapeHtml(claimsMeta.title)}" data-id="${warranty.id}">
 				<i class="fas fa-clipboard-list"></i>
 			</button>
-			<span class="action-btn-placeholder" title="View only - not your warranty">
+			<span class="action-btn-placeholder" title="${escapeHtml(t('warranties.view_only_not_your_warranty', 'View only - not your warranty'))}">
 				<i class="fas fa-eye" style="color: #666;"></i>
 			</span>
 		`;
@@ -403,13 +404,13 @@ function buildActionButtons(warranty, { canEdit, isArchivedView, claimsMeta, vie
 	if (view === 'grid') {
 		const archived = isArchivedView || warranty.is_archived;
 		return `
-		<button class="${claimsMeta.className}" title="${claimsMeta.title}" data-id="${warranty.id}">
+		<button class="${claimsMeta.className}" title="${escapeHtml(claimsMeta.title)}" data-id="${warranty.id}">
 			<i class="fas fa-clipboard-list"></i>
 		</button>
 		${archived
 			? ''
 			: `
-				<button class="action-btn edit-btn" title="Edit" data-id="${warranty.id}">
+				<button class="action-btn edit-btn" title="${escapeHtml(t('actions.edit', 'Edit'))}" data-id="${warranty.id}">
 					<i class="fas fa-edit"></i>
 				</button>
 			`}
@@ -417,23 +418,23 @@ function buildActionButtons(warranty, { canEdit, isArchivedView, claimsMeta, vie
 	`;
 	}
 	return `
-		<button class="${claimsMeta.className}" title="${claimsMeta.title}" data-id="${warranty.id}">
+		<button class="${claimsMeta.className}" title="${escapeHtml(claimsMeta.title)}" data-id="${warranty.id}">
 			<i class="fas fa-clipboard-list"></i>
 		</button>
 		${isArchivedView || warranty.is_archived
 		? `
-				<button class="action-btn unarchive-btn" title="Unarchive" data-id="${warranty.id}">
+				<button class="action-btn unarchive-btn" title="${escapeHtml(t('actions.unarchive', 'Unarchive'))}" data-id="${warranty.id}">
 					<i class="fas fa-box-open"></i>
 				</button>
-				<button class="action-btn edit-btn" title="Edit (disabled in archived view)" data-id="${warranty.id}" disabled>
+				<button class="action-btn edit-btn" title="${escapeHtml(t('warranties.edit_disabled_archived', 'Edit (disabled in archived view)'))}" data-id="${warranty.id}" disabled>
 					<i class="fas fa-edit"></i>
 				</button>
 			`
 		: `
-				<button class="action-btn edit-btn" title="Edit" data-id="${warranty.id}">
+				<button class="action-btn edit-btn" title="${escapeHtml(t('actions.edit', 'Edit'))}" data-id="${warranty.id}">
 					<i class="fas fa-edit"></i>
 				</button>
-				<button class="action-btn archive-btn" title="Archive" data-id="${warranty.id}">
+				<button class="action-btn archive-btn" title="${escapeHtml(t('actions.archive', 'Archive'))}" data-id="${warranty.id}">
 					<i class="fas fa-archive"></i>
 				</button>
 				${warranty.is_voided
@@ -451,7 +452,7 @@ function buildActionButtons(warranty, { canEdit, isArchivedView, claimsMeta, vie
 		<button class="action-btn duplicate-btn" title="${t('warranties.duplicate_warranty', 'Duplicate warranty')}" data-id="${warranty.id}">
 			<i class="fas fa-copy"></i>
 		</button>
-		<button class="action-btn delete-btn" title="Delete" data-id="${warranty.id}">
+		<button class="action-btn delete-btn" title="${escapeHtml(t('actions.delete', 'Delete'))}" data-id="${warranty.id}">
 			<i class="fas fa-trash"></i>
 		</button>
 	`;
@@ -461,10 +462,11 @@ function cardClassName(warranty, view, statusClass) {
 	const isArchived = warranty.is_archived || warranty.viewFlags?.isArchivedView;
 	if (isArchived) return 'warranty-card archived';
 	if (warranty.is_voided) return 'warranty-card voided';
-	if (view === 'table') return `warranty-card status-${statusClass}`;
-	if (statusClass === 'expired') return 'warranty-card expired';
-	if (statusClass === 'expiring') return 'warranty-card expiring-soon';
-	return 'warranty-card active';
+	const modifier = statusClass === 'expired'
+		? 'expired'
+		: (statusClass === 'expiring' ? 'expiring-soon' : 'active');
+	if (view === 'table') return `warranty-card ${modifier} status-${statusClass}`;
+	return `warranty-card ${modifier}`;
 }
 
 function buildPhotoHtml(warranty, view) {
@@ -473,7 +475,7 @@ function buildPhotoHtml(warranty, view) {
 	const sanitizedPath = warranty.product_photo_path.replace('uploads/', '');
 	return `
 		<div class="product-photo-thumbnail">
-			<a href="#" onclick="openSecureFile('${warranty.product_photo_path}'); return false;" title="Click to view full size image">
+			<a href="#" onclick="openSecureFile('${warranty.product_photo_path}'); return false;" title="${escapeHtml(t('warranties.click_to_view_full_image', 'Click to view full size image'))}">
 				<img data-secure-src="/api/secure-file/${sanitizedPath}" alt="Product Photo"
 					style="width: ${config.size}px; height: ${config.size}px; object-fit: cover; border-radius: ${config.radius}px; border: ${config.border}; cursor: pointer;"
 					onerror="this.style.display='none'" class="secure-image">

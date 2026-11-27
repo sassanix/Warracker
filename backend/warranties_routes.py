@@ -2923,7 +2923,18 @@ def get_timezones():
             })
         
         # Convert to frontend expected format: array of objects with region and timezones
-        timezone_groups_array = []
+        timezone_groups_array = [
+            {
+                'region': 'UTC',
+                'timezones': [
+                    {
+                        'value': 'UTC',
+                        'label': 'UTC (Coordinated Universal Time)',
+                        'full_name': 'UTC'
+                    }
+                ]
+            }
+        ]
         for region, timezones in grouped_timezones.items():
             timezone_groups_array.append({
                 'region': region,

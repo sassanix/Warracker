@@ -345,14 +345,20 @@ function translatePage() {
     document.querySelectorAll('[data-i18n-html]').forEach(element => {
         const key = element.getAttribute('data-i18n-html');
         const translation = window.i18n.t(key);
-        element.innerHTML = translation;
+        if (translation && translation !== key) {
+            element.innerHTML = translation;
+            translatedCount++;
+        }
     });
     
     // Translate elements with data-i18n-title attribute
     document.querySelectorAll('[data-i18n-title]').forEach(element => {
         const key = element.getAttribute('data-i18n-title');
         const translation = window.i18n.t(key);
-        element.title = translation;
+        if (translation && translation !== key) {
+            element.title = translation;
+            translatedCount++;
+        }
     });
     
     // Translate elements with data-i18n-placeholder attribute

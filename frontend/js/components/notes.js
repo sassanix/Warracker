@@ -1,10 +1,25 @@
 import { getWarranties, setWarranties } from '../store.js';
 import { showLoadingSpinner, hideLoadingSpinner, showToast } from './ui.js';
 
-const DEFAULT_MODAL_HTML = `
+function tNotes(key, fallback) {
+	try {
+		if (window.i18next && typeof window.i18next.t === 'function' && window.i18next.isInitialized) {
+			const translated = window.i18next.t(key);
+			if (translated && translated !== key) return translated;
+		}
+		if (window.i18n && typeof window.i18n.t === 'function') {
+			const translated = window.i18n.t(key);
+			if (translated && translated !== key) return translated;
+		}
+	} catch (_) {}
+	return fallback;
+}
+
+function buildDefaultModalHtml() {
+	return `
 	<div class="modal" style="max-width: 500px;">
 		<div class="modal-header">
-			<h3 class="modal-title">${(window.i18next && window.i18next.t('warranties.notes_title') || 'Warranty Notes')}</h3>
+			<h3 class="modal-title" data-i18n="warranties.notes_title">${tNotes('warranties.notes_title', 'Warranty Notes')}</h3>
 			<button class="close-btn" id="closeNotesModal">&times;</button>
 		</div>
 		<div class="modal-body">
@@ -12,18 +27,19 @@ const DEFAULT_MODAL_HTML = `
 			<textarea id="notesModalTextarea" style="display:none;width:100%;min-height:100px;"></textarea>
 			<div id="notesThread" style="margin-top: 12px;"></div>
 			<div id="notesAddBox" style="margin-top: 12px;">
-				<textarea id="notesAddTextarea" placeholder="Add a note for the team..." style="width:100%;min-height:60px;"></textarea>
-				<button class="btn btn-primary" id="addNoteEntryBtn" style="margin-top: 6px;">Add Note</button>
+				<textarea id="notesAddTextarea" data-i18n-placeholder="warranties.team_note_placeholder" placeholder="${tNotes('warranties.team_note_placeholder', 'Add a note for the team...')}" style="width:100%;min-height:60px;"></textarea>
+				<button class="btn btn-primary" id="addNoteEntryBtn" data-i18n="actions.add_note" style="margin-top: 6px;">${tNotes('actions.add_note', 'Add Note')}</button>
 			</div>
 		</div>
 		<div class="modal-footer" id="notesModalFooter">
-			<button class="btn btn-secondary" id="editNotesBtn">${(window.i18next && window.i18next.t('actions.edit_notes') || 'Edit Notes')}</button>
-			<button class="btn btn-info" id="editWarrantyBtn">${(window.i18next && window.i18next.t('actions.edit_warranty') || 'Edit Warranty')}</button>
-			<button class="btn btn-primary" id="saveNotesBtn" style="display:none;">${(window.i18next && window.i18next.t('actions.save') || 'Save')}</button>
-			<button class="btn btn-danger" id="cancelEditNotesBtn" style="display:none;">${(window.i18next && window.i18next.t('actions.cancel') || 'Cancel')}</button>
+			<button class="btn btn-secondary" id="editNotesBtn" data-i18n="actions.edit_notes">${tNotes('actions.edit_notes', 'Edit Notes')}</button>
+			<button class="btn btn-info" id="editWarrantyBtn" data-i18n="actions.edit_warranty">${tNotes('actions.edit_warranty', 'Edit Warranty')}</button>
+			<button class="btn btn-primary" id="saveNotesBtn" data-i18n="actions.save" style="display:none;">${tNotes('actions.save', 'Save')}</button>
+			<button class="btn btn-danger" id="cancelEditNotesBtn" data-i18n="actions.cancel" style="display:none;">${tNotes('actions.cancel', 'Cancel')}</button>
 		</div>
 	</div>
 `;
+}
 
 const state = {
 	warrantyId: null,
@@ -60,7 +76,7 @@ function ensureModal() {
 		modal = document.createElement('div');
 		modal.id = 'notesModal';
 		modal.className = 'modal-backdrop';
-		modal.innerHTML = DEFAULT_MODAL_HTML;
+		modal.innerHTML = buildDefaultModalHtml();
 		document.body.appendChild(modal);
 	}
 	refreshDomRefs();
@@ -181,17 +197,11 @@ function buildFormData(warranty, noteValue) {
 	if (warranty.purchase_price !== null && warranty.purchase_price !== undefined) {
 		formData.append('purchase_price', warranty.purchase_price);
 	}
-	const vendorInput = document.getElementById('editVendorOrRetailer');
-	if (vendorInput) {
-		formData.append('vendor', vendorInput.value.trim());
-	} else if (warranty.vendor) {
+	if (warranty.vendor !== null && warranty.vendor !== undefined && warranty.vendor !== '') {
 		formData.append('vendor', warranty.vendor);
 	}
 	if (warranty.warranty_type) formData.append('warranty_type', warranty.warranty_type);
-	const modelNumberInput = document.getElementById('editModelNumber');
-	if (modelNumberInput && modelNumberInput.value.trim() !== '') {
-		formData.append('model_number', modelNumberInput.value.trim());
-	} else if (typeof warranty.model_number !== 'undefined' && warranty.model_number !== null) {
+	if (typeof warranty.model_number !== 'undefined' && warranty.model_number !== null) {
 		formData.append('model_number', warranty.model_number);
 	}
 	if (Array.isArray(warranty.serial_numbers)) {
@@ -430,6 +440,14 @@ export function showNotesModal(notes, warrantyOrId = null) {
 	state.warranty = warranty || null;
 	const contentText = typeof notes === 'string' ? notes : warranty?.notes || '';
 	if (!refs.modal) return;
+	const titleEl = refs.modal.querySelector('.modal-title');
+	if (titleEl) titleEl.textContent = tNotes('warranties.notes_title', 'Warranty Notes');
+	if (refs.addTextarea) refs.addTextarea.placeholder = tNotes('warranties.team_note_placeholder', 'Add a note for the team...');
+	if (refs.addBtn) refs.addBtn.textContent = tNotes('actions.add_note', 'Add Note');
+	if (refs.editBtn) refs.editBtn.textContent = tNotes('actions.edit_notes', 'Edit Notes');
+	if (refs.editWarrantyBtn) refs.editWarrantyBtn.textContent = tNotes('actions.edit_warranty', 'Edit Warranty');
+	if (refs.saveBtn) refs.saveBtn.textContent = tNotes('actions.save', 'Save');
+	if (refs.cancelBtn) refs.cancelBtn.textContent = tNotes('actions.cancel', 'Cancel');
 	refs.content.textContent = contentText || '';
 	refs.textarea.value = contentText || '';
 	if (refs.thread) refs.thread.innerHTML = '';
@@ -439,7 +457,7 @@ export function showNotesModal(notes, warrantyOrId = null) {
 		if (canEdit) {
 			refs.editWarrantyBtn.removeAttribute('title');
 		} else {
-			refs.editWarrantyBtn.title = 'View only - not your warranty';
+			refs.editWarrantyBtn.title = tNotes('warranties.view_only_not_your_warranty', 'View only - not your warranty');
 		}
 	}
 	if (refs.editBtn) {
@@ -451,7 +469,7 @@ export function showNotesModal(notes, warrantyOrId = null) {
 		if (canEdit) {
 			refs.editBtn.removeAttribute('title');
 		} else {
-			refs.editBtn.title = 'View only - not your warranty';
+			refs.editBtn.title = tNotes('warranties.view_only_not_your_warranty', 'View only - not your warranty');
 		}
 	}
 	if (refs.addTextarea) refs.addTextarea.value = '';
