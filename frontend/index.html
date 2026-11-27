@@ -182,11 +182,11 @@
                     <div class="search-container" style="display: flex; width: 100%; gap: 8px; align-items: center;">
                         <!-- Make search box width controlled by CSS for consistency -->
                         <div class="search-box">
-                            <button id="searchBtn" class="search-btn" title="Search">
+                            <button id="searchBtn" class="search-btn" title="Search" data-i18n-title="actions.search">
                                 <i class="fas fa-search"></i>
                             </button>
                             <input type="text" id="searchWarranties" data-i18n-placeholder="warranties.search_placeholder" placeholder="Find by name, model, vendors, notes, tag, or serial number..." style="width: 100%;">
-                            <button id="clearSearch" class="clear-search-btn" title="Clear search" style="display: none;">
+                            <button id="clearSearch" class="clear-search-btn" title="Clear search" data-i18n-title="filters.clear_search" style="display: none;">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
@@ -262,7 +262,7 @@
                         </div>
                         <div class="secondary-actions" style="display: flex; gap: 8px; flex-wrap: nowrap; flex-shrink: 1; min-width: 0;">
                             <div class="data-dropdown" style="position: relative;">
-                                <button id="dataMenuBtn" class="action-btn" title="Data" style="white-space: nowrap;">
+                                <button id="dataMenuBtn" class="action-btn" title="Data" data-i18n-title="actions.data" style="white-space: nowrap;">
                                     <i class="fas fa-database"></i> <span data-i18n="actions.data">Data</span> <i class="fas fa-caret-down"></i>
                                 </button>
                                 <div id="dataMenu" class="popover" style="min-width: 180px;">
@@ -273,39 +273,39 @@
                                 </div>
                             </div>
                             <!-- Keep original buttons hidden to preserve existing JS behavior -->
-                            <button id="exportBtn" class="export-btn" title="Export warranties" style="display:none;">
+                            <button id="exportBtn" class="export-btn" title="Export warranties" data-i18n-title="actions.export_warranties" style="display:none;">
                                 <i class="fas fa-file-export"></i> <span data-i18n="actions.export">Export</span>
                             </button>
-                            <button id="importBtn" class="import-btn" title="Import warranties from CSV" style="display:none;">
+                            <button id="importBtn" class="import-btn" title="Import warranties from CSV" data-i18n-title="actions.import_warranties_csv" style="display:none;">
                                 <i class="fas fa-file-import"></i> <span data-i18n="actions.import">Import</span>
                             </button>
-                            <button id="globalManageTagsBtn" class="action-btn export-btn" title="Tags" style="white-space: nowrap;">
+                            <button id="globalManageTagsBtn" class="action-btn export-btn" title="Tags" data-i18n-title="warranties.tags" style="white-space: nowrap;">
                                 <i class="fas fa-tags"></i> <span data-i18n="warranties.tags">Tags</span>
                             </button>
 
                             <!-- View Dropdown (moved after Tags) -->
                             <div class="data-dropdown" id="viewDropdownContainer" style="position: relative;">
-                                <button id="viewMenuBtn" class="action-btn" title="View" style="white-space: nowrap;">
+                                <button id="viewMenuBtn" class="action-btn" title="View" data-i18n-title="filters.view" style="white-space: nowrap;">
                                     <i class="fas fa-eye"></i> <span data-i18n="filters.view">View</span> <i class="fas fa-caret-down"></i>
                                 </button>
                                 <div id="viewMenu" class="popover" style="min-width: 160px;">
                                     <ul class="sort-options">
-                                        <li id="viewGridOption"><i class="fas fa-th-large"></i> <span>Grid</span></li>
-                                        <li id="viewListOption"><i class="fas fa-list"></i> <span>List</span></li>
-                                        <li id="viewTableOption"><i class="fas fa-table"></i> <span>Table</span></li>
+                                        <li id="viewGridOption"><i class="fas fa-th-large"></i> <span data-i18n="filters.grid">Grid</span></li>
+                                        <li id="viewListOption"><i class="fas fa-list"></i> <span data-i18n="filters.list">List</span></li>
+                                        <li id="viewTableOption"><i class="fas fa-table"></i> <span data-i18n="filters.table">Table</span></li>
                                     </ul>
                                 </div>
                             </div>
 
                             <!-- Scope Dropdown (moved after Tags) -->
                             <div class="data-dropdown" id="scopeDropdown" style="position: relative; display: none;">
-                                <button id="scopeMenuBtn" class="action-btn" title="Scope" style="white-space: nowrap;">
+                                <button id="scopeMenuBtn" class="action-btn" title="Scope" data-i18n-title="filters.scope" style="white-space: nowrap;">
                                     <i class="fas fa-users"></i> <span data-i18n="filters.scope">Scope</span> <i class="fas fa-caret-down"></i>
                                 </button>
                                 <div id="scopeMenu" class="popover" style="min-width: 160px;">
                                     <ul class="sort-options">
-                                        <li id="scopePersonalOption"><i class="fas fa-user"></i> <span>Personal</span></li>
-                                        <li id="scopeGlobalOption"><i class="fas fa-globe"></i> <span>Global</span></li>
+                                        <li id="scopePersonalOption"><i class="fas fa-user"></i> <span data-i18n="filters.personal">Personal</span></li>
+                                        <li id="scopeGlobalOption"><i class="fas fa-globe"></i> <span data-i18n="filters.global">Global</span></li>
                                     </ul>
                                 </div>
                             </div>
@@ -320,13 +320,13 @@
                             <div class="view-switcher" style="display: none;">
                                 <label class="filter-label" data-i18n="filters.view">View</label>
                                 <div class="view-buttons">
-                                    <button id="gridViewBtn" class="view-btn active" title="Grid View">
+                                    <button id="gridViewBtn" class="view-btn active" title="Grid View" data-i18n-title="settings.grid_view">
                                         <i class="fas fa-th-large"></i>
                                     </button>
-                                    <button id="listViewBtn" class="view-btn" title="List View">
+                                    <button id="listViewBtn" class="view-btn" title="List View" data-i18n-title="settings.list_view">
                                         <i class="fas fa-list"></i>
                                     </button>
-                                    <button id="tableViewBtn" class="view-btn" title="Table View">
+                                    <button id="tableViewBtn" class="view-btn" title="Table View" data-i18n-title="settings.table_view">
                                         <i class="fas fa-table"></i>
                                     </button>
                                 </div>
@@ -335,10 +335,10 @@
                             <div class="admin-view-switcher" id="adminViewSwitcher" style="display: none; margin-left: auto;">
                                 <label class="filter-label" data-i18n="filters.scope">Scope</label>
                                 <div class="view-buttons" style="display: none;">
-                                    <button id="personalViewBtn" class="view-btn active" title="View your warranties only">
+                                    <button id="personalViewBtn" class="view-btn active" title="View your warranties only" data-i18n-title="filters.view_personal_tooltip">
                                         <i class="fas fa-user"></i>
                                     </button>
-                                    <button id="globalViewBtn" class="view-btn" title="View all users' warranties (read-only for others)">
+                                    <button id="globalViewBtn" class="view-btn" title="View all users' warranties (read-only for others)" data-i18n-title="filters.view_global_tooltip">
                                         <i class="fas fa-globe"></i>
                                     </button>
                                 </div>
@@ -521,7 +521,7 @@
                                             <option value="Accidental Damage" data-i18n="warranties.accidental_damage">Accidental Damage</option>
                                             <option value="other" data-i18n="warranties.other_custom">Other (Custom)</option>
                                         </select>
-                                        <input type="text" id="warrantyTypeCustom" name="warranty_type_custom" class="form-control" style="display: none; margin-top: 8px;" data-i18n-placeholder="warranties.enter_custom_warranty_type_placeholder" placeholder="Enter custom warranty type">
+                                        <input type="text" id="warrantyTypeCustom" name="warranty_type_custom" class="form-control" style="display: none; margin-top: 8px;" data-i18n-placeholder="warranties.enter_custom_warranty_type" placeholder="Enter custom warranty type">
                                     </div>
                                                         <div class="form-group">
                         <label for="currency" data-i18n="warranties.currency">Currency</label>
@@ -547,7 +547,7 @@
                                     <!-- Paperless-ngx Info Alert (hidden by default, shown when enabled) -->
                                     <div id="paperlessInfoAlert" class="alert alert-info" style="display: none;">
                                         <i class="fas fa-info-circle"></i>
-                                        <strong>Paperless-ngx Integration Enabled!</strong> You can now choose to store documents in your Paperless-ngx instance instead of locally.
+                                        <strong data-i18n="paperless.integration_enabled_title">Paperless-ngx Integration Enabled!</strong> <span data-i18n="paperless.integration_enabled_desc">You can now choose to store documents in your Paperless-ngx instance instead of locally.</span>
                                     </div>
 
                                     <div class="form-group">
@@ -677,7 +677,7 @@
                                             </div>
                                             
                                             <div class="tags-dropdown">
-                                                <input type="text" id="tagSearch" class="form-control" data-i18n-placeholder="warranties.search_or_add_tag" placeholder="Search or add new tag...">
+                                                <input type="text" id="tagSearch" class="form-control" data-i18n-placeholder="warranties.search_or_add_new_tag" placeholder="Search or add new tag...">
                                                 <div class="tags-list" id="tagsList">
                                                     <!-- Tag options will be populated by JavaScript -->
                                                 </div>
@@ -927,7 +927,7 @@
                                 <option value="Accidental Damage" data-i18n="warranties.accidental_damage">Accidental Damage</option>
                                 <option value="other" data-i18n="warranties.other_custom">Other (Custom)</option>
                             </select>
-                            <input type="text" id="editWarrantyTypeCustom" name="warranty_type_custom" class="form-control" style="display: none; margin-top: 8px;" data-i18n-placeholder="warranties.enter_custom_warranty_type_placeholder" placeholder="Enter custom warranty type">
+                            <input type="text" id="editWarrantyTypeCustom" name="warranty_type_custom" class="form-control" style="display: none; margin-top: 8px;" data-i18n-placeholder="warranties.enter_custom_warranty_type" placeholder="Enter custom warranty type">
                         </div>
                         <div class="form-group">
                             <label for="editCurrency" data-i18n="warranties.currency">Currency</label>
@@ -1152,17 +1152,17 @@
     <div id="archiveModal" class="modal-backdrop">
         <div class="modal">
             <div class="modal-header">
-                <h3 class="modal-title">Archive Warranty</h3>
+                <h3 class="modal-title" data-i18n="warranties.archive_warranty">Archive Warranty</h3>
                 <button class="close-btn" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to archive this warranty?</p>
-                <p>Archived warranties are not deleted. You can find them by selecting the "Archived" status in Filters.</p>
-                <p><strong>Product:</strong> <span id="archiveProductName"></span></p>
+                <p data-i18n="warranties.archive_confirm_question">Are you sure you want to archive this warranty?</p>
+                <p data-i18n="warranties.archive_confirm_info">Archived warranties are not deleted. You can find them by selecting the "Archived" status in Filters.</p>
+                <p><strong><span data-i18n="warranties.product">Product</span>:</strong> <span id="archiveProductName"></span></p>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button id="confirmArchiveBtn" class="btn btn-primary">Archive</button>
+                <button class="btn btn-secondary" data-dismiss="modal" data-i18n="actions.cancel">Cancel</button>
+                <button id="confirmArchiveBtn" class="btn btn-primary" data-i18n="actions.archive">Archive</button>
             </div>
         </div>
     </div>
@@ -1196,29 +1196,29 @@
     <div id="paperlessBrowserModal" class="modal-backdrop">
         <div class="modal modal-large">
             <div class="modal-header">
-                <h3 class="modal-title">Browse Paperless-ngx Documents</h3>
+                <h3 class="modal-title" data-i18n="warranties.browse_paperless">Browse Paperless-ngx Documents</h3>
                 <button class="close-btn" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="paperless-browser-controls">
                     <div class="search-section">
-                        <input type="text" id="paperlessSearchInput" class="form-control" placeholder="Search documents by title, content, or tags...">
+                        <input type="text" id="paperlessSearchInput" class="form-control" data-i18n-placeholder="paperless.search_placeholder" placeholder="Search documents by title, content, or tags...">
                         <button type="button" class="btn btn-primary" id="paperlessSearchBtn">
-                            <i class="fas fa-search"></i> Search
+                            <i class="fas fa-search"></i> <span data-i18n="actions.search">Search</span>
                         </button>
                         <button type="button" class="btn btn-secondary" id="paperlessShowAllBtn">
-                            <i class="fas fa-list"></i> Show All
+                            <i class="fas fa-list"></i> <span data-i18n="actions.show_all">Show All</span>
                         </button>
                     </div>
                     <div class="filter-section">
                         <select id="paperlessTypeFilter" class="form-control">
-                            <option value="">All Document Types</option>
-                            <option value="application/pdf">PDF Documents</option>
-                            <option value="image/jpeg,image/jpg,image/png">Images</option>
-                            <option value="application/zip">Archives</option>
+                            <option value="" data-i18n="paperless.all_document_types">All Document Types</option>
+                            <option value="application/pdf" data-i18n="paperless.pdf_documents">PDF Documents</option>
+                            <option value="image/jpeg,image/jpg,image/png" data-i18n="paperless.images">Images</option>
+                            <option value="application/zip" data-i18n="paperless.archives">Archives</option>
                         </select>
                         <select id="paperlessTagFilter" class="form-control">
-                            <option value="">All Tags</option>
+                            <option value="" data-i18n="paperless.all_tags">All Tags</option>
                             <!-- Tags will be populated dynamically -->
                         </select>
                     </div>
@@ -1226,24 +1226,24 @@
                 
                 <div id="paperlessDocumentsList" class="paperless-documents-list">
                     <div class="loading-message" style="text-align: center; padding: 20px;">
-                        <i class="fas fa-spinner fa-spin"></i> Loading documents...
+                        <i class="fas fa-spinner fa-spin"></i> <span data-i18n="paperless.loading_documents">Loading documents...</span>
                     </div>
                 </div>
                 
                 <div class="pagination-controls" id="paperlessPagination" style="display: none;">
                     <button type="button" class="btn btn-secondary" id="prevPageBtn" onclick="changePage(-1)">
-                        <i class="fas fa-chevron-left"></i> Previous
+                        <i class="fas fa-chevron-left"></i> <span data-i18n="warranties.previous_tab">Previous</span>
                     </button>
                     <span id="pageInfo">Page 1 of 1</span>
                     <button type="button" class="btn btn-secondary" id="nextPageBtn" onclick="changePage(1)">
-                        Next <i class="fas fa-chevron-right"></i>
+                        <span data-i18n="warranties.next_tab">Next</span> <i class="fas fa-chevron-right"></i>
                     </button>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button class="btn btn-secondary" data-dismiss="modal" data-i18n="actions.cancel">Cancel</button>
                 <button id="selectPaperlessDocBtn" class="btn btn-primary" style="display: none;">
-                    <i class="fas fa-check"></i> Select Document
+                    <i class="fas fa-check"></i> <span data-i18n="paperless.select_document">Select Document</span>
                 </button>
             </div>
         </div>
@@ -1264,7 +1264,7 @@
                 </div>
                 <div id="claimsListBody" class="claims-list">
                     <div class="loading-message" style="text-align: center; padding: 20px;">
-                        <i class="fas fa-spinner fa-spin"></i> Loading claims...
+                        <i class="fas fa-spinner fa-spin"></i> <span data-i18n="claims.loading">Loading claims...</span>
                     </div>
                 </div>
             </div>

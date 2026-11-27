@@ -43,10 +43,10 @@
                     The easiest way to organize product warranties, monitor expiration dates, and store receipts or related documents.
                 </p>
                 <ul class="showcase-features">
-                    <li><i class="fas fa-bell"></i> <span>Proactive Expiration Alerts</span></li>
-                    <li><i class="fas fa-cloud-upload-alt"></i> <span>Secure Document Storage</span></li>
-                    <li><i class="fas fa-users"></i> <span>Multi-User Support</span></li>
-                    <li><i class="fas fa-search"></i> <span>Quick Search & Filter</span></li>
+                    <li><i class="fas fa-bell"></i> <span data-i18n="auth.feature_alerts">Proactive Expiration Alerts</span></li>
+                    <li><i class="fas fa-cloud-upload-alt"></i> <span data-i18n="auth.feature_storage">Secure Document Storage</span></li>
+                    <li><i class="fas fa-users"></i> <span data-i18n="auth.feature_multi_user">Multi-User Support</span></li>
+                    <li><i class="fas fa-search"></i> <span data-i18n="auth.feature_search">Quick Search & Filter</span></li>
                 </ul>
             </div>
         </div>
@@ -71,7 +71,7 @@
                         <div class="input-group">
                             <i class="fas fa-lock input-icon"></i>
                             <input type="password" id="password" name="password" class="form-control" required>
-                            <button type="button" class="password-toggle" title="Show/Hide Password">
+                            <button type="button" class="password-toggle" title="Show/Hide Password" data-i18n-title="auth.toggle_password">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
@@ -81,9 +81,9 @@
                     </button>
                 </form>
                 <div id="ssoSection" style="display: none;">
-                    <div class="separator"><span>OR</span></div>
+                    <div class="separator"><span data-i18n="auth.or">OR</span></div>
                     <a href="/api/oidc/login" id="oidcLoginButton" class="btn btn-secondary btn-block btn-sso" style="text-decoration: none;">
-                        <i class="fab fa-openid" style="margin-right: 8px;"></i> <span>Login with SSO Provider</span>
+                        <i class="fab fa-openid" style="margin-right: 8px;"></i> <span data-i18n="auth.login_with_sso">Login with SSO Provider</span>
                     </a>
                 </div>
                 <div class="auth-links">
@@ -96,13 +96,27 @@
 
     <script src="auth.js?v=20250119001"></script>
     <script>
+        function tLogin(key, fallback) {
+            try {
+                if (window.i18n && typeof window.i18n.t === 'function') {
+                    const translated = window.i18n.t(key);
+                    if (translated && translated !== key) return translated;
+                }
+                if (window.i18next && typeof window.i18next.t === 'function' && window.i18next.isInitialized) {
+                    const translated = window.i18next.t(key);
+                    if (translated && translated !== key) return translated;
+                }
+            } catch (_) {}
+            return fallback;
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             // Check for OIDC errors in URL parameters and display them
             const urlParams = new URLSearchParams(window.location.search);
             const oidcError = urlParams.get('oidc_error');
             
             if (oidcError) {
-                let errorMessage = 'An unknown error occurred during SSO login.';
+                let errorMessage = tLogin('auth.sso_err_unknown', 'An unknown error occurred during SSO login.');
                 switch (oidcError) {
                     case 'oidc_disabled':
                         errorMessage = 'SSO login is currently disabled.';
@@ -111,37 +125,37 @@
                         errorMessage = 'SSO is not properly configured. Please contact your administrator.';
                         break;
                     case 'token_exchange_failed':
-                        errorMessage = 'Failed to exchange authorization code for tokens with the SSO provider.';
+                        errorMessage = tLogin('auth.sso_err_token_exchange', 'Failed to exchange authorization code for tokens with the SSO provider.');
                         break;
                     case 'token_missing':
-                        errorMessage = 'Access token was not received from the SSO provider.';
+                        errorMessage = tLogin('auth.sso_err_token_missing', 'Access token was not received from the SSO provider.');
                         break;
                     case 'userinfo_fetch_failed':
-                        errorMessage = 'Failed to fetch user information from the SSO provider.';
+                        errorMessage = tLogin('auth.sso_err_userinfo_fetch', 'Failed to fetch user information from the SSO provider.');
                         break;
                     case 'userinfo_missing':
-                        errorMessage = 'User information was not received from the SSO provider.';
+                        errorMessage = tLogin('auth.sso_err_userinfo_missing', 'User information was not received from the SSO provider.');
                         break;
                     case 'subject_missing':
-                        errorMessage = 'User subject identifier (sub) was missing from SSO provider response.';
+                        errorMessage = tLogin('auth.sso_err_subject_missing', 'User subject identifier (sub) was missing from SSO provider response.');
                         break;
                     case 'email_missing_for_new_user':
-                        errorMessage = 'Email address was not provided by SSO provider, which is required for new user registration.';
+                        errorMessage = tLogin('auth.sso_err_email_missing', 'Email address was not provided by SSO provider, which is required for new user registration.');
                         break;
                     case 'email_conflict_local_account':
-                        errorMessage = 'The email address from your SSO provider is already associated with an existing local account. Please log in with your local credentials or contact support.';
+                        errorMessage = tLogin('auth.sso_err_email_conflict', 'The email address from your SSO provider is already associated with an existing local account. Please log in with your local credentials or contact support.');
                         break;
                     case 'registration_disabled':
-                        errorMessage = 'New user registration via SSO is currently disabled. Only existing users can log in with SSO. Please contact your administrator if you need an account.';
+                        errorMessage = tLogin('auth.sso_err_registration_disabled', 'New user registration via SSO is currently disabled. Only existing users can log in with SSO. Please contact your administrator if you need an account.');
                         break;
                     case 'user_processing_failed':
-                        errorMessage = 'Failed to process user information after SSO login.';
+                        errorMessage = tLogin('auth.sso_err_user_processing', 'Failed to process user information after SSO login.');
                         break;
                     case 'db_error':
-                        errorMessage = 'A database error occurred during SSO login. Please try again later.';
+                        errorMessage = tLogin('auth.sso_err_db', 'A database error occurred during SSO login. Please try again later.');
                         break;
                     case 'internal_error':
-                        errorMessage = 'An internal server error occurred during SSO login. Please try again later.';
+                        errorMessage = tLogin('auth.sso_err_internal', 'An internal server error occurred during SSO login. Please try again later.');
                         break;
                 }
                 showMessage(errorMessage, 'error');
@@ -346,7 +360,7 @@
                     localStorage.setItem('user_info', JSON.stringify(data.user));
                     
                     // Show success message
-                    showMessage('Login successful! Redirecting...', 'success');
+                    showMessage(tLogin('auth.login_success_redirecting', 'Login successful! Redirecting...'), 'success');
                     
                     // Redirect to home page after a short delay
                     setTimeout(() => {
@@ -360,7 +374,15 @@
                     // Reset button state
                     const submitBtn = this.querySelector('button[type="submit"]');
                     if (submitBtn) {
-                        submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> <span data-i18n="auth.login">Login</span>';
+                        submitBtn.textContent = '';
+                        const icon = document.createElement('i');
+                        icon.className = 'fas fa-sign-in-alt';
+                        const span = document.createElement('span');
+                        span.setAttribute('data-i18n', 'auth.login');
+                        span.textContent = tLogin('auth.login', 'Login');
+                        submitBtn.appendChild(icon);
+                        submitBtn.appendChild(document.createTextNode(' '));
+                        submitBtn.appendChild(span);
                         submitBtn.disabled = false;
                     }
                 }

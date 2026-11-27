@@ -2,6 +2,12 @@
 
 ## 1.0.8 - Unreleased
 
+- **Localization completeness and i18n fixes across all 20 languages:**
+  - Fixed broken `data-i18n-placeholder` keys in `index.html` (`warranties.enter_custom_warranty_type` and `warranties.search_or_add_new_tag`), added missing Polish CLDR plural forms (`year_few`/`many`, `month_few`/`many`, `day_few`/`many`), guarded `data-i18n-html` and `data-i18n-title` in `frontend/js/i18n.js` against overwriting fallbacks with raw keys, and replaced dead dynamically injected `data-i18n` attributes in `status.js` (`toggleWarrantyDetails`) with live translations.
+  - Translated untranslated English strings across non-English locale files (including 9 `messages.*` keys across 14 locales and single-locale leftovers in `de`, `nl`, `pl`, `pt`, and `zh_CN`) and added 153 newly wired keys across all 20 supported languages (`en`, `fr`, `es`, `de`, `it`, `cs`, `nl`, `hi`, `fa`, `ar`, `ru`, `uk`, `zh_CN`, `zh_HK`, `ja`, `pt`, `ko`, `tr`, `pl`, `he`) with 100% key and `{{placeholder}}` parity.
+  - Localized previously hardcoded UI labels, tooltips, modals, and toasts/confirms/alerts across `index.html`, `login.html`, `auth-redirect.html`, `status.html`, `about.html`, `settings-new.html`, `mobile-menu.js`, `status.js`, `notes.js`, `warrantyRenderer.js`, `paperless.js`, `file-utils.js`, `settings-new.js`, and `script.js`, and added automated i18n key/placeholder/plural regression tests.
+  - _Files: `frontend/about.html`, `frontend/auth-redirect.html`, `frontend/file-utils.js`, `frontend/index.html`, `frontend/js/components/notes.js`, `frontend/js/components/paperless.js`, `frontend/js/components/warrantyRenderer.js`, `frontend/js/i18n.js`, `frontend/login.html`, `frontend/mobile-menu.js`, `frontend/script.js`, `frontend/settings-new.html`, `frontend/settings-new.js`, `frontend/status.html`, `frontend/status.js`, `locales/*/translation.json`, `tests/test_qa_fixes_regressions.py`, `tests/test_status_edit_and_notes.py`, `tests/test_xss_regressions.py`_
+
 - **Desktop, tablet, and mobile QA fixes across warranty editing, tags, CSV export, settings, and responsive layouts:**
   - Edit Warranty modal now populates and trims existing `invoice_url`, `manual_url`, and `other_document_url` inputs on open so saving unrelated fields no longer wipes linked document URLs.
   - Notes modal saves now serialize `vendor` and `model_number` directly from the target warranty instead of reading stale hidden inputs from `#editModal`.

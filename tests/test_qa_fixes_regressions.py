@@ -284,3 +284,121 @@ def test_style_css_and_settings_cleanup_invariants():
     settings_html = (FRONTEND / "settings-new.html").read_text(encoding="utf-8")
     assert "emergencyDeleteBtn" not in settings_html
     assert "If the delete button doesn't work" not in settings_html
+
+
+def _flatten_locale(data, prefix=""):
+    flat = {}
+    for key, value in data.items():
+        full_key = f"{prefix}.{key}" if prefix else key
+        if isinstance(value, dict):
+            flat.update(_flatten_locale(value, full_key))
+        else:
+            flat[full_key] = value
+    return flat
+
+
+def test_all_frontend_i18n_keys_exist_in_english_locale():
+    en_data = json.loads((LOCALES / "en" / "translation.json").read_text(encoding="utf-8"))
+    en_flat = _flatten_locale(en_data)
+    plural_bases = {
+        k[:-4] for k in en_flat if k.endswith("_one") and f"{k[:-4]}_other" in en_flat
+    }
+
+    attr_re = re.compile(r'data-i18n(?:-[a-z]+)?="([^"]+)"')
+    call_re = re.compile(
+        r"(?:\b(?:i18next|i18n|window)\.t|\b(?:t|tLogin|tAuth|tMobile|tFile|tNotes|tStatus|tSettings|tScript))"
+        r"\(\s*['\"]([a-zA-Z0-9_]+\.[a-zA-Z0-9_.]+)['\"]"
+    )
+
+    missing = []
+    for html_path in sorted(FRONTEND.glob("*.html")):
+        content = html_path.read_text(encoding="utf-8")
+        for raw in attr_re.findall(content):
+            key = re.sub(r"^\[[^\]]+\]", "", raw)
+            if key not in en_flat and key not in plural_bases:
+                missing.append((html_path.name, raw))
+
+    scan_files = sorted(list(FRONTEND.rglob("*.js")) + list(FRONTEND.glob("*.html")))
+    for path in scan_files:
+        if "vendor" in path.parts or "lib" in path.parts or path.name == "chart.js":
+            continue
+        content = path.read_text(encoding="utf-8")
+        for key in call_re.findall(content):
+            if key not in en_flat and key not in plural_bases:
+                missing.append((str(path.relative_to(REPO)), key))
+
+    assert not missing, f"Broken i18n keys referenced in frontend: {missing}"
+
+
+def test_all_locales_match_english_placeholders_and_non_empty():
+    en_flat = _flatten_locale(
+        json.loads((LOCALES / "en" / "translation.json").read_text(encoding="utf-8"))
+    )
+    ph_re = re.compile(r"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}")
+    failures = []
+
+    for locale_file in sorted(LOCALES.glob("*/translation.json")):
+        lang = locale_file.parent.name
+        lang_flat = _flatten_locale(json.loads(locale_file.read_text(encoding="utf-8")))
+        missing = sorted(set(en_flat.keys()) - set(lang_flat.keys()))
+        if missing:
+            failures.append(f"{lang}: missing {len(missing)} keys (e.g. {missing[:5]})")
+        for key, en_val in en_flat.items():
+            if key not in lang_flat:
+                continue
+            val = lang_flat[key]
+            if not isinstance(val, str) or not val.strip():
+                failures.append(f"{lang}: empty value for {key}")
+                continue
+            if set(ph_re.findall(str(en_val))) != set(ph_re.findall(val)):
+                failures.append(
+                    f"{lang}: placeholder mismatch on {key} "
+                    f"(en={ph_re.findall(str(en_val))}, {lang}={ph_re.findall(val)})"
+                )
+
+    assert not failures, "\n".join(failures)
+
+
+def test_polish_locale_defines_cldr_plural_forms():
+    pl_flat = _flatten_locale(
+        json.loads((LOCALES / "pl" / "translation.json").read_text(encoding="utf-8"))
+    )
+    for unit in ("year", "month", "day"):
+        for form in ("one", "few", "many", "other"):
+            key = f"warranties.{unit}_{form}"
+            assert key in pl_flat and pl_flat[key].strip(), f"Missing Polish plural key: {key}"
+
+
+def test_non_english_locales_have_no_untranslated_english_messages():
+    en_messages = json.loads(
+        (LOCALES / "en" / "translation.json").read_text(encoding="utf-8")
+    )["messages"]
+    # Spanish legitimately uses "Error: {{error}}".
+    allowed_exact = {("es", "error_colon")}
+    leftovers = []
+
+    for locale_file in sorted(LOCALES.glob("*/translation.json")):
+        lang = locale_file.parent.name
+        if lang == "en":
+            continue
+        lang_messages = json.loads(locale_file.read_text(encoding="utf-8")).get("messages", {})
+        for key, en_val in en_messages.items():
+            if len(str(en_val).split()) < 2:
+                continue
+            if lang_messages.get(key) == en_val and (lang, key) not in allowed_exact:
+                leftovers.append((lang, f"messages.{key}", en_val))
+
+    assert not leftovers, f"Untranslated English messages found: {leftovers}"
+
+
+def test_i18n_js_guards_missing_keys_and_status_details_has_no_dead_data_i18n():
+    i18n_js = (FRONTEND / "js" / "i18n.js").read_text(encoding="utf-8")
+    html_idx = i18n_js.index("document.querySelectorAll('[data-i18n-html]')")
+    title_idx = i18n_js.index("document.querySelectorAll('[data-i18n-title]')")
+    ph_idx = i18n_js.index("document.querySelectorAll('[data-i18n-placeholder]')")
+    assert "if (translation && translation !== key)" in i18n_js[html_idx:title_idx]
+    assert "if (translation && translation !== key)" in i18n_js[title_idx:ph_idx]
+
+    status_js = (FRONTEND / "status.js").read_text(encoding="utf-8")
+    assert '<strong data-i18n=' not in status_js
+

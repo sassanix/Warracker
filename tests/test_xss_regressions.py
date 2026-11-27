@@ -120,7 +120,7 @@ def test_xss08_paperless_test_renders_escaped():
     # One raw ${error.message} remains, inside a showToast call, which
     # renders via textContent; the innerHTML catch template is escaped.
     assert section.count("${error.message}") == 1
-    assert "showToast(`Error testing connection: ${error.message}`" in section
+    assert "showToast(tSettings('messages.error_testing_connection', `Error testing connection: ${error.message}`" in section
     assert "${escapeHtmlSafe(error.message)}" in section
     assert "${escapeHtmlSafe(result.message)}" in section
     assert "${escapeHtmlSafe(result.server_info)}" in section

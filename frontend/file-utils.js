@@ -21,6 +21,20 @@ function secureFilePath(path) {
     return path;
 }
 
+function tFile(key, fallback) {
+    try {
+        if (window.i18n && typeof window.i18n.t === 'function') {
+            const translated = window.i18n.t(key);
+            if (translated && translated !== key) return translated;
+        }
+        if (window.i18next && typeof window.i18next.t === 'function' && window.i18next.isInitialized) {
+            const translated = window.i18next.t(key);
+            if (translated && translated !== key) return translated;
+        }
+    } catch (_) {}
+    return fallback;
+}
+
 /**
  * Opens a file in a new tab with proper authentication
  * @param {string} path - The file path to open
@@ -36,7 +50,7 @@ function openSecureFile(path) {
     
     if (!token) {
         console.error('No authentication token available');
-        alert('You must be logged in to access files');
+        alert(tFile('messages.login_required_access_files', 'You must be logged in to access files'));
         return;
     }
     
@@ -96,7 +110,7 @@ function openSecureFile(path) {
         })
         .catch(error => {
             console.error('Error opening file:', error);
-            alert('Error opening file. Please try again or check if you are logged in.');
+            alert(tFile('messages.error_opening_file', 'Error opening file. Please try again or check if you are logged in.'));
         });
     });
     
@@ -119,7 +133,7 @@ function downloadSecureFile(path, filename) {
     
     if (!token) {
         console.error('No authentication token available');
-        alert('You must be logged in to download files');
+        alert(tFile('messages.login_required_download_files', 'You must be logged in to download files'));
         return;
     }
     
@@ -147,6 +161,6 @@ function downloadSecureFile(path, filename) {
     })
     .catch(error => {
         console.error('Error downloading file:', error);
-        alert('Error downloading file. Please try again or check if you are logged in.');
+        alert(tFile('messages.error_downloading_file', 'Error downloading file. Please try again or check if you are logged in.'));
     });
 } 

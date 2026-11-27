@@ -569,7 +569,8 @@ async function loadPaperlessTags() {
 		const data = await response.json();
 		const tagFilter = document.getElementById('paperlessTagFilter');
 		if (!tagFilter) return;
-		tagFilter.innerHTML = '<option value="">All Tags</option>';
+		const allTagsLabel = (window.t ? window.t('paperless.all_tags') : null) || 'All Tags';
+		tagFilter.innerHTML = `<option value="">${escapeHtml(allTagsLabel === 'paperless.all_tags' ? 'All Tags' : allTagsLabel)}</option>`;
 		if (data.results) {
 			data.results.forEach((tag) => {
 				const option = document.createElement('option');
@@ -701,7 +702,16 @@ function updatePaperlessPagination() {
 	paginationDiv.style.display = 'flex';
 	if (prevBtn) prevBtn.disabled = browserState.currentPage <= 1;
 	if (nextBtn) nextBtn.disabled = browserState.currentPage >= browserState.totalPages;
-	if (pageInfo) pageInfo.textContent = `Page ${browserState.currentPage} of ${browserState.totalPages}`;
+	if (pageInfo) {
+		const pageText = (window.i18next && window.i18next.isInitialized)
+			? window.i18next.t('paperless.page_of', {
+				current: browserState.currentPage,
+				total: browserState.totalPages,
+				defaultValue: `Page ${browserState.currentPage} of ${browserState.totalPages}`,
+			})
+			: `Page ${browserState.currentPage} of ${browserState.totalPages}`;
+		pageInfo.textContent = pageText;
+	}
 }
 
 function showPaperlessLoading() {
