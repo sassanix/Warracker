@@ -341,7 +341,7 @@
     "save_oidc_settings": "Uložit nastavení OIDC",
     "oidc_sso_desc": "Povolit uživatelům přihlášení přes poskytovatele OIDC.",
     "oidc_only_mode": "Režim přihlášení pouze přes OIDC",
-    "oidc_only_mode_desc": "Skrýt tradiční formulář pro přihlášení pomocí uživatelského jména/hesla a povolit pouze přihlášení přes OIDC. <strong>Varování:</strong> Před povolením této možnosti se ujistěte, že je OIDC správně nakonfigurován.",
+    "oidc_only_mode_desc": "Skrýt tradiční formulář pro přihlášení pomocí uživatelského jména/hesla a povolit pouze přihlášení přes OIDC. Varování: Před povolením této možnosti se ujistěte, že je OIDC správně nakonfigurován.",
     "oidc_provider_name_desc": "Interní název pro klienta OIDC (např. 'oidc').",
     "client_secret_desc": "Citlivá hodnota. Uloženo v databázi. Pro projevení změn je nutný restart aplikace.",
     "issuer_url_desc": "Základní URL vašeho poskytovatele OIDC.",

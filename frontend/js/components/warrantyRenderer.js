@@ -461,10 +461,11 @@ function cardClassName(warranty, view, statusClass) {
 	const isArchived = warranty.is_archived || warranty.viewFlags?.isArchivedView;
 	if (isArchived) return 'warranty-card archived';
 	if (warranty.is_voided) return 'warranty-card voided';
-	if (view === 'table') return `warranty-card status-${statusClass}`;
-	if (statusClass === 'expired') return 'warranty-card expired';
-	if (statusClass === 'expiring') return 'warranty-card expiring-soon';
-	return 'warranty-card active';
+	const modifier = statusClass === 'expired'
+		? 'expired'
+		: (statusClass === 'expiring' ? 'expiring-soon' : 'active');
+	if (view === 'table') return `warranty-card ${modifier} status-${statusClass}`;
+	return `warranty-card ${modifier}`;
 }
 
 function buildPhotoHtml(warranty, view) {

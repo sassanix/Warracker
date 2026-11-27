@@ -334,7 +334,7 @@
     "save_oidc_settings": "保存 OIDC 设置",
     "oidc_sso_desc": "允许用户通过 OIDC 提供商登录。",
     "oidc_only_mode": "仅允许 OIDC 登录",
-    "oidc_only_mode_desc": "隐藏传统的用户名/密码登录表单，只允许通过 OIDC 登录。<strong>警告：</strong>启用前请确保 OIDC 已正确配置。",
+    "oidc_only_mode_desc": "隐藏传统的用户名/密码登录表单，只允许通过 OIDC 登录。警告：启用前请确保 OIDC 已正确配置。",
     "oidc_provider_name_desc": "OIDC 客户端的内部名称（例如 'oidc'）。",
     "client_secret_desc": "敏感值，会存储在数据库中。更改后需要重启应用才会生效。",
     "issuer_url_desc": "OIDC 提供商的基础 URL。",

@@ -284,7 +284,7 @@
     "oidc_admin_desc": "Gruppo a cui vengono concessi privilegi di amministratore. Lascia vuoto per disabilitare.",
     "oidc_admin_group": "Gruppo di amministrazione OIDC",
     "oidc_only_mode": "Modalità di accesso solo OIDC",
-    "oidc_only_mode_desc": "Nascondi il tradizionale modulo di accesso con nome utente/password e consenti solo l'accesso OIDC. <strong>Avviso:</strong> assicurati che OIDC sia configurato correttamente prima di abilitare questa opzione.",
+    "oidc_only_mode_desc": "Nascondi il tradizionale modulo di accesso con nome utente/password e consenti solo l'accesso OIDC. Avviso: assicurati che OIDC sia configurato correttamente prima di abilitare questa opzione.",
     "oidc_provider_name_desc": "Nome interno per il client OIDC (ad esempio \"oidc\").",
     "oidc_restart_message": "Affinché le impostazioni OIDC abbiano pieno effetto, è necessario riavviare l'applicazione.",
     "oidc_sso_desc": "Consenti agli utenti di accedere tramite un provider OIDC.",

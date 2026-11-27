@@ -607,7 +607,7 @@
                                 <div class="preference-item">
                                     <div>
                                         <label for="oidcOnlyMode" data-i18n="settings.oidc_only_mode">OIDC-Only Login Mode</label>
-                                        <p class="text-muted" data-i18n="settings.oidc_only_mode_desc">Hide traditional username/password login form and only allow OIDC login. <strong>Warning:</strong> Ensure OIDC is properly configured before enabling this option.</p>
+                                        <p class="text-muted" data-i18n="settings.oidc_only_mode_desc">Hide traditional username/password login form and only allow OIDC login. Warning: Ensure OIDC is properly configured before enabling this option.</p>
                                     </div>
                                     <label class="toggle-switch">
                                         <input type="checkbox" id="oidcOnlyMode">
@@ -1110,52 +1110,6 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary close-modal">Cancel</button>
                         <button type="button" id="confirmDeleteUserBtn" class="btn btn-danger" onclick="deleteUser()">Delete</button>
-                    </div>
-                    <div style="margin-top: 20px; border-top: 1px solid #ddd; padding-top: 10px;">
-                        <p><small>If the delete button doesn't work, try these alternatives:</small></p>
-                        <ul style="font-size: 0.8em;">
-                            <li><a href="#" id="directDeleteLink" style="color: #dc3545;" onclick="deleteUser(); return false;">Alternative 1: Direct function call</a></li>
-                            <li><a href="#" id="directAPILink" style="color: #dc3545;" onclick="directDeleteUserAPI(document.getElementById('deleteUserId').value); return false;">Alternative 2: Direct API call</a></li>
-                            <li><button type="submit" class="btn btn-sm btn-danger">Alternative 3: Form Submit</button></li>
-                        </ul>
-                        <div style="margin-top: 10px;">
-                            <button type="button" id="emergencyDeleteBtn" class="btn btn-sm btn-danger" 
-                                    onclick="(function() {
-                                        const userId = document.getElementById('deleteUserId').value || document.getElementById('displayUserId').textContent;
-                                        if (!userId) {
-                                            alert('Error: User ID is missing');
-                                            return;
-                                        }
-                                        const token = localStorage.getItem('auth_token');
-                                        if (!token) {
-                                            alert('Error: Authentication token is missing');
-                                            return;
-                                        }
-                                        alert('Emergency delete for user ID: ' + userId);
-                                        fetch('/api/admin/users/' + userId, {
-                                            method: 'DELETE',
-                                            headers: {
-                                                'Authorization': 'Bearer ' + token,
-                                                'Content-Type': 'application/json'
-                                            }
-                                        })
-                                        .then(response => {
-                                            alert('Response status: ' + response.status);
-                                            if (response.status >= 200 && response.status < 300) {
-                                                alert('User deleted successfully');
-                                                document.querySelectorAll('.modal-backdrop').forEach(m => m.style.display = 'none');
-                                                location.reload();
-                                            } else {
-                                                alert('Failed to delete user: ' + response.status);
-                                            }
-                                        })
-                                        .catch(error => {
-                                            alert('Error: ' + error.message);
-                                        });
-                                    })(); return false;">
-                                Emergency Delete (Inline JS)
-                            </button>
-                        </div>
                     </div>
                 </form>
             </div>

@@ -302,7 +302,7 @@
     "save_oidc_settings": "OIDC Ayarlarını Kaydet",
     "oidc_sso_desc": "Kullanıcıların bir OIDC sağlayıcısı aracılığıyla oturum açmasına izin ver.",
     "oidc_only_mode": "Yalnızca OIDC Oturum Açma Modu",
-    "oidc_only_mode_desc": "Geleneksel kullanıcı adı/şifre giriş formunu gizleyin ve yalnızca OIDC girişine izin verin. <strong>Uyarı:</strong> Bu seçeneği etkinleştirmeden önce OIDC'nin düzgün yapılandırıldığından emin olun.",
+    "oidc_only_mode_desc": "Geleneksel kullanıcı adı/şifre giriş formunu gizleyin ve yalnızca OIDC girişine izin verin. Uyarı: Bu seçeneği etkinleştirmeden önce OIDC'nin düzgün yapılandırıldığından emin olun.",
     "oidc_provider_name_desc": "OIDC istemcisi için dahili ad (ör. 'oidc').",
     "client_secret_desc": "Hassas değer. Veritabanında saklanır. Değişikliklerin etkili olması için bir uygulama yeniden başlatması gerekir.",
     "issuer_url_desc": "OIDC sağlayıcınızın temel URL'si.",

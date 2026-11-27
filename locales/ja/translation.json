@@ -334,7 +334,7 @@
     "save_oidc_settings": "OIDC設定を保存",
     "oidc_sso_desc": "ユーザーがOIDCプロバイダー経由でログインできるようにする。",
     "oidc_only_mode": "OIDCのみのログインモード",
-    "oidc_only_mode_desc": "従来のユーザー名/パスワードログインフォームを非表示にし、OIDCログインのみを許可します。<strong>警告：</strong>このオプションを有効にする前に、OIDCが正しく設定されていることを確認してください。",
+    "oidc_only_mode_desc": "従来のユーザー名/パスワードログインフォームを非表示にし、OIDCログインのみを許可します。警告：このオプションを有効にする前に、OIDCが正しく設定されていることを確認してください。",
     "oidc_provider_name_desc": "OIDCクライアントの内部名（例：「oidc」）。",
     "client_secret_desc": "機密情報。データベースに保存されます。変更を有効にするにはアプリケーションの再起動が必要です。",
     "issuer_url_desc": "OIDCプロバイダーのベースURL。",

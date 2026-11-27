@@ -347,6 +347,7 @@ header .container {
 
 .form-tab.completed {
   color: var(--secondary-color);
+  padding-inline-end: 20px;
 }
 
 .form-tab.completed::after {
@@ -354,9 +355,9 @@ header .container {
   font-family: 'Font Awesome 5 Free';
   font-weight: 900;
   position: absolute;
-  top: 10px;
-  right: 10px;
-  font-size: 0.8rem;
+  top: 4px;
+  inset-inline-end: 6px;
+  font-size: 0.7rem;
 }
 
 .form-tab i {
@@ -1032,6 +1033,17 @@ input.invalid {
   color: #7d3c98;
 }
 
+:root[data-theme="dark"] .status-void,
+:root[data-theme="dark"] .status-badge.status-void {
+  background-color: rgba(187, 134, 252, 0.22);
+  color: #e2c6ff;
+}
+
+:root[data-theme="dark"] tr.status-void {
+  background-color: rgba(187, 134, 252, 0.08);
+  color: var(--text-color);
+}
+
 /* Voided warranty cards (issue #250): purple accent, distinct from
    active (green), expiring (amber), expired (red), and archived (grey) */
 .warranty-card.voided {
@@ -1042,6 +1054,10 @@ input.invalid {
 .table-view .warranty-card.voided {
   border-left: none;
   background-color: rgba(142, 68, 173, 0.05);
+}
+
+:root[data-theme="dark"] .table-view .warranty-card.voided {
+  background-color: rgba(187, 134, 252, 0.1);
 }
 
 /* Ensure all status badges share the same shape/spacing */
@@ -1174,6 +1190,19 @@ input.invalid {
   width: 100%;
   margin-top: 5px;
   margin-bottom: 15px;
+}
+
+@media (max-width: 480px) {
+  .serial-number-input {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .serial-number-input .form-control,
+  .serial-number-input .btn {
+    width: 100%;
+  }
 }
 
 /* End serial number input styling */
@@ -1498,6 +1527,7 @@ input.invalid {
 
 /* ===== EMPTY STATE ===== */
 .empty-state {
+  grid-column: 1 / -1;
   text-align: center;
   padding: 40px 20px;
   color: var(--dark-gray);
@@ -1863,10 +1893,15 @@ input:checked + .toggle-slider:before {
 
 .status-card[data-status="total_value"] .count {
     font-size: 1.4rem;
-    /* Large totals must stay inside the card: allow the value to
-       wrap (amount and symbol are separate spans) instead of
-       overflowing on one nowrap line (#294). */
-    overflow-wrap: anywhere;
+    /* Large totals must stay inside the card: allow wrapping at token boundaries
+       instead of overflowing on one nowrap line (#294) without splitting mid-number. */
+    overflow-wrap: break-word;
+}
+
+@media (min-width: 821px) {
+    .status-card[data-status="total_value"] {
+        grid-column: span 2;
+    }
 }
 
 .info-popover {
@@ -2253,6 +2288,40 @@ tr.status-expiring {
     display: flex;
     gap: 10px;
     align-items: center;
+}
+
+@media (max-width: 768px) {
+    .table-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .table-actions {
+        flex-wrap: wrap;
+        width: 100%;
+        gap: 10px;
+    }
+
+    .table-actions .search-box {
+        flex: 1 1 100%;
+        min-width: 100%;
+        width: 100%;
+    }
+
+    .table-actions .search-box input {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .table-actions .filter-options {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .table-actions .export-btn {
+        flex: 0 0 auto;
+    }
 }
 
 .filter-options {
@@ -3385,13 +3454,15 @@ input.invalid {
 
 /* Specific styling for links in table view */
 .table-view .document-links-row a {
-  white-space: nowrap !important;
-  overflow: hidden !important; /* Restore overflow hidden */
-  text-overflow: ellipsis !important; /* Restore text overflow */
-  max-width: 90% !important; /* Slightly narrower to ensure centering works */
-  font-size: 0.9rem !important; /* Slightly smaller font size */
-  padding: 4px 8px !important; /* Smaller padding */
-  text-align: left !important; /* Keep text left-aligned within the link */
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  max-width: 100% !important;
+  font-size: 0.85rem !important;
+  padding: 4px 8px !important;
+  text-align: center !important;
+  line-height: 1.25 !important;
   width: auto; /* Allow natural width */
 }
 
@@ -3587,8 +3658,10 @@ input.invalid {
   
   .table-view .product-name-header {
     display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
     width: 100%;
-    padding: 15px;
+    padding: 12px 15px;
     background-color: var(--secondary-color);
     color: white;
     border-bottom: 1px solid var(--border-color);
@@ -3601,10 +3674,26 @@ input.invalid {
   .table-view .warranty-card.expiring-soon .product-name-header {
     background-color: var(--warning-color);
   }
+
+  .table-view .warranty-card.voided .product-name-header {
+    background-color: #8e44ad;
+  }
   
   .table-view .product-name-header .warranty-title {
     color: white;
-    font-size: 1.1rem;
+    font-size: 1.05rem;
+    flex: 1 1 100%;
+    max-width: 100%;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.3;
+  }
+
+  .table-view .product-name-header .warranty-actions {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
   }
   
   .table-view .warranty-content,
@@ -3770,7 +3859,10 @@ input.invalid {
 }
 
 .archived-view .warranty-card .warranty-actions .action-btn,
-.warranty-card.archived .warranty-actions .action-btn {
+.warranty-card.archived .warranty-actions .action-btn,
+.archived-view .warranty-card .product-name-header .action-btn i,
+.warranty-card.archived .product-name-header .action-btn i,
+.table-view .warranty-card.archived .product-name-header .action-btn i {
   color: var(--text-color) !important;
 }
 
@@ -4151,10 +4243,30 @@ input.invalid {
 }
 
 @media (max-width: 480px) {
-    /* Tabs stay swipeable on phones; fade the right edge to hint there's more */
     .edit-tabs-nav {
-        -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent 100%);
-        mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent 100%);
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        overflow-x: visible;
+        -webkit-mask-image: none;
+        mask-image: none;
+    }
+
+    .edit-tab-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 8px 4px;
+        font-size: 0.75rem;
+        white-space: normal;
+        text-align: center;
+        line-height: 1.15;
+    }
+
+    .edit-tab-btn i {
+        margin-right: 0;
+        font-size: 0.95rem;
     }
 }
 
@@ -4850,13 +4962,14 @@ input.invalid {
   }
 
   #tagManagementModal .tag-form {
-    flex-direction: column !important;
     gap: 10px !important;
   }
 
   #tagManagementModal .tag-form input[type="color"] {
-    width: 100% !important;
-    height: 40px !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 38px !important;
+    padding: 2px !important;
   }
 }
 
@@ -5033,6 +5146,17 @@ html.dark-mode .warracker-footer a:hover {
 [dir="rtl"] .product-photo-thumbnail {
     right: auto;
     left: 8px;
+}
+
+/* Prevent top info rows from colliding with the product photo thumbnail in Grid View */
+.grid-view .warranty-content:has(.product-photo-thumbnail) .warranty-info > div:nth-child(-n+3) {
+    padding-inline-end: 94px;
+    flex-wrap: wrap;
+}
+
+.grid-view .warranty-content:has(.product-photo-thumbnail) .warranty-info > div:nth-child(-n+3) strong {
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .product-photo-thumbnail img {
@@ -5891,7 +6015,7 @@ html.dark-mode .warracker-footer a:hover {
 
 .login-showcase {
     flex-basis: 50%;
-    background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.9), rgba(var(--primary-rgb), 0.7)), url('https://images.unsplash.com/photo-1586920740199-47ce3734a7a2?q=80&w=2070&auto=format&fit=crop') no-repeat center center;
+    background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.9), rgba(var(--primary-rgb), 0.7));
     background-size: cover;
     color: white;
     display: flex;
@@ -6226,7 +6350,7 @@ html.dark-mode .warracker-footer a:hover {
 }
 
 [data-theme="dark"] .login-page-body .login-showcase {
-    background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.8), #1a1a1a 85%), url('https://images.unsplash.com/photo-1586920740199-47ce3734a7a2?q=80&w=2070&auto=format&fit=crop') no-repeat center center;
+    background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.8), #1a1a1a 85%);
     background-size: cover;
 }
 

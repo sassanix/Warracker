@@ -5,6 +5,10 @@ import { getIsGlobalView, getUserPreferencePrefix, setUserPreferencePrefix } fro
 
 let paperlessNgxEnabled = false;
 
+export function isPaperlessEnabled() {
+	return Boolean(paperlessNgxEnabled || (typeof window !== 'undefined' && window.paperlessNgxEnabled));
+}
+
 const browserState = {
 	isOpen: false,
 	documentType: null,

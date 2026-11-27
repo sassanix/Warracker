@@ -334,7 +334,7 @@
     "save_oidc_settings": "儲存OIDC設定",
     "oidc_sso_desc": "允許使用者透過OIDC提供者登入。",
     "oidc_only_mode": "僅OIDC登入模式",
-    "oidc_only_mode_desc": "隱藏傳統的使用者名稱/密碼登入表單，僅允許OIDC登入。<strong>警告：</strong>在啟用此選項之前，請確保OIDC已正確設定。",
+    "oidc_only_mode_desc": "隱藏傳統的使用者名稱/密碼登入表單，僅允許OIDC登入。警告：在啟用此選項之前，請確保OIDC已正確設定。",
     "oidc_provider_name_desc": "OIDC用戶端的內部名稱（例如'oidc'）。",
     "client_secret_desc": "敏感值。儲存在資料庫中。變更生效需要重新啟動應用程式。",
     "issuer_url_desc": "您的OIDC提供者的基礎URL。",

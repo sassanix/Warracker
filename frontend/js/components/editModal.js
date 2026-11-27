@@ -540,6 +540,12 @@ function populateDocuments(warranty) {
   setDeleteHandler('deleteOtherDocumentBtn', otherContainer, (window.i18next && window.i18next.t('warranties.other_document_will_be_deleted') || 'Files will be deleted'));
   const photoUrlInput = document.getElementById('editProductPhotoUrl');
   if (photoUrlInput) photoUrlInput.value = '';
+  const invoiceUrlInput = document.getElementById('editInvoiceUrl');
+  if (invoiceUrlInput) invoiceUrlInput.value = warranty.invoice_url || '';
+  const manualUrlInput = document.getElementById('editManualUrl');
+  if (manualUrlInput) manualUrlInput.value = warranty.manual_url || '';
+  const otherDocUrlInput = document.getElementById('editOtherDocumentUrl');
+  if (otherDocUrlInput) otherDocUrlInput.value = warranty.other_document_url || '';
   clearPaperlessSelection('edit_invoice');
   clearPaperlessSelection('edit_manual');
   clearPaperlessSelection('edit_productPhoto');
@@ -637,9 +643,9 @@ export async function saveWarranty() {
   formData.append('tag_ids', JSON.stringify(tags.map((t) => t.id)));
 
   // Document URLs
-  formData.append('invoice_url', (document.getElementById('editInvoiceUrl') || {}).value || '');
-  formData.append('manual_url', (document.getElementById('editManualUrl') || {}).value || '');
-  formData.append('other_document_url', (document.getElementById('editOtherDocumentUrl') || {}).value || '');
+  formData.append('invoice_url', ((document.getElementById('editInvoiceUrl') || {}).value || '').trim());
+  formData.append('manual_url', ((document.getElementById('editManualUrl') || {}).value || '').trim());
+  formData.append('other_document_url', ((document.getElementById('editOtherDocumentUrl') || {}).value || '').trim());
 
   // Files
   const invoiceFile = (document.getElementById('editInvoice') || {}).files ? document.getElementById('editInvoice').files[0] : null;

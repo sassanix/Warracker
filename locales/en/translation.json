@@ -334,7 +334,7 @@
     "save_oidc_settings": "Save OIDC Settings",
     "oidc_sso_desc": "Allow users to log in via an OIDC provider.",
     "oidc_only_mode": "OIDC-Only Login Mode",
-    "oidc_only_mode_desc": "Hide traditional username/password login form and only allow OIDC login. <strong>Warning:</strong> Ensure OIDC is properly configured before enabling this option.",
+    "oidc_only_mode_desc": "Hide traditional username/password login form and only allow OIDC login. Warning: Ensure OIDC is properly configured before enabling this option.",
     "oidc_provider_name_desc": "Internal name for the OIDC client (e.g., 'oidc').",
     "client_secret_desc": "Sensitive value. Stored in the database. An application restart is required for changes to take effect.",
     "issuer_url_desc": "The base URL of your OIDC provider.",

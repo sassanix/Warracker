@@ -334,7 +334,7 @@
     "save_oidc_settings": "OIDC-instellingen opslaan",
     "oidc_sso_desc": "Gebruikers toestaan in te loggen via een OIDC-provider.",
     "oidc_only_mode": "Alleen-OIDC-inlogmodus",
-    "oidc_only_mode_desc": "Verberg het traditionele gebruikersnaam/wachtwoord-inlogformulier en sta alleen OIDC-inloggen toe. <strong>Waarschuwing:</strong> Zorg ervoor dat OIDC correct is geconfigureerd voordat u deze optie inschakelt.",
+    "oidc_only_mode_desc": "Verberg het traditionele gebruikersnaam/wachtwoord-inlogformulier en sta alleen OIDC-inloggen toe. Waarschuwing: Zorg ervoor dat OIDC correct is geconfigureerd voordat u deze optie inschakelt.",
     "oidc_provider_name_desc": "Interne naam voor de OIDC-client (bijv. 'oidc').",
     "client_secret_desc": "Gevoelige waarde. Opgeslagen in de database. Een herstart van de applicatie is vereist om wijzigingen door te voeren.",
     "issuer_url_desc": "De basis-URL van uw OIDC-provider.",

@@ -491,6 +491,8 @@
             const activeLabel = i18next.t('warranties.active');
             const expiringSoonLabel = i18next.t('warranties.expiring_soon');
             const expiredLabel = i18next.t('warranties.expired');
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const legendColor = isDark ? '#e0e0e0' : '#333333';
             
             statusChart = new Chart(ctx, {
                 type: 'doughnut',
@@ -498,7 +500,16 @@
                     labels: [activeLabel, expiringSoonLabel, expiredLabel],
                     datasets: [{ data: [trulyActive, expiringSoon, expired], backgroundColor: ['#4CAF50', '#FF9800', '#F44336'], borderWidth: 1 }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: legendColor }
+                        }
+                    }
+                }
             });
             console.log('Created new status chart');
         } catch (e) {
@@ -564,6 +575,9 @@
         try {
             // Get translated label for timeline chart
             const timelineLabel = i18next.t('status.expiration_timeline');
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const textColor = isDark ? '#e0e0e0' : '#333333';
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.1)';
             
             timelineChart = new Chart(ctx, {
                 type: 'bar',
@@ -571,7 +585,26 @@
                     labels: labels, 
                     datasets: [{ label: timelineLabel, data: counts, backgroundColor: '#3498db', borderWidth: 1 }] 
                 },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: textColor }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: textColor },
+                            grid: { color: gridColor }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0, color: textColor },
+                            grid: { color: gridColor }
+                        }
+                    }
+                }
             });
             console.log('Created new timeline chart');
         } catch (e) {
@@ -1162,7 +1195,7 @@
                     // Map: { 'YYYY-MM': count }
                     const timelineMap = {};
                     warranties.forEach(w => {
-                        if (w.is_lifetime) return; // Skip lifetime warranties
+                        if (w.is_lifetime || w.is_archived || w.is_voided) return; // Skip lifetime, archived, and voided warranties
                         if (!w.expiration_date) return;
                         let expDate = w.expiration_date;
                         if (typeof expDate === 'string') {

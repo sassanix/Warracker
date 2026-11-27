@@ -415,11 +415,15 @@
       flex-wrap: nowrap !important;
       gap: 8px !important;
     }
-    .search-container .secondary-actions #viewDropdownContainer,
-    .search-container .secondary-actions #scopeDropdown {
+    .search-container .secondary-actions #viewDropdownContainer {
       width: auto !important;
       flex: 0 1 auto !important;
       display: block !important;
+      min-width: 0 !important;
+    }
+    .search-container .secondary-actions #scopeDropdown {
+      width: auto !important;
+      flex: 0 1 auto !important;
       min-width: 0 !important;
     }
     #viewMenuBtn,
@@ -505,6 +509,27 @@
     .search-container #globalManageTagsBtn { grid-area: tags !important; }
     .search-container #viewDropdownContainer { grid-area: view !important; }
     .search-container #scopeDropdown { grid-area: scope !important; }
+
+    /* Keep column-3 (Data, Scope) and column-2 (View) popovers inside mobile viewports */
+    #dataMenu,
+    #scopeMenu {
+      left: auto !important;
+      right: 0 !important;
+      width: max-content !important;
+      max-width: calc(100vw - 32px) !important;
+    }
+    html[dir="rtl"] #dataMenu,
+    html[dir="rtl"] #scopeMenu {
+      left: 0 !important;
+      right: auto !important;
+    }
+    #viewMenu {
+      left: 50% !important;
+      right: auto !important;
+      transform: translateX(-50%) !important;
+      width: max-content !important;
+      max-width: calc(100vw - 32px) !important;
+    }
 
     /* Make the button inside each grid cell fill its container */
     .search-container .secondary-actions .data-dropdown > .action-btn,
@@ -931,6 +956,8 @@
   .list-view .product-name-header {
     padding: 10px 12px !important;
     font-size: 1rem !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
   }
   
   .list-view .product-name-header .warranty-title {
@@ -939,7 +966,14 @@
     white-space: normal !important; /* Allow wrapping on mobile */
     overflow: visible !important;
     text-overflow: clip !important;
-    max-width: calc(100% - 70px) !important; /* Make room for action buttons */
+    flex: 1 1 100% !important;
+    max-width: 100% !important;
+  }
+
+  .list-view .product-name-header .warranty-actions {
+    width: 100% !important;
+    justify-content: flex-end !important;
+    flex-wrap: wrap !important;
   }
   
   /* Optimize warranty content padding */

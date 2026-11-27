@@ -399,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Ensure globalManageTagsBtn triggers modal and tag form is always initialized ---
     // (Redundant with setupUIEventListeners, but ensures modal is always ready)
     const globalManageTagsBtn = document.getElementById('globalManageTagsBtn');
-    if (globalManageTagsBtn) {
+    if (globalManageTagsBtn && !(window.components && window.components.tagManager)) {
         globalManageTagsBtn.addEventListener('click', async () => {
             if (!allTags || allTags.length === 0) {
                 showLoadingSpinner();
@@ -427,9 +427,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 1. ALWAYS Initialize listeners for the global Tag Management Modal IF IT EXISTS
     if (globalTagManagementModal) {
-        if (globalNewTagForm) {
-            // Ensure the event listener is attached only once, or manage it if DOMContentLoaded could fire multiple times (not typical)
-            // For simplicity, assuming DOMContentLoaded runs once per page load.
+        const hasModularTagManager = !!(window.components && window.components.tagManager);
+        if (globalNewTagForm && !hasModularTagManager && globalNewTagForm.dataset.tagFormBound !== 'true') {
+            globalNewTagForm.dataset.tagFormBound = 'true';
             globalNewTagForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 // Inline implementation for creating a new tag from the modal
@@ -461,7 +461,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const closeButtons = globalTagManagementModal.querySelectorAll('[data-dismiss="modal"]');
         closeButtons.forEach(button => {
             button.addEventListener('click', (event) => {
-                globalTagManagementModal.style.display = 'none';
+                globalTagManagementModal.classList.remove('active');
+                globalTagManagementModal.style.display = '';
                 event.stopPropagation(); // This was the fix from before, ensuring it's applied
             });
         });
@@ -4685,6 +4686,10 @@ function getContrastColor(hexColor) {
 
 // Open tag management modal
 function openTagManagementModal() {
+    if (window.components && window.components.tagManager && typeof window.components.tagManager.openTagManagementModal === 'function') {
+        window.components.tagManager.openTagManagementModal();
+        return;
+    }
     if (!tagManagementModal) return;
     
     // Populate existing tags
@@ -4692,6 +4697,7 @@ function openTagManagementModal() {
     addTagManagementEventListeners();
     
     // Show modal
+    tagManagementModal.style.display = '';
     tagManagementModal.classList.add('active');
 }
 
@@ -4859,6 +4865,7 @@ function updateTag(id, name, color) {
 
 // Centralized event delegation for tag management table
 function addTagManagementEventListeners() {
+    if (window.components && window.components.tagManager) return;
     if (!tagManagementModal) return;
     const container = existingTagsContainer;
     if (!container) return;
@@ -5016,7 +5023,7 @@ function setupUIEventListeners() {
     }
     // --- Global Manage Tags Button ---
     const globalManageTagsBtn = document.getElementById('globalManageTagsBtn');
-    if (globalManageTagsBtn) {
+    if (globalManageTagsBtn && !(window.components && window.components.tagManager)) {
         globalManageTagsBtn.addEventListener('click', async () => {
             // Ensure allTags are loaded before opening the modal
             if (!allTags || allTags.length === 0) {

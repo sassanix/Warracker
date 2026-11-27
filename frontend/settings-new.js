@@ -929,6 +929,27 @@ async function loadPreferences() {
         console.log(`${prefix}defaultView not found, defaulting view to grid`);
     }
 
+    // Helper to resolve either a currency code (e.g. 'USD') or a currency symbol (e.g. '$')
+    // to a valid standard <option> value in currencySymbolSelect.
+    const resolveCurrencyOptionValue = (codeOrSymbol) => {
+        if (!codeOrSymbol || !currencySymbolSelect) return null;
+        const raw = String(codeOrSymbol).trim();
+        if (!raw) return null;
+        const options = Array.from(currencySymbolSelect.options);
+        const byCode = options.find(opt => opt.value !== 'other' && opt.value === raw);
+        if (byCode) return byCode.value;
+        const sharedDefaults = { '$': 'USD', '£': 'GBP', '¥': 'JPY', '₩': 'KRW', 'kr': 'SEK' };
+        const sharedCode = sharedDefaults[raw];
+        if (sharedCode && options.some(opt => opt.value === sharedCode)) {
+            return sharedCode;
+        }
+        const bySymbol = globalCurrenciesData.find(c => c.symbol === raw);
+        if (bySymbol && options.some(opt => opt.value === bySymbol.code)) {
+            return bySymbol.code;
+        }
+        return null;
+    };
+
     // Currency - Load stored preference first (code preferred; symbol is legacy)
     const storedCurrencyCode = localStorage.getItem(`${prefix}currencyCode`);
     const storedCurrency = storedCurrencyCode || localStorage.getItem(`${prefix}currencySymbol`);
@@ -938,15 +959,11 @@ async function loadPreferences() {
     
     if (storedCurrency) {
         if (currencySymbolSelect) {
-            // Check if the stored code/symbol matches a standard option
-            // (option values are currency codes; legacy stored values may be symbols)
-            const standardOption = Array.from(currencySymbolSelect.options).find(opt =>
-                opt.value === storedCurrency ||
-                (globalCurrenciesData.find(c => c.code === opt.value)?.symbol === storedCurrency));
-            if (standardOption) {
-                currencySymbolSelect.value = storedCurrency;
+            const resolvedCode = resolveCurrencyOptionValue(storedCurrency);
+            if (resolvedCode) {
+                currencySymbolSelect.value = resolvedCode;
                 if (currencySymbolCustom) currencySymbolCustom.style.display = 'none';
-                console.log(`Set currency dropdown to stored value: ${storedCurrency}`);
+                console.log(`Set currency dropdown to resolved code: ${resolvedCode} (from ${storedCurrency})`);
             } else {
                 // It's a custom symbol
                 currencySymbolSelect.value = 'other';
@@ -1009,16 +1026,15 @@ async function loadPreferences() {
                     }
                 }
                 // --- MODIFIED CURRENCY SYMBOL HANDLING ---
-                const storedCurrency = localStorage.getItem(`${prefix}currencySymbol`); // Get localStorage value again for comparison
+                const storedCurrencySymbol = localStorage.getItem(`${prefix}currencySymbol`);
                 if (apiPrefs.currency_symbol && currencySymbolSelect) {
                     // Only update UI from API if the API value is different from what was in localStorage
                     // Or if localStorage didn't have a value initially
-                    if (!storedCurrency || apiPrefs.currency_symbol !== storedCurrency) {
-                        console.log(`API currency_symbol (${apiPrefs.currency_symbol}) differs from localStorage (${storedCurrency}). Updating UI.`);
-                        // Logic to handle standard vs custom symbol from API
-                        const standardOption = Array.from(currencySymbolSelect.options).find(opt => opt.value === apiPrefs.currency_symbol);
-                        if (standardOption) {
-                            currencySymbolSelect.value = apiPrefs.currency_symbol;
+                    if (!storedCurrencySymbol || apiPrefs.currency_symbol !== storedCurrencySymbol) {
+                        console.log(`API currency_symbol (${apiPrefs.currency_symbol}) differs from localStorage (${storedCurrencySymbol}). Updating UI.`);
+                        const resolvedApiCode = resolveCurrencyOptionValue(apiPrefs.currency_symbol);
+                        if (resolvedApiCode) {
+                            currencySymbolSelect.value = resolvedApiCode;
                             if (currencySymbolCustom) currencySymbolCustom.style.display = 'none';
                         } else {
                             currencySymbolSelect.value = 'other';
@@ -1028,7 +1044,7 @@ async function loadPreferences() {
                             }
                         }
                     } else {
-                         console.log(`API currency_symbol (${apiPrefs.currency_symbol}) matches localStorage (${storedCurrency}). Skipping UI update.`);
+                         console.log(`API currency_symbol (${apiPrefs.currency_symbol}) matches localStorage (${storedCurrencySymbol}). Skipping UI update.`);
                     }
                 }
                 // --- END MODIFIED CURRENCY SYMBOL HANDLING ---
@@ -4155,7 +4171,17 @@ async function checkSchedulerStatus() {
  * @returns {Promise} A promise that resolves when timezones are loaded
  */
 function loadTimezones() {
-    return loadTimezonesIntoSelect(timezoneSelect);
+    const tasks = [];
+    if (timezoneSelect) {
+        tasks.push(loadTimezonesIntoSelect(timezoneSelect));
+    }
+    if (userAppriseTimezoneSelect) {
+        tasks.push(loadTimezonesIntoSelect(userAppriseTimezoneSelect));
+    }
+    if (tasks.length === 0) {
+        return Promise.resolve();
+    }
+    return Promise.allSettled(tasks);
 }
 
 function loadTimezonesIntoSelect(selectElement) {
@@ -4195,21 +4221,34 @@ function loadTimezonesIntoSelect(selectElement) {
                 
                 selectElement.appendChild(optgroup);
             });
+
+            const applyTimezoneValue = (tz) => {
+                const hasOption = (val) => Array.from(selectElement.options).some(opt => opt.value === val);
+                if (tz && hasOption(tz)) {
+                    selectElement.value = tz;
+                } else if (hasOption('UTC')) {
+                    selectElement.value = 'UTC';
+                }
+            };
             
             // Set the current timezone from preferences
             // Get the appropriate key prefix based on user type
             const prefix = getPreferenceKeyPrefix();
             const savedPreferences = JSON.parse(localStorage.getItem(`${prefix}preferences`) || '{}');
+            const isAppriseSelect = selectElement === userAppriseTimezoneSelect;
+            const localTz = isAppriseSelect
+                ? (savedPreferences.apprise_timezone || savedPreferences.timezone)
+                : savedPreferences.timezone;
             
             console.log('Loading timezone preference from localStorage', {
                 prefix: prefix,
                 preferenceKey: `${prefix}preferences`,
-                savedTimezone: savedPreferences.timezone
+                savedTimezone: localTz
             });
             
-            if (savedPreferences.timezone) {
-                selectElement.value = savedPreferences.timezone;
-                console.log(`Set ${selectElement.id} to:`, savedPreferences.timezone, 'Current value:', selectElement.value);
+            if (localTz) {
+                applyTimezoneValue(localTz);
+                console.log(`Set ${selectElement.id} to:`, localTz, 'Current value:', selectElement.value);
                 resolve();
             } else {
                 // If no timezone preference found in localStorage, load from API as backup
@@ -4224,15 +4263,19 @@ function loadTimezonesIntoSelect(selectElement) {
                 .then(response => response.json())
                 .then(data => {
                     // API returns preferences directly, not nested
-                    if (data && data.timezone) {
-                        console.log('Received timezone from API:', data.timezone);
-                        selectElement.value = data.timezone;
-                        console.log(`Set ${selectElement.id} to:`, data.timezone, 'Current value:', selectElement.value);
+                    const apiTz = data ? (isAppriseSelect ? (data.apprise_timezone || data.timezone) : data.timezone) : null;
+                    if (apiTz) {
+                        console.log('Received timezone from API:', apiTz);
+                        applyTimezoneValue(apiTz);
+                        console.log(`Set ${selectElement.id} to:`, apiTz, 'Current value:', selectElement.value);
+                    } else {
+                        applyTimezoneValue('UTC');
                     }
                     resolve();
                 })
                 .catch(error => {
                     console.error('Error loading preferences from API:', error);
+                    applyTimezoneValue('UTC');
                     resolve(); // Still resolve to continue the chain
                 });
             }
@@ -4344,13 +4387,22 @@ window.addEventListener('storage', (event) => {
         }
     }
 
-    if (event.key === `${prefix}currencySymbol`) { // Simplified log for other keys
-         console.log(`[Settings Storage Listener] ${prefix}currencySymbol changed to ${event.newValue}`);
-         if (event.newValue && currencySymbolSelect && currencySymbolSelect.value !== event.newValue) {
-            // Handle standard vs custom symbol update
-             const standardOption = Array.from(currencySymbolSelect.options).find(opt => opt.value === event.newValue);
-             if (standardOption) {
-                 currencySymbolSelect.value = event.newValue;
+    if (event.key === `${prefix}currencySymbol` || event.key === `${prefix}currencyCode`) {
+         console.log(`[Settings Storage Listener] ${event.key} changed to ${event.newValue}`);
+         if (event.newValue && currencySymbolSelect) {
+             const sharedDefaults = { '$': 'USD', '£': 'GBP', '¥': 'JPY', '₩': 'KRW', 'kr': 'SEK' };
+             const options = Array.from(currencySymbolSelect.options);
+             const raw = String(event.newValue).trim();
+             const byCode = options.find(opt => opt.value !== 'other' && opt.value === raw);
+             const sharedCode = sharedDefaults[raw];
+             const bySymbol = globalCurrenciesData.find(c => c.symbol === raw);
+             const resolvedCode = (byCode && byCode.value)
+                 || (sharedCode && options.some(opt => opt.value === sharedCode) ? sharedCode : null)
+                 || (bySymbol && options.some(opt => opt.value === bySymbol.code) ? bySymbol.code : null);
+             if (resolvedCode) {
+                 if (currencySymbolSelect.value !== resolvedCode) {
+                     currencySymbolSelect.value = resolvedCode;
+                 }
                  if (currencySymbolCustom) currencySymbolCustom.style.display = 'none';
                  console.log('[Settings Storage Listener] Updated settings currency dropdown via storage event.');
              } else if (currencySymbolSelect.value !== 'other' || (currencySymbolCustom && currencySymbolCustom.value !== event.newValue)) {

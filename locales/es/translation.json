@@ -334,7 +334,7 @@
     "save_oidc_settings": "Guardar Configuración OIDC",
     "oidc_sso_desc": "Permitir a los usuarios iniciar sesión a través de un proveedor OIDC.",
     "oidc_only_mode": "Modo de inicio de sesión solo OIDC",
-    "oidc_only_mode_desc": "Ocultar el formulario de inicio de sesión tradicional de nombre de usuario/contraseña y permitir solo el inicio de sesión OIDC. <strong>Advertencia:</strong> Asegúrese de que OIDC esté configurado correctamente antes de habilitar esta opción.",
+    "oidc_only_mode_desc": "Ocultar el formulario de inicio de sesión tradicional de nombre de usuario/contraseña y permitir solo el inicio de sesión OIDC. Advertencia: Asegúrese de que OIDC esté configurado correctamente antes de habilitar esta opción.",
     "oidc_provider_name_desc": "Nombre interno para el cliente OIDC (por ejemplo, 'oidc').",
     "client_secret_desc": "Valor sensible. Almacenado en la base de datos. Se requiere un reinicio de la aplicación para que los cambios surtan efecto.",
     "issuer_url_desc": "La URL base de su proveedor OIDC.",

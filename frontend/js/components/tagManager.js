@@ -342,6 +342,7 @@ export function openTagManagementModal() {
   if (!modal) return;
   ensureTagsLoaded();
   renderExistingTags();
+  modal.style.display = '';
   modal.classList.add('active');
 }
 
@@ -407,8 +408,9 @@ export function renderExistingTags() {
 function bindTagManagementDelegates() {
   if (state.listenersBound) return;
   const container = getElement(selectors.modal.existingTags);
-  if (!container) return;
+  if (!container || container.dataset.tmListenersAttached === 'true') return;
   state.listenersBound = true;
+  container.dataset.tmListenersAttached = 'true';
   container.addEventListener('click', (event) => {
     const row = event.target.closest('tr.existing-tag-row');
     if (!row) return;
@@ -496,7 +498,8 @@ export function addTagManagementEventListeners() {
   if (!modal || modal.dataset.listenersBound === 'true') return;
   modal.dataset.listenersBound = 'true';
   const form = getElement(selectors.modal.newTagForm);
-  if (form) {
+  if (form && form.dataset.tagFormBound !== 'true') {
+    form.dataset.tagFormBound = 'true';
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const nameInput = getElement(selectors.modal.tagNameInput);

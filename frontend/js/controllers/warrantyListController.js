@@ -172,10 +172,12 @@ export async function loadWarranties(isAuthenticatedOverride) {
 			return;
 		}
 
-		let combined = Array.isArray(primary) ? primary : [];
-
 		let lastLoadedArchived = filters.status === 'archived';
 		let lastLoadedIncludesArchived = false;
+
+		let combined = Array.isArray(primary)
+			? (lastLoadedArchived ? primary.map((warranty) => ({ ...warranty, __isArchived: true })) : primary)
+			: [];
 
 		if (filters.status === 'all') {
 			const archived = await listWarranties({ scope, archived: true });

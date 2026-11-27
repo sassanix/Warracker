@@ -334,7 +334,7 @@
     "save_oidc_settings": "Enregistrer les Paramètres OIDC",
     "oidc_sso_desc": "Permettre aux utilisateurs de se connecter via un fournisseur OIDC.",
     "oidc_only_mode": "Mode de connexion OIDC uniquement",
-    "oidc_only_mode_desc": "Masquer le formulaire de connexion traditionnel nom d'utilisateur/mot de passe et n'autoriser que la connexion OIDC. <strong>Avertissement :</strong> Assurez-vous que l'OIDC est correctement configuré avant d'activer cette option.",
+    "oidc_only_mode_desc": "Masquer le formulaire de connexion traditionnel nom d'utilisateur/mot de passe et n'autoriser que la connexion OIDC. Avertissement : Assurez-vous que l'OIDC est correctement configuré avant d'activer cette option.",
     "oidc_provider_name_desc": "Nom interne du client OIDC (par exemple, 'oidc').",
     "client_secret_desc": "Valeur sensible. Stockée dans la base de données. Un redémarrage de l'application est nécessaire pour que les modifications prennent effet.",
     "issuer_url_desc": "L'URL de base de votre fournisseur OIDC.",

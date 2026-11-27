@@ -181,17 +181,11 @@ function buildFormData(warranty, noteValue) {
 	if (warranty.purchase_price !== null && warranty.purchase_price !== undefined) {
 		formData.append('purchase_price', warranty.purchase_price);
 	}
-	const vendorInput = document.getElementById('editVendorOrRetailer');
-	if (vendorInput) {
-		formData.append('vendor', vendorInput.value.trim());
-	} else if (warranty.vendor) {
+	if (warranty.vendor !== null && warranty.vendor !== undefined && warranty.vendor !== '') {
 		formData.append('vendor', warranty.vendor);
 	}
 	if (warranty.warranty_type) formData.append('warranty_type', warranty.warranty_type);
-	const modelNumberInput = document.getElementById('editModelNumber');
-	if (modelNumberInput && modelNumberInput.value.trim() !== '') {
-		formData.append('model_number', modelNumberInput.value.trim());
-	} else if (typeof warranty.model_number !== 'undefined' && warranty.model_number !== null) {
+	if (typeof warranty.model_number !== 'undefined' && warranty.model_number !== null) {
 		formData.append('model_number', warranty.model_number);
 	}
 	if (Array.isArray(warranty.serial_numbers)) {

@@ -389,7 +389,7 @@
     "save_oidc_settings": "Salvar Configurações OIDC",
     "oidc_sso_desc": "Permitir que os usuários façam login através de um provedor OIDC.",
     "oidc_only_mode": "Modo de Login Apenas OIDC",
-    "oidc_only_mode_desc": "Ocultar o formulário de login tradicional de nome de usuário/senha e permitir apenas o login OIDC. <strong>Aviso:</strong> Certifique-se de que o OIDC esteja configurado corretamente antes de habilitar esta opção.",
+    "oidc_only_mode_desc": "Ocultar o formulário de login tradicional de nome de usuário/senha e permitir apenas o login OIDC. Aviso: Certifique-se de que o OIDC esteja configurado corretamente antes de habilitar esta opção.",
     "oidc_provider_name_desc": "Nome interno para o cliente OIDC (ex: 'oidc').",
     "client_secret_desc": "Valor sensível. Armazenado no banco de dados. É necessário reiniciar a aplicação para que as alterações entrem em vigor.",
     "issuer_url_desc": "A URL base do seu provedor OIDC.",

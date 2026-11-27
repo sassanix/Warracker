@@ -334,7 +334,7 @@
     "save_oidc_settings": "OIDC-Einstellungen speichern",
     "oidc_sso_desc": "Benutzern die Anmeldung über einen OIDC-Anbieter ermöglichen.",
     "oidc_only_mode": "Nur-OIDC-Anmeldemodus",
-    "oidc_only_mode_desc": "Traditionelles Anmeldeformular für Benutzername/Passwort ausblenden und nur OIDC-Anmeldung zulassen. <strong>Warnung:</strong> Stellen Sie sicher, dass OIDC ordnungsgemäß konfiguriert ist, bevor Sie diese Option aktivieren.",
+    "oidc_only_mode_desc": "Traditionelles Anmeldeformular für Benutzername/Passwort ausblenden und nur OIDC-Anmeldung zulassen. Warnung: Stellen Sie sicher, dass OIDC ordnungsgemäß konfiguriert ist, bevor Sie diese Option aktivieren.",
     "oidc_provider_name_desc": "Interner Name für den OIDC-Client (z. B. 'oidc').",
     "client_secret_desc": "Sensibler Wert. In der Datenbank gespeichert. Ein Neustart der Anwendung ist erforderlich, damit die Änderungen wirksam werden.",
     "issuer_url_desc": "Die Basis-URL Ihres OIDC-Anbieters.",
